@@ -146,12 +146,13 @@ end subroutine
 !--------------------------------------------------------------------------------------
 real function TClifetime(ptr)
 type (cog_type), pointer :: ptr
-integer :: gen, stage
+integer :: gen, stage, region
 real :: p1, p2
 integer :: kpar = 0
 
 TClifetime = 0
-stage = get_stage(ptr)
+!stage = get_stage(ptr)
+call get_stage(ptr,stage,region)
 if (stage == NAIVE) then
     TClifetime = BIG_TIME
     return
@@ -2729,13 +2730,14 @@ subroutine updatestage1(kcell,tnow,divide_flag)
 integer :: kcell
 logical :: divide_flag
 real :: tnow
-integer :: stage,gen,ctype
+integer :: stage, region, gen, ctype
 real :: stagetime
 type(cog_type), pointer :: p
 
 divide_flag = .false.
 p => cellist(kcell)%cptr
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 if (stage >= CLUSTERS) then
     if (.not.cansurvive(p)) then
         write(*,*) 'cell IL2 store too low: ',kcell,p%cogID
@@ -2826,13 +2828,14 @@ subroutine updatestage(kcell,tnow,divide_flag)
 integer :: kcell
 logical :: divide_flag
 real :: tnow
-integer :: stage,gen,ctype
+integer :: stage, region, gen, ctype
 real :: stagetime
 type(cog_type), pointer :: p
 
 divide_flag = .false.
 p => cellist(kcell)%cptr
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 if (stage >= CLUSTERS) then
     if (.not.cansurvive(p)) then
         write(*,*) 'cell IL2 store too low: ',kcell,p%cogID
@@ -2914,9 +2917,10 @@ end subroutine
 real function get_stagetime(p,ctype)
 type(cog_type), pointer :: p
 integer :: ctype
-integer :: stage, gen,cd4_8
+integer :: stage, region, gen, cd4_8
 
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 cd4_8 = ctype - 1       ! converts ctype -> 1=CD4, 2=CD8
 gen = get_generation(p)
 if (gen == 1) then
@@ -2935,9 +2939,12 @@ end function
 !--------------------------------------------------------------------------------
 logical function bindable(p)
 type(cog_type), pointer :: p
+integer :: stage, region
 
 bindable = .true.
-if (get_stage(p) == FINISHED) then
+!if (get_stage(p) == FINISHED) then
+call get_stage(p,stage,region)
+if (stage == FINISHED) then
     bindable = .false.
 endif
 end function
@@ -2958,9 +2965,9 @@ end function
 real function get_bindtime(p,cognate,ctype,pMHC,kpar)
 type(cog_type), pointer :: p
 logical :: cognate
-integer :: ctype,kpar
+integer :: ctype, kpar
 real :: pMHC
-integer :: stage, i, cd4_8
+integer :: stage, region, i, cd4_8
 real(DP) :: R
 real :: stimrate, btime, p1, median
 real, parameter :: CT_shape = 2.0, CT_max_factor = 4.0
@@ -2969,7 +2976,8 @@ real, parameter :: p2 = log(CT_shape)
 get_bindtime = 0
 if (cognate) then
     cd4_8 = ctype - 1
-	stage = get_stage(p)
+!	stage = get_stage(p)
+	call get_stage(p,stage,region)
 	btime = dc_mean_bindtime_c(stage,cd4_8)
 	if (stage > NAIVE .and. stage < SWARMS) then
 	    select case (CONTACT_RULE)
@@ -3127,10 +3135,11 @@ end function
 logical function IL2_production_status(p,t)
 type(cog_type), pointer :: p
 real :: t
-integer :: gen, stage
+integer :: gen, stage, region
 
 IL2_production_status = .false.
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 if (stage == FINISHED) then
     return
 endif

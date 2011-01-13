@@ -97,6 +97,10 @@ integer, parameter :: VIS2_TAG   = 28
 integer, parameter :: MOL1_TAG   = 29
 integer, parameter :: MOL2_TAG   = 30
 
+! T cell region
+integer, parameter :: LYMPHNODE = 1
+integer, parameter :: PERIPHERY = 2
+
 ! T cell activation stage
 integer, parameter :: NAIVE      = 1
 integer, parameter :: TRANSIENT  = 2
@@ -104,6 +108,7 @@ integer, parameter :: CLUSTERS   = 3
 integer, parameter :: SWARMS     = 4
 integer, parameter :: DIVIDING   = 5
 integer, parameter :: FINISHED   = 6
+integer, parameter :: STAGELIMIT = 6
 !integer, parameter :: ACTIVATED  = 5   ! NOT USED NOW
 
 integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 
@@ -1347,15 +1352,33 @@ end subroutine
 !----------------------------------------------------------------------------------------
 ! Interim
 !----------------------------------------------------------------------------------------
-integer function get_stage(p)
+integer function old_get_stage(p)
 type(cog_type), pointer :: p
 integer :: status
 integer(1) :: statusbyte(4)
 equivalence (status,statusbyte)
 
 status = p%status
-get_stage = statusbyte(STAGE_BYTE)
+old_get_stage = statusbyte(STAGE_BYTE)
 end function
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine get_stage(p,stage,region)
+type(cog_type), pointer :: p
+integer :: stage, region
+integer :: status
+integer(1) :: statusbyte(4)
+equivalence (status,statusbyte)
+
+status = p%status
+stage = statusbyte(STAGE_BYTE)
+region = LYMPHNODE
+if (stage > STAGELIMIT) then
+	stage = stage - STAGELIMIT
+	region = PERIPHERY
+endif
+end subroutine
 
 !--------------------------------------------------------------------------------------
 ! Interim
@@ -1408,7 +1431,7 @@ integer :: kcell
 type (cog_type), pointer :: p
 !integer :: cogID
 type(cell_type) :: tcell
-integer :: gen, stage
+integer :: gen, stage, region
 
 tcell = cellist(kcell)
 if (.not.associated(tcell%cptr)) then
@@ -1420,7 +1443,8 @@ write(*,*) 'Cognate cell: ',p%cogID,kcell,cellist(kcell)%ID
 write(*,'(a,i10,a,3i4,a,i2)') '  ID: ',tcell%ID,' site: ',tcell%site,' ctype: ',tcell%ctype
 write(*,'(a,i2,a,2i6,a,2f10.2)') '  lastdir: ',tcell%lastdir,' DCbound: ',tcell%DCbound,' unbindtime: ',tcell%unbindtime
 gen = get_generation(p)
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 write(*,'(a,i8,a,i2,a,i2)') '   cogID: ',p%cogID,' gen: ',gen,' stage: ', stage
 write(*,'(a,4f10.2)') '   times: entry,die,div,stage: ',tcell%entrytime,p%dietime,p%dividetime,p%stagetime
 write(*,'(a,3f8.2)') 'avidity, stimulation, IL2 store:: ', p%avidity,p%stimulation,get_IL2store(p)
@@ -1500,7 +1524,7 @@ subroutine save_cell_positions
 integer :: k, kcell, site(3), j, idc, dcsite(3)
 !integer :: dcstate = 1
 real :: dcstate
-integer :: itcstate, stype, ctype
+integer :: itcstate, stype, ctype, stage, region
 real :: Tcell_diam = 0.9
 real :: DC_diam = 1.8
 !real :: spectrum_max = 10, spectrum_freefraction = 0.9
@@ -1589,7 +1613,9 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	!        else
 	!            tcbound = 1
 	!        endif
-			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+!			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (stage == NAIVE) then
 				itcstate = 0
 			else
 				if (bnd(1) == 0 .and. bnd(2) == 0) then
@@ -1636,7 +1662,9 @@ else
 			itcstate = -1
 		else
 			gen = get_generation(cellist(kcell)%cptr)
-			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+!			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (stage == NAIVE) then
 				itcstate = 0
 			else
 				if (bnd(1) == 0 .and. bnd(2) == 0) then

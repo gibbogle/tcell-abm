@@ -879,7 +879,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine binder(ok)
 logical :: ok
-integer :: kcell, nbnd, i, k, site(3), ctype, stage, neardc(0:DCDIM-1), idc
+integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc
 integer :: nadd, nsub
 real :: tnow, bindtime, pMHC, t_travel
 logical :: unbound, cognate
@@ -946,7 +946,8 @@ do kcell = 1,nlist
     if (nbnd < MAX_DC_BIND .and. tnow >= cell%unbindtime(2) + DC_BIND_DELAY) then
         if (cognate) then
             if (.not.bindable(cog_ptr)) cycle
-            stage = get_stage(cog_ptr)
+!            stage = get_stage(cog_ptr)
+			call get_stage(cog_ptr,stage,region)
             if (stage == NAIVE) then    ! on first binding a cognate cell is ready for next stage
                 cog_ptr%stagetime = tnow
             endif
@@ -1025,7 +1026,7 @@ end subroutine
 ! NOT USED
 !-----------------------------------------------------------------------------------------
 subroutine event_binder
-integer :: kcell, nbnd, k, ctype, stage, idc=0
+integer :: kcell, nbnd, k, ctype, stage, region, idc=0
 integer :: nadd, nsub
 !integer :: neardc(0:DCDIM-1)
 real :: tnow, bindtime, pMHC
@@ -1087,7 +1088,8 @@ do kcell = 1,nlist
 !        if (cognate) then
 
 !            if (.not.bindable(cog_ptr)) cycle
-            stage = get_stage(cog_ptr)
+!            stage = get_stage(cog_ptr)
+			call get_stage(cog_ptr,stage,region)
             if (stage == NAIVE) then    ! on first binding a cognate cell is ready for next stage
                 cog_ptr%stagetime = tnow
             endif
@@ -1183,7 +1185,7 @@ end subroutine
 !--------------------------------------------------------------------------------
 subroutine par_binder(sweep)
 integer :: sweep
-integer :: kcell, nbnd, k, site(3), ctype, stage, neardc(0:DCDIM-1), idc, DCbound(2)
+integer :: kcell, nbnd, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc, DCbound(2)
 integer :: nadd, nsub
 real :: tnow, bindtime, unbindtime(2), pMHC
 logical :: unbound, cognate
@@ -1259,7 +1261,8 @@ do kcell = 1,nlist
                     cell%unbindtime = unbindtime
                     cycle
                 endif
-                stage = get_stage(cog_ptr)
+!                stage = get_stage(cog_ptr)
+				call get_stage(cog_ptr,stage,region)
                 if (stage == NAIVE) then    ! on first binding a cognate cell is ready for next stage
                     cog_ptr%stagetime = tnow
                 endif
@@ -1883,11 +1886,14 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The cell kcell in slot at esite(:) is a candidate to exit.  If it meets the criteria,
 ! left = .true.
+! Currently, when a T cell exits the LN its ID is set to 0, and a gap is recorded in cellist(:).
+! To keep track of a T cell in the periphery, we need to keep it in cellist(:), but somehow
+! flag it to indicate that it is not in the LN.
 !-----------------------------------------------------------------------------------------
 subroutine cell_exit(kcell,slot,esite,left)
 integer :: kcell, slot, esite(3)
 logical :: left
-integer :: x, y, z, ctype, gen, stage
+integer :: x, y, z, ctype, gen, stage, region
 !real :: tnow, tin
 logical :: cognate
 type(cog_type), pointer :: p
@@ -1899,7 +1905,8 @@ if (evaluate_residence_time .or. track_DCvisits) then
 elseif (associated(cellist(kcell)%cptr)) then
     cognate = .true.
     p => cellist(kcell)%cptr
-    stage = get_stage(p)
+!    stage = get_stage(p)
+	call get_stage(p,stage,region)
     gen = get_generation(p)
 !        tin = tnow - p%entrytime
 !        if (tin < min_transit_time) cycle     ! prevent immediate exit of newly arrived cell
@@ -2452,13 +2459,14 @@ end subroutine
 !--------------------------------------------------------------------------------
 subroutine efferent(kcell)
 integer :: kcell
-integer :: ctype, gen, stage, i
+integer :: ctype, gen, stage, region, i
 real :: avid
 type (cog_type), pointer :: p
 
 ctype = cellist(kcell)%ctype
 p => cellist(kcell)%cptr
-stage = get_stage(p)
+!stage = get_stage(p)
+call get_stage(p,stage,region)
 gen = get_generation(p)
 if (stage < CLUSTERS) return
 
@@ -2501,7 +2509,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine show_snapshot(ok)
 logical :: ok
-integer :: kcell, ctype, stype, ncog, noncog, ntot, stage, i, iseq, error
+integer :: kcell, ctype, stype, ncog, noncog, ntot, stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead
 real :: stim(FINISHED), IL2sig(FINISHED), tgen, tnow, fac, act, cyt_conc, mols_pM
 type (cog_type), pointer :: p
@@ -2531,7 +2539,8 @@ do kcell = 1,nlist
     stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
         ncog = ncog + 1
-        stage = get_stage(p)
+!        stage = get_stage(p)
+		call get_stage(p,stage,region)
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3122,7 +3131,7 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog, noncog, ntot, stage, i, iseq, error
+integer :: kcell, ctype, stype, ncog, noncog, ntot, stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact
 real :: stim(FINISHED), IL2sig(FINISHED), tgen, tnow, fac, act, cyt_conc, mols_pM
 type (cog_type), pointer :: p
@@ -3152,7 +3161,8 @@ do kcell = 1,nlist
     stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
         ncog = ncog + 1
-        stage = get_stage(p)
+!        stage = get_stage(p)
+		call get_stage(p,stage,region)
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3280,7 +3290,7 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: nDC_list, nTC_list, nbond_list, DC_list(*), TC_list(*), bond_list(*)
 integer :: k, kc, kcell, site(3), j, jb, idc, dcsite(3)
 real :: dcstate
-integer :: idcstate, itcstate, stype, ctype
+integer :: idcstate, itcstate, stype, ctype, stage, region
 real :: Tcell_diam = 0.9
 real :: DC_diam = 1.8
 integer :: gen, bnd(2)
@@ -3317,7 +3327,9 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	!        tcstate = mod(kcell,2) + 1
 			gen = get_generation(cellist(kcell)%cptr)
 			bnd = cellist(kcell)%DCbound
-			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+!			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (stage == NAIVE) then
 				itcstate = 0
 			else
 				if (bnd(1) == 0 .and. bnd(2) == 0) then
@@ -3377,7 +3389,9 @@ else
 			itcstate = -1
 		else
 			gen = get_generation(cellist(kcell)%cptr)
-			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+!			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (stage == NAIVE) then
 				itcstate = 0
 			else
 				if (bnd(1) == 0 .and. bnd(2) == 0) then
