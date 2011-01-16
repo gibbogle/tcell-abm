@@ -955,7 +955,7 @@ end subroutine
 subroutine cell_division(kcell,site2,freeslot,ok)
 integer :: kcell, site2(3), freeslot
 logical :: ok
-integer :: icnew, ctype, gen, site(3), indx(2)
+integer :: icnew, ctype, gen, region, site(3), indx(2)
 integer :: iseq, tag, kfrom, kto
 real :: tnow
 type(cog_type), pointer :: p1, p2
@@ -967,6 +967,7 @@ tnow = istep*DELTA_T
 !call show_cognate_cell(kcell)
 p1 => cellist(kcell)%cptr
 gen = get_generation(p1)
+call get_region(p1,region)
 !write(*,*) 'cell_division: ',kcell,gen,istep,tnow
 if (gen == TC_MAX_GEN) then
     write(logmsg,*) 'cell_division: reached maximum generation: ',kcell
@@ -1013,7 +1014,7 @@ else
     p1%stagetime = tnow
 endif
 !call show_cognate_cell(kcell)
-call create_Tcell(icnew,cellist(icnew),site2,ctype,gen,POST_DIVISION,ok)
+call create_Tcell(icnew,cellist(icnew),site2,ctype,gen,POST_DIVISION,region,ok)
 if (.not.ok) return
 
 p2 => cellist(icnew)%cptr
@@ -1582,9 +1583,9 @@ end subroutine
 ! Create a new T cell.
 ! We could give a progeny cell (the result of cell division) the same ID as its parent.
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,cell,site,ctype,gen,stage,ok)
+subroutine create_Tcell(kcell,cell,site,ctype,gen,stage,region,ok)
 type(cell_type) :: cell
-integer :: kcell, site(3), ctype, gen, stage
+integer :: kcell, site(3), ctype, gen, stage, region
 logical :: ok
 integer :: stype, cogID, i
 real :: tnow, param1, param2
@@ -1610,7 +1611,7 @@ elseif (stype == COG_TYPE_TAG) then
     param1 = log(TC_AVIDITY_MEDIAN)
     param2 = log(TC_AVIDITY_SHAPE)
     call set_generation(cell%cptr,gen)
-    call set_stage(cell%cptr,stage)
+    call set_stage_region(cell%cptr,stage,region)
     if (fix_avidity) then
         i = mod(navid,avidity_nlevels)
         navid = navid + 1
@@ -1700,8 +1701,8 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Add a cell (kcell) with characteristics (ctype, gen, stage) at site.
 !--------------------------------------------------------------------------------
-subroutine add_Tcell(site,ctype,gen,stage,kcell,ok)
-integer :: site(3), ctype, gen, stage,kcell
+subroutine add_Tcell(site,ctype,gen,stage,region,kcell,ok)
+integer :: site(3), ctype, gen, stage, region, kcell
 logical :: ok
 integer :: indx(2)
 
@@ -1720,9 +1721,9 @@ else
     kcell = nlist
 endif
 if (dbug) then
-    write(*,'(a,8i7)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage
+    write(*,'(a,9i7)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region
 endif
-call create_Tcell(kcell,cellist(kcell),site,ctype,gen,stage,ok)
+call create_Tcell(kcell,cellist(kcell),site,ctype,gen,stage,region,ok)
 if (.not.ok) return
 
 indx = occupancy(site(1),site(2),site(3))%indx
@@ -1870,7 +1871,7 @@ end subroutine
 subroutine place_cells(ok)
 logical :: ok
 integer :: id, cogid, x, y, z, site(3), ctype
-integer :: idc, kdc, k, x2, y2, z2, gen, stage
+integer :: idc, kdc, k, x2, y2, z2, gen, stage, region
 integer :: xdc, ydc, zdc, xmin, xmax, ymin, ymax, zmin, zmax, nzlim, nassigned
 real(DP) :: R
 real :: d, d2, p1, p2, tnow, prox, iv_fraction=0, tmins
@@ -2071,6 +2072,7 @@ do x = 1,NX
                 site = (/x,y,z/)
                 gen = 1
                 stage = NAIVE
+                region = LYMPHNODE
                 ctype = 1
                 if (evaluate_residence_time) then
 !                    if (Mnodes /= 1) then
@@ -2095,7 +2097,7 @@ do x = 1,NX
 				else
 	                k = permc(id)
 	            endif
-                call create_Tcell(k,cellist(k),site,ctype,gen,stage,ok)
+                call create_Tcell(k,cellist(k),site,ctype,gen,stage,region,ok)
                 if (.not.ok) return
 !                cellist(k)%entrytime = -12*60   ! testing for K1_S1P1 setting
                 occupancy(x,y,z)%indx(1) = k
@@ -2545,7 +2547,7 @@ end function
 !---------------------------------------------------------------------
 subroutine updater(ok)
 logical :: ok
-integer :: kcell, ctype, stype, iseq, tag, kfrom, kto, k, ncog, ntot
+integer :: kcell, ctype, stype, region, iseq, tag, kfrom, kto, k, ncog, ntot
 integer :: site(3), site2(3), freeslot, indx(2), status, DC(2), idc
 real :: C(N_CYT), mrate(N_CYT), tnow, dstim, S, cyt_conc, mols_pM, Ctemp, dstimrate, stimrate
 logical :: divide_flag, producing, first, dbg, unbound, flag, flag1
@@ -2555,6 +2557,7 @@ type (cog_type), pointer :: p
 !write(*,*) 'updater: ',me
 ok = .true.
 dbg = .false.
+flag = .false.
 flag1 = .false.
 ntot = 0
 ncog = 0
@@ -2576,123 +2579,123 @@ do kcell = 1,nlist
         write(*,*) 'ERROR: updater: p not associated: ',kcell
         stop
     endif
-! Cell death
+    call get_region(p,region)
+	! Cell death
     if (tnow > p%dietime) then
         call Tcell_death(kcell)
         cycle
     endif
-
-! TCR stimulation
-    unbound = .false.
-    DC = cellist(kcell)%DCbound
-    stimrate = 0
-    do k = 1,MAX_DC_BIND
-        idc = DC(k)
-        if (idc /= 0) then
-            if (DClist(idc)%capable) then
-!                dstimrate = TC_STIM_RATE_CONSTANT*DClist(idc)%density*p%avidity
-                dstimrate = TC_STIM_RATE_CONSTANT*stimulation_rate(DClist(idc)%density,p%avidity)
-                stimrate = stimrate + dstimrate
-                dstim = dstimrate*DELTA_T
-                p%stimulation = p%stimulation + dstim
-                p%stimulation = min(p%stimulation, STIMULATION_LIMIT)
-                DClist(idc)%stimulation = DClist(idc)%stimulation + dstim
-            else    ! unbind T cell from incapable DC
-                idc = cellist(kcell)%DCbound(k)
-                DClist(idc)%nbound = DClist(idc)%nbound - 1
-                DClist(idc)%ncogbound = DClist(idc)%ncogbound - 1
-                cellist(kcell)%DCbound(k) = 0
-                unbound = .true.
-            endif
-        endif
-    enddo
-    p%stimrate = stimrate
 	! TCR stimulation decay
     p%stimulation = p%stimulation*(1 - TCRdecayrate*DELTA_T)
 
-    if (unbound .and. cellist(kcell)%DCbound(1) == 0 .and. cellist(kcell)%DCbound(2) /= 0) then
-        cellist(kcell)%DCbound(1) = cellist(kcell)%DCbound(2)
-        cellist(kcell)%DCbound(2) = 0
-        cellist(kcell)%unbindtime(1) = cellist(kcell)%unbindtime(2)
-        cellist(kcell)%unbindtime(2) = tnow
-    endif
+	if (region == LYMPHNODE) then
+	! TCR stimulation
+		unbound = .false.
+		DC = cellist(kcell)%DCbound
+		stimrate = 0
+		do k = 1,MAX_DC_BIND
+			idc = DC(k)
+			if (idc /= 0) then
+				if (DClist(idc)%capable) then
+	!                dstimrate = TC_STIM_RATE_CONSTANT*DClist(idc)%density*p%avidity
+					dstimrate = TC_STIM_RATE_CONSTANT*stimulation_rate(DClist(idc)%density,p%avidity)
+					stimrate = stimrate + dstimrate
+					dstim = dstimrate*DELTA_T
+					p%stimulation = p%stimulation + dstim
+					p%stimulation = min(p%stimulation, STIMULATION_LIMIT)
+					DClist(idc)%stimulation = DClist(idc)%stimulation + dstim
+				else    ! unbind T cell from incapable DC
+					idc = cellist(kcell)%DCbound(k)
+					DClist(idc)%nbound = DClist(idc)%nbound - 1
+					DClist(idc)%ncogbound = DClist(idc)%ncogbound - 1
+					cellist(kcell)%DCbound(k) = 0
+					unbound = .true.
+				endif
+			endif
+		enddo
+		p%stimrate = stimrate
+		if (unbound .and. cellist(kcell)%DCbound(1) == 0 .and. cellist(kcell)%DCbound(2) /= 0) then
+			cellist(kcell)%DCbound(1) = cellist(kcell)%DCbound(2)
+			cellist(kcell)%DCbound(2) = 0
+			cellist(kcell)%unbindtime(1) = cellist(kcell)%unbindtime(2)
+			cellist(kcell)%unbindtime(2) = tnow
+		endif
 
-    flag = .false.
-    site = cellist(kcell)%site
-    if (use_cytokines) then
-        ! IL receptor stimulation
-        status = p%status
-        if (use_diffusion) then
-            C = cyt(site(1),site(2),site(3),:)
-        endif
-        S = p%stimulation
-        flag = .false.
-        do iseq = 1,Ncytokines
-            tag = cyt_tag(iseq)
-            kfrom = NP_offset(iseq)+1
-            kto = NP_offset(iseq+1)
-            if (use_diffusion) then
-                cyt_conc = C(iseq)
-            else
-                cyt_conc = cyt_mols(iseq)*mols_pM   ! -> conc in pM
-            endif
-            ctemp = cyt_conc
-            select case(tag)
-            case(IL2_TAG)
-                producing = IL2_production_status(p,tnow)
-                if (p%IL_state(kfrom) == 0) then    ! temporary measure to detect first call of IL2_update
-                    first = .true.
-                else
-                    first = .false.
-                endif
-                call IL2_update(p%cogID,ctype,tnow,S,p%IL_state(kfrom:kto),p%IL_statep(kfrom:kto), &
-                    first,producing,cyt_conc,Vc,DELTA_T,mrate(iseq),flag1)
-            case(IL4_TAG)
-                call IL4_update(p%IL_state(kfrom:kto))
-            case(IL7_TAG)
-                call IL7_update(p%IL_state(kfrom:kto))
-            case(IL9_TAG)
-                call IL9_update(p%IL_state(kfrom:kto))
-            case(IL15_TAG)
-                call IL15_update(p%IL_state(kfrom:kto))
-            case(IL21_TAG)
-                call IL21_update(p%IL_state(kfrom:kto))
-            end select
+		site = cellist(kcell)%site
+		if (use_cytokines) then
+			! IL receptor stimulation
+			status = p%status
+			if (use_diffusion) then
+				C = cyt(site(1),site(2),site(3),:)
+			endif
+			S = p%stimulation
+			do iseq = 1,Ncytokines
+				tag = cyt_tag(iseq)
+				kfrom = NP_offset(iseq)+1
+				kto = NP_offset(iseq+1)
+				if (use_diffusion) then
+					cyt_conc = C(iseq)
+				else
+					cyt_conc = cyt_mols(iseq)*mols_pM   ! -> conc in pM
+				endif
+				ctemp = cyt_conc
+				select case(tag)
+				case(IL2_TAG)
+					producing = IL2_production_status(p,tnow)
+					if (p%IL_state(kfrom) == 0) then    ! temporary measure to detect first call of IL2_update
+						first = .true.
+					else
+						first = .false.
+					endif
+					call IL2_update(p%cogID,ctype,tnow,S,p%IL_state(kfrom:kto),p%IL_statep(kfrom:kto), &
+						first,producing,cyt_conc,Vc,DELTA_T,mrate(iseq),flag1)
+				case(IL4_TAG)
+					call IL4_update(p%IL_state(kfrom:kto))
+				case(IL7_TAG)
+					call IL7_update(p%IL_state(kfrom:kto))
+				case(IL9_TAG)
+					call IL9_update(p%IL_state(kfrom:kto))
+				case(IL15_TAG)
+					call IL15_update(p%IL_state(kfrom:kto))
+				case(IL21_TAG)
+					call IL21_update(p%IL_state(kfrom:kto))
+				end select
 
-            if (use_diffusion) then
-! Concentration units
-! mrate = mass rate of flow in molecules/min
-! mrate*L_um3/Vc = molecules/L/min
-! mrate*L_um3*DELTA_T/Vc = molecules/L
-! mrate*L_um3*DELTA_T/Vc/Navo = moles/L = M
-! mrate*L_um3*DELTA_T*M_pM/Vc/Navo = pM
-! To convert total number of molecules in the region to conc in pM
-! mols * L_um3*M_pM/(NTcells*Vc*Navo)
-                C(iseq) = cyt_conc
-!                C(iseq) = C(iseq) + (mrate(iseq)/Vc)*DELTA_T*M_pM*L_um3/Navo    ! Vc/L_um3 ->free vol in L
-                if (C(iseq) < 0) then
-                    write(*,'(a,6i6,4f8.4)') 'WARNING: cyt < 0: ',kcell,p%cogID,iseq,site,Ctemp,C(iseq)
-                    C(iseq) = 0
-                endif
-                if (flag) write(*,'(a,2f8.3)') 'mrate, cyt_constit (mols/min): ',mrate(iseq),cyt_constit(iseq)*Vc
-            else
-                ! increment total number of molecules of this cytokine
-                dcyt_mols(iseq) = dcyt_mols(iseq) + (cyt_conc - ctemp)/(mols_pM*globalvar%NTcells)
-!                write(*,*) cyt_mols(iseq),dcyt_mols(iseq),ctemp,cyt_conc
-            endif
-        enddo
-        if (use_diffusion) then
-            cyt(site(1),site(2),site(3),:) = C
-        endif
-    endif
+				if (use_diffusion) then
+	! Concentration units
+	! mrate = mass rate of flow in molecules/min
+	! mrate*L_um3/Vc = molecules/L/min
+	! mrate*L_um3*DELTA_T/Vc = molecules/L
+	! mrate*L_um3*DELTA_T/Vc/Navo = moles/L = M
+	! mrate*L_um3*DELTA_T*M_pM/Vc/Navo = pM
+	! To convert total number of molecules in the region to conc in pM
+	! mols * L_um3*M_pM/(NTcells*Vc*Navo)
+					C(iseq) = cyt_conc
+	!                C(iseq) = C(iseq) + (mrate(iseq)/Vc)*DELTA_T*M_pM*L_um3/Navo    ! Vc/L_um3 ->free vol in L
+					if (C(iseq) < 0) then
+						write(*,'(a,6i6,4f8.4)') 'WARNING: cyt < 0: ',kcell,p%cogID,iseq,site,Ctemp,C(iseq)
+						C(iseq) = 0
+					endif
+				else
+					! increment total number of molecules of this cytokine
+					dcyt_mols(iseq) = dcyt_mols(iseq) + (cyt_conc - ctemp)/(mols_pM*globalvar%NTcells)
+	!                write(*,*) cyt_mols(iseq),dcyt_mols(iseq),ctemp,cyt_conc
+				endif
+			enddo
+			if (use_diffusion) then
+				cyt(site(1),site(2),site(3),:) = C
+			endif
+		endif
 
-    if (use_chemotaxis) then
-		! Note that stimrate is normalized with TC_STIM_RATE_CONSTANT for consistency
-		! with the calibration of S1P1/CD69 dynamics, which was carried out with
-		! normalized stimulation of approx. 1  This is easier than adjusting K1_CD69
-        call S1P1_update(p%CD69,p%S1P1,p%stimrate/TC_STIM_RATE_CONSTANT,DELTA_T)
-!        call S1P1_update(p%CD69,p%S1P1,p%stimrate,DELTA_T)
-    endif
+		if (use_chemotaxis) then
+			! Note that stimrate is normalized with TC_STIM_RATE_CONSTANT for consistency
+			! with the calibration of S1P1/CD69 dynamics, which was carried out with
+			! normalized stimulation of approx. 1  This is easier than adjusting K1_CD69
+			call S1P1_update(p%CD69,p%S1P1,p%stimrate/TC_STIM_RATE_CONSTANT,DELTA_T)
+	!        call S1P1_update(p%CD69,p%S1P1,p%stimrate,DELTA_T)
+		endif
+	endif
+
 ! Stage transition
     call updatestage(kcell, tnow, divide_flag)
 

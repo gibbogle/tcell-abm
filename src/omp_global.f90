@@ -99,7 +99,7 @@ integer, parameter :: MOL2_TAG   = 30
 
 ! T cell region
 integer, parameter :: LYMPHNODE = 1
-integer, parameter :: PERIPHERY = 2
+integer, parameter :: PERIPHERY = LYMPHNODE + 1
 
 ! T cell activation stage
 integer, parameter :: NAIVE      = 1
@@ -295,6 +295,7 @@ end type
 type global_type
     integer :: NTcells0
     integer :: NTcells
+    integer :: NTcellsPer
     integer :: NDC
     integer :: NDCalive
     integer :: Nsites
@@ -1340,12 +1341,28 @@ end function
 subroutine set_stage(p,stage)
 type(cog_type), pointer :: p
 integer :: stage
+integer :: status, oldstage, region
+integer(1) :: statusbyte(4)
+equivalence (status,statusbyte)
+
+call get_stage(p,oldstage,region)
+status = p%status
+!statusbyte(STAGE_BYTE) = stage
+statusbyte(STAGE_BYTE) = stage + (region-1)*STAGELIMIT
+p%status = status
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine set_stage_region(p,stage,region)
+type(cog_type), pointer :: p
+integer :: stage, region
 integer :: status
 integer(1) :: statusbyte(4)
 equivalence (status,statusbyte)
 
 status = p%status
-statusbyte(STAGE_BYTE) = stage
+statusbyte(STAGE_BYTE) = stage + (region-1)*STAGELIMIT
 p%status = status
 end subroutine
 
@@ -1376,6 +1393,23 @@ stage = statusbyte(STAGE_BYTE)
 region = LYMPHNODE
 if (stage > STAGELIMIT) then
 	stage = stage - STAGELIMIT
+	region = PERIPHERY
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine get_region(p,region)
+type(cog_type), pointer :: p
+integer :: region
+integer :: stage, status
+integer(1) :: statusbyte(4)
+equivalence (status,statusbyte)
+
+status = p%status
+stage = statusbyte(STAGE_BYTE)
+region = LYMPHNODE
+if (stage > STAGELIMIT) then
 	region = PERIPHERY
 endif
 end subroutine
@@ -1518,6 +1552,7 @@ endif
 end subroutine
 
 !--------------------------------------------------------------------------------
+! We display only T cells that are still in the lymphnode
 !--------------------------------------------------------------------------------
 subroutine save_cell_positions
 !!!use ifport
@@ -1604,6 +1639,8 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	do k = 1,lastcogID
 		kcell = cognate_list(k)
 		if (kcell > 0) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (region /= LYMPHNODE) cycle
 			site = cellist(kcell)%site
 	!        tcstate = mod(kcell,2) + 1
 			gen = get_generation(cellist(kcell)%cptr)
@@ -1614,7 +1651,6 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	!            tcbound = 1
 	!        endif
 !			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
-			call get_stage(cellist(kcell)%cptr,stage,region)
 			if (stage == NAIVE) then
 				itcstate = 0
 			else
@@ -1635,6 +1671,8 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	do k = 1,lastcogID
 		kcell = cognate_list(k)
 		if (kcell > 0) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (region /= LYMPHNODE) cycle
 			site = cellist(kcell)%site
 			do j = 1,2
 				idc = cellist(kcell)%DCbound(j)
@@ -1654,6 +1692,8 @@ else
 	! T cell section
 	do kcell = 1,nlist
 		if (cellist(kcell)%ID == 0) cycle  ! gap
+		call get_stage(cellist(kcell)%cptr,stage,region)
+		if (region /= LYMPHNODE) cycle
 		site = cellist(kcell)%site
 		bnd = cellist(kcell)%DCbound
 		ctype = cellist(kcell)%ctype
@@ -1663,7 +1703,6 @@ else
 		else
 			gen = get_generation(cellist(kcell)%cptr)
 !			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
-			call get_stage(cellist(kcell)%cptr,stage,region)
 			if (stage == NAIVE) then
 				itcstate = 0
 			else
@@ -1680,6 +1719,8 @@ else
 	! Bond section
 	do kcell = 1,nlist
 		if (cellist(kcell)%ID == 0) cycle  ! gap
+		call get_stage(cellist(kcell)%cptr,stage,region)
+		if (region /= LYMPHNODE) cycle
 		site = cellist(kcell)%site
 		do j = 1,2
 			idc = cellist(kcell)%DCbound(j)
@@ -1709,7 +1750,7 @@ real :: tcstate
 real :: Tcell_diam = 0.9
 real :: DC_diam = 1.8
 real :: spectrum_max = 10, spectrum_freefraction = 0.6
-integer :: gen, bnd(2)
+integer :: gen, stage, region, bnd(2)
 character*(64) :: fname = '\CMGUI\DCU\dcu_00000.exnode'
 
 write(fname(16:20),'(i5.5)') istep
@@ -1760,6 +1801,8 @@ write(nfcmgui,*) '    value.'
 do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell > 0) then
+		call get_stage(cellist(kcell)%cptr,stage,region)
+		if (region /= LYMPHNODE) cycle
         nd = nd+1
         site = cellist(kcell)%site
 !        tcstate = mod(kcell,2) + 1

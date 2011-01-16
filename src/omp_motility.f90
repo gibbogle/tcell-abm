@@ -691,13 +691,11 @@ end subroutine
 subroutine par_mover(sweep,kpar)
 integer :: sweep
 integer :: kpar
-integer :: site1(3), kcell, indx(2), slot, z, slice, site(3)
+integer :: site1(3), kcell, indx(2), slot, z, slice, site(3), stage, region
 logical :: go
 type(cell_type), pointer :: cell
 integer :: z_lo,z_hi
 
-!kpar = omp_get_thread_num()
-!write(*,*) 'kpar: ',kpar
 slice = sweep + 2*kpar
 do kcell = 1,nlist
 	if (Mnodes == 1) then
@@ -708,13 +706,11 @@ do kcell = 1,nlist
 	    z_hi = zoffset(slice+1)
 	endif
     cell => cellist(kcell)
-
-    !if (kcell == 5220) write(*,*) 'par_mover: ',kcell,istep,cell%step,cell%DCbound
-
     if (cell%ID == 0) cycle             ! skip gaps in the list
+    call get_stage(cell%cptr,stage,region)
+    if (region /= LYMPHNODE) cycle
     if (cell%step == istep) cycle
     if (cell%DCbound(1) /= 0 .or. cell%DCbound(2) /= 0) then
-!        if (cognate) call check_DCbound(cell%DCbound)
         cycle     ! skip cells bound to DC
     endif
     site1 = cell%site
@@ -738,10 +734,8 @@ do kcell = 1,nlist
 		site = cellist(kcell)%site
 	else
 		call jumper(kcell,indx,slot,go,kpar)
-	!	if (kcell == 5220) write(*,*) 'go: ',go,cellist(kcell)%site
 	endif
     cell%step = istep
-!    if (istep == 263) call check_xyz(kcell)
 enddo
 end subroutine
 
@@ -757,8 +751,6 @@ logical :: go
 type(cell_type), pointer :: cell
 integer :: x_lo,x_hi
 
-!kpar = omp_get_thread_num()
-!write(*,*) 'kpar: ',kpar
 slice = sweep + 2*kpar
 do kcell = 1,nlist
 	if (Mnodes == 1) then
@@ -773,7 +765,6 @@ do kcell = 1,nlist
     if (cell%ID == 0) cycle             ! skip gaps in the list
     if (cell%step == istep) cycle
     if (cell%DCbound(1) /= 0 .or. cell%DCbound(2) /= 0) then
-!        if (cognate) call check_DCbound(cell%DCbound)
         cycle     ! skip cells bound to DC
     endif
     site1 = cell%site
@@ -1216,9 +1207,6 @@ else
 	occupancy(site1(1),site1(2),site1(3))%indx(1) = indx1(2)
 	occupancy(site1(1),site1(2),site1(3))%indx(2) = 0
 endif
-!if (site2(3) == 3) then
-!	write(*,*) 'hi: ',kcell,site2,irel,occupancy(site2(1),site2(2),site2(3)-1)%indx(1)
-!endif
 end subroutine
 
 !--------------------------------------------------------------------------------

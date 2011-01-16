@@ -893,13 +893,14 @@ tnow = istep*DELTA_T
 do kcell = 1,nlist
     cell => cellist(kcell)
     if (cell%ID == 0) cycle
-
     if (evaluate_residence_time .or. track_DCvisits) then
         cognate = .false.
     else
         cog_ptr => cell%cptr
         cognate = (associated(cog_ptr))
     endif
+	call get_region(cog_ptr,region)
+	if (region /= LYMPHNODE) cycle
 
     ! Handle unbinding first
     nbnd = 0
@@ -1362,8 +1363,8 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! To test add_Tcell()
 !-----------------------------------------------------------------------------------------
-subroutine add_random_cells(n, ctype, gen, stage)
-integer :: n, ctype, gen, stage
+subroutine add_random_cells(n, ctype, gen, stage, region)
+integer :: n, ctype, gen, stage, region
 integer :: k, x, y, z, site(3), slots, kcell
 integer :: kpar=0
 logical :: ok
@@ -1377,7 +1378,7 @@ do while (k < n)
     slots = getslots(site)
     if (occupancy(x,y,z)%indx(1) >= 0 .and. slots < BOTH) then
         if (dbug) write(*,'(a,7i6)') 'add_random_cells: ',site,occupancy(x,y,z)%indx,slots
-        call add_Tcell(site,ctype,gen,stage,kcell,ok)
+        call add_Tcell(site,ctype,gen,stage,region,kcell,ok)
         if (dbug) write(*,'(a,7i6)') 'after add_random_cells: ',site,occupancy(x,y,z)%indx,slots
         call checkslots('add_random_cells: ',site)
         k = k+1
@@ -1525,7 +1526,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine traffic(ok)
 logical :: ok
-integer :: x, y, z, k, kcell, indx(2), ctype, gen, site(3), n, slot
+integer :: x, y, z, k, kcell, indx(2), ctype, gen, region, site(3), n, slot
 integer :: zin_min, zin_max, node_inflow, node_outflow, add(3), net_inflow, ihr
 !integer ::  zout_min, zout_max
 real(DP) :: R, df
@@ -1541,6 +1542,7 @@ endif
 ok = .true.
 !write(*,*) 'traffic'
 tnow = istep*DELTA_T
+region = LYMPHNODE
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
 df = globalvar%InflowTotal - node_inflow
@@ -1614,7 +1616,7 @@ do while (k < node_inflow)
 !            write(nfout,*) 'add cell ctype: ',ctype,ncogseed
         endif
 !        add(ctype) = add(ctype) + 1
-        call add_Tcell(site,ctype,gen,NAIVE,kcell,ok)
+        call add_Tcell(site,ctype,gen,NAIVE,region,kcell,ok)
         if (dbug) then
             write(nfres,'(a,5i4,i6)') 'added cell: ',k,site,ctype,kcell
 !            call check_xyz(6)
@@ -1679,6 +1681,7 @@ do while (k < node_outflow)
 enddo
 nadd_sites = nadd_sites + net_inflow
 globalvar%NTcells = globalvar%NTcells + net_inflow
+globalvar%NTcellsPer = globalvar%NTcellsPer + node_outflow
 if (dbug) call check_xyz(5)
 !if (net_inflow /= 0) then
 !    write(*,*) 'traffic: net inflow: ',node_inflow,node_outflow,net_inflow,globalvar%NTcells
@@ -1741,7 +1744,7 @@ end function
 subroutine chemo_traffic(ok)
 logical :: ok
 integer :: iexit, esite(3), site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv
-integer :: x, y, z, ctype, gen, node_inflow, node_outflow, net_inflow
+integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow
 real(DP) :: R, df
 logical :: left
 integer, allocatable :: permex(:)
@@ -1750,6 +1753,7 @@ real :: tnow, fract
 real :: exit_prob   ! 12 hr => 0.2, 24 hr => 0.1
 
 ok = .true.
+region = LYMPHNODE
 exit_prob = ep_factor/residence_time
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
@@ -1819,7 +1823,7 @@ do while (k < node_inflow)
             ncogseed = ncogseed + 1
         endif
 
-        call add_Tcell(site,ctype,gen,NAIVE,kcell,ok)
+        call add_Tcell(site,ctype,gen,NAIVE,region,kcell,ok)
         if (.not.ok) return
         k = k+1
         cycle
@@ -1879,6 +1883,7 @@ nadd_sites = nadd_sites + net_inflow
 total_in = total_in + node_inflow
 total_out = total_out + ne
 globalvar%NTcells = globalvar%NTcells + net_inflow
+globalvar%NTcellsPer = globalvar%NTcellsPer + node_outflow
 globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
 !write(*,'(a,4i8)') 'chemo_traffic: ',node_inflow,ne,net_inflow,globalvar%NTcells
 end subroutine
@@ -1888,7 +1893,7 @@ end subroutine
 ! left = .true.
 ! Currently, when a T cell exits the LN its ID is set to 0, and a gap is recorded in cellist(:).
 ! To keep track of a T cell in the periphery, we need to keep it in cellist(:), but somehow
-! flag it to indicate that it is not in the LN.
+! flag it to indicate that it is not in the LN.  Use region.
 !-----------------------------------------------------------------------------------------
 subroutine cell_exit(kcell,slot,esite,left)
 integer :: kcell, slot, esite(3)
@@ -1923,9 +1928,11 @@ elseif (associated(cellist(kcell)%cptr)) then
 else
     cognate = .false.
 endif
-ngaps = ngaps + 1
-gaplist(ngaps) = kcell
-cellist(kcell)%ID = 0
+!ngaps = ngaps + 1
+!gaplist(ngaps) = kcell
+!cellist(kcell)%ID = 0
+region = PERIPHERY
+call set_stage_region(p,stage,region)
 cellist(kcell)%DCbound = 0
 x = esite(1)
 y = esite(2)
@@ -3125,15 +3132,16 @@ end subroutine
 ! Using the complete list of cells, cellist(), extract info about the current state of the
 ! paracortex.  This info must be supplemented by counts of cells that have died and cells that
 ! have returned to the circulation.
+! We now store stim() and IL2sig() for cells in the periphery.
 !-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog, noncog, ntot, stage, region, i, iseq, error
+integer :: kcell, ctype, stype, ncog(2), noncog, ntot(2), stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact
-real :: stim(FINISHED), IL2sig(FINISHED), tgen, tnow, fac, act, cyt_conc, mols_pM
+real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
 type (cog_type), pointer :: p
 integer :: nst(FINISHED)
 integer, allocatable :: gendist(:)
@@ -3156,13 +3164,13 @@ div_gendist = 0
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
     p => cellist(kcell)%cptr
-    ntot = ntot + 1
+	call get_stage(p,stage,region)
+    ntot(region) = ntot(region) + 1
     ctype = cellist(kcell)%ctype
     stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
-        ncog = ncog + 1
+        ncog(region) = ncog(region) + 1
 !        stage = get_stage(p)
-		call get_stage(p,stage,region)
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3247,7 +3255,7 @@ write(*,*) '========= Average time to IL2 threshold: ',nIL2thresh,tIL2thresh/max
 write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
-write(nfout,'(2(i8,f8.0),6i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
+write(nfout,'(2(i8,f8.0),8i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
     fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 
 if (use_tcp) then
@@ -3277,7 +3285,7 @@ if (save_DCbinding) then
 endif
 
 nact = 100*act
-summaryData(1:8) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen/)
+summaryData(1:8) = (/istep,globalvar%NDCalive,nact,ntot(1),ncogseed,ncog(1),Ndead,teffgen/)
 
 end subroutine
 !--------------------------------------------------------------------------------
@@ -3321,6 +3329,8 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	do kc = 1,lastcogID
 		kcell = cognate_list(kc)
 		if (kcell > 0) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (region /= LYMPHNODE) cycle
 			k = k+1
 			j = 5*(k-1)
 			site = cellist(kcell)%site
@@ -3328,7 +3338,6 @@ if (.not.IV_SHOW_NONCOGNATE) then
 			gen = get_generation(cellist(kcell)%cptr)
 			bnd = cellist(kcell)%DCbound
 !			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
-			call get_stage(cellist(kcell)%cptr,stage,region)
 			if (stage == NAIVE) then
 				itcstate = 0
 			else
@@ -3597,6 +3606,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! This is the original version, using files to communicate signals and data with the Qt main.
+! NOT USED
 !-----------------------------------------------------------------------------------------
 subroutine simulate(ok)
 !!!use ifport
