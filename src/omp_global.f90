@@ -668,6 +668,7 @@ logical :: dbug = .false.
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
+!DEC$ ATTRIBUTES DLLEXPORT :: istep, nsteps
 contains
 
 !---------------------------------------------------------------------

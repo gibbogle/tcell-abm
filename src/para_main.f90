@@ -5,10 +5,12 @@
 
 PROGRAM omp_para
 use omp_main_mod
-integer :: ncpu
+use omp_global
+integer :: ncpu, res, summarydata(10)
 character*(128) :: infile,outfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
+!integer :: NX, NY, NZ, Nsteps, res
 character*(128) :: b, c, progname
 
 call process_command_line(ncpu,infile,outfile)
@@ -118,6 +120,14 @@ if (compute_travel_time) then
 endif
 write(*,*) 'call execute'
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
-
+!call get_dimensions(NX,NY,NZ,Nsteps)
+do istep = 1,Nsteps
+	call simulate_step(res)
+	if (mod(istep,240) == 0) then
+		call get_summary(summarydata)
+!summaryData(1:10) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd/)
+		write(*,'(10i7)') summarydata
+	endif
+enddo
 end
 

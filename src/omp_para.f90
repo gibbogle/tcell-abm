@@ -22,11 +22,11 @@
 ! else it is added to the end of the cell list.
 
 module omp_main_mod
-
+use omp_global
 use omp_behaviour
 use omp_diffuse
 use winsock
-!use aviewer
+!use aviewer 
 
 IMPLICIT NONE
 
@@ -1932,12 +1932,12 @@ if (cognate) then
     if (.not.evaluate_residence_time .and. activated) then
 		call efferent(p,ctype)
 	endif
-	if (activated) then
-		write(logmsg,'(a,i4,2f6.1)') "activated cognate cell left: stage: ",stage,cellist(kcell)%entrytime,tnow
-		call logger(logmsg)
-	else
+!	if (activated) then
+!		write(logmsg,'(a,i4,2f8.1)') "activated cognate cell left: stage: ",stage,cellist(kcell)%entrytime,tnow
+!		call logger(logmsg)
+!	else 
 !		call logger("non-activated cognate cell left") 
-    endif
+!    endif
 	if (SIMULATE_PERIPHERY .and. activated) then 
 		region = PERIPHERY
 		call set_stage_region(p,stage,region)
@@ -3110,17 +3110,6 @@ NY_dim = NY
 NZ_dim = NZ
 end subroutine
 
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-subroutine get_summary1(summaryData) BIND(C)
-!!DEC$ ATTRIBUTES DLLEXPORT :: get_summary
-use, intrinsic :: iso_c_binding
-integer(c_int) :: summaryData(*)
-
-!write(msg,'(2(i6,f8.0),5i8)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,Ndead,teffgen
-summaryData(1:4) = (/istep,0,0,0/)
-end subroutine
-
 !-----------------------------------------------------------------------------------------
 ! Using the complete list of cells, cellist(), extract info about the current state of the
 ! paracortex.  This info must be supplemented by counts of cells that have died and cells that
@@ -3230,7 +3219,7 @@ else
 endif
 if (.not.use_TCP) then
 write(*,'(a)') '----------------------------------------------------------------------'
-write(*,'(a,i6,3i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
+write(*,'(a,i6,4i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
 write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
