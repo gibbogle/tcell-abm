@@ -154,6 +154,7 @@ integer, parameter :: SCANNER_INTERVAL = 100
 real, parameter :: DELTA_T = 0.25       ! minutes
 logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals
 logical, parameter :: save_input = .true.
+logical, parameter :: SIMULATE_PERIPHERY = .true.
 
 !logical, parameter :: IN_VITRO = .true.
 integer, parameter :: NZ_IN_VITRO = 3
@@ -241,7 +242,7 @@ integer, parameter :: n_multiple_runs = 1
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.  ! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: suppress_exit = .false.        ! to test effect of S1P1 agonist, e.g. SEW8721 (Rosen hypothesis)
-logical, parameter :: L_selectin = .false.              ! T cell inflow is suppressed
+logical, parameter :: L_selectin = .true.              ! T cell inflow is suppressed
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -1206,6 +1207,7 @@ if (use_traffic) then
 else
     inflow0 = 0
 endif
+
 if (.not.steadystate) then     ! surrogate for modeling an immune response
     call generate_traffic(inflow0)
 else
@@ -1262,6 +1264,9 @@ else        !traffic_mode == TRAFFIC_MODE_2 or TRAFFIC_MODE_3
 endif
 
 if (L_selectin) then
+	if (mod(istep,1000) == 0) then
+		call logger('Using L_selectin!')
+	endif
     globalvar%OutflowTotal = globalvar%NTcells*DELTA_T/(RESIDENCE_TIME*60)
     globalvar%InflowTotal = 0
     return
@@ -1395,6 +1400,8 @@ if (stage > STAGELIMIT) then
 	stage = stage - STAGELIMIT
 	region = PERIPHERY
 endif
+!write(logmsg,*) 'get_stage: ',stage,region
+!call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -1692,8 +1699,6 @@ else
 	! T cell section
 	do kcell = 1,nlist
 		if (cellist(kcell)%ID == 0) cycle  ! gap
-		call get_stage(cellist(kcell)%cptr,stage,region)
-		if (region /= LYMPHNODE) cycle
 		site = cellist(kcell)%site
 		bnd = cellist(kcell)%DCbound
 		ctype = cellist(kcell)%ctype
@@ -1701,6 +1706,8 @@ else
 		if (stype == NONCOG_TYPE_TAG) then
 			itcstate = -1
 		else
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (region /= LYMPHNODE) cycle
 			gen = get_generation(cellist(kcell)%cptr)
 !			if (get_stage(cellist(kcell)%cptr) == NAIVE) then
 			if (stage == NAIVE) then
@@ -1719,8 +1726,10 @@ else
 	! Bond section
 	do kcell = 1,nlist
 		if (cellist(kcell)%ID == 0) cycle  ! gap
-		call get_stage(cellist(kcell)%cptr,stage,region)
-		if (region /= LYMPHNODE) cycle
+		if (associated(cellist(kcell)%cptr)) then
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (region /= LYMPHNODE) cycle
+		endif
 		site = cellist(kcell)%site
 		do j = 1,2
 			idc = cellist(kcell)%DCbound(j)
@@ -2097,7 +2106,8 @@ else
     DCinflux = temp
     dn_last = temp - DCinflux
 endif
-!write(*,*) 'DC rate: ',rate,DCinflux,dn
+!write(logmsg,*) 'DC rate: ',rate,DCinflux,dn
+!call logger(logmsg)
 end function
 
 !--------------------------------------------------------------------------------

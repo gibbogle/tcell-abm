@@ -730,9 +730,10 @@ void MainWindow::loadResultFile()
 	R->tnow = new double[R->nsteps];
 	R->nDC = new double[R->nsteps];
 	R->act = new double[R->nsteps];
-	R->ntot = new double[R->nsteps];
+	R->ntot_LN = new double[R->nsteps];
+	R->ncog_PER = new double[R->nsteps];
 	R->ncogseed = new double[R->nsteps];
-	R->ncog = new double[R->nsteps];
+	R->ncog_LN = new double[R->nsteps];
 	R->ndead = new double[R->nsteps];
 	R->teffgen = new double[R->nsteps];
 
@@ -754,9 +755,10 @@ void MainWindow::loadResultFile()
 				R->tnow[step] = step;		//data[1];
 				R->nDC[step] = data[2];
 				R->act[step] = data[3];
-				R->ntot[step] = data[4];
+				R->ntot_LN[step] = data[4];
+				R->ncog_PER[step] = data[4]/2;		// Just for testing
 				R->ncogseed[step] = data[5];
-				R->ncog[step] = data[6];
+				R->ncog_LN[step] = data[6];
 				R->ndead[step] = data[8];
 				R->teffgen[step] = data[9];
 			}
@@ -768,11 +770,11 @@ void MainWindow::loadResultFile()
 
 	// Compute the maxima
 	R->max_act = getMaximum(R,R->act);
-	R->max_ncog = getMaximum(R,R->ncog);
+	R->max_ncog_LN = getMaximum(R,R->ncog_LN);
 	R->max_ncogseed = getMaximum(R,R->ncogseed);
 	R->max_nDC = getMaximum(R,R->nDC);
 	R->max_teffgen = getMaximum(R,R->teffgen);
-	R->max_ntot = getMaximum(R,R->ntot);
+	R->max_ntot = getMaximum(R,R->ntot_LN);
 
 	// Now add the result set to the list
 	result_list.append(R);
@@ -1100,22 +1102,26 @@ void MainWindow::preConnection()
 	newR->tnow = new double[nsteps];
 	newR->nDC = new double[nsteps];
 	newR->act = new double[nsteps];
-	newR->ntot = new double[nsteps];
+	newR->ntot_LN = new double[nsteps];
+	newR->ncog_PER = new double[nsteps];
 	newR->ncogseed = new double[nsteps];
-	newR->ncog = new double[nsteps];
+	newR->ncog_LN = new double[nsteps];
 	newR->ndead = new double[nsteps];
 	newR->teffgen = new double[nsteps];
+	newR->nbnd = new double[nsteps];
 	LOG_MSG("preconnection: Allocated result set arrays");
 
 	step = -1;
 	newR->tnow[0] = 0;	// These are not the right initial values
 	newR->nDC[0] = 0;
 	newR->act[0] = 0;
-	newR->ntot[0] = 0;
+	newR->ntot_LN[0] = 0;
+	newR->ncog_PER[0] = 0;
 	newR->ncogseed[0] = 0;
-	newR->ncog[0] = 0;
+	newR->ncog_LN[0] = 0;
 	newR->ndead[0] = 0;
 	newR->teffgen[0] = 0;
+	newR->nbnd[0] = 0;
 
 	// Initialize graphs
 	initializeGraphs(newR);
@@ -1151,15 +1157,19 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     graph_act->setTitle("Total DC Antigen Activity");
 //    graph_act.setAxisTitle(Qwt.QwtPlot.yLeft, 'No. of Cells ')
 
-    graph_ntot = new Plot("ntot",R->casename);
-    graph_ntot->setTitle("Total T Cell Population");
-	graph_ntot->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
+	graph_ntot_LN = new Plot("ntot_LN",R->casename);
+	graph_ntot_LN->setTitle("Total T Cell Population in LN");
+	graph_ntot_LN->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
 //    graph_ntot.addCurve('Total DC antigen activity level')
     
-    graph_ncog = new Plot("ncog",R->casename);
-    graph_ncog->setTitle("Cognate T Cells");
-	graph_ncog->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
+	graph_ncog_LN = new Plot("ncog_LN",R->casename);
+	graph_ncog_LN->setTitle("Cognate T Cells in LN");
+	graph_ncog_LN->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
 //    graph_ncog->addCurve(1,"Total cells");
+
+	graph_ncog_PER = new Plot("ncog_PER",R->casename);
+	graph_ncog_PER->setTitle("Cognate T Cells in Periphery");
+	graph_ncog_PER->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
 
 	if (!show_outputdata) {
 		graph_ncogseed = new Plot("ncogseed",R->casename);
@@ -1172,28 +1182,42 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	graph_nDC->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
 
     graph_teffgen = new Plot("teffgen",R->casename);
-    graph_teffgen->setTitle("Efferent Cognate Cells");
+	graph_teffgen->setTitle("Efferent Activated Cognate Cells");
 	graph_teffgen->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
     
+	graph_nbnd = new Plot("nbnd",R->casename);
+	graph_nbnd->setTitle("Bound Cognate Cells");
+	graph_nbnd->setAxisTitle(QwtPlot::yLeft, "No. of Cells");
+
+	graph_dummy = new Plot("dummy",R->casename);
+	graph_dummy->setTitle("");
+	graph_dummy->setAxisTitle(QwtPlot::yLeft, "");
+
 	nGraphCases = 1;
 	graphResultSet[0] = R;
 
-    mdiArea->addSubWindow(graph_ncog);
+	mdiArea->addSubWindow(graph_ncog_LN);
     mdiArea->addSubWindow(graph_act);
-    mdiArea->addSubWindow(graph_ntot);
-    mdiArea->addSubWindow(graph_nDC);
+	mdiArea->addSubWindow(graph_ntot_LN);
+	mdiArea->addSubWindow(graph_ncog_PER);
+	mdiArea->addSubWindow(graph_nDC);
     mdiArea->addSubWindow(graph_teffgen);
-    if (show_outputdata) 
+	mdiArea->addSubWindow(graph_nbnd);
+	mdiArea->addSubWindow(graph_dummy);
+	if (show_outputdata)
 		mdiArea->addSubWindow(box_outputData);
 	else
 		mdiArea->addSubWindow(graph_ncogseed);
 
-    graph_ncog->show();
     graph_nDC->show();
     graph_act->show();
-    graph_ntot->show();
-    graph_teffgen->show();
-    if (show_outputdata) 
+	graph_ntot_LN->show();
+	graph_ncog_LN->show();
+	graph_ncog_PER->show();
+	graph_teffgen->show();
+	graph_nbnd->show();
+	graph_dummy->show();
+	if (show_outputdata)
 	    box_outputData->show();
 	else
 		graph_ncogseed->show();
@@ -1201,10 +1225,12 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     mdiArea->tileSubWindows();
 
 	graph_act->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
-    graph_ntot->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
-    graph_ncog->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
-    graph_nDC->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+	graph_ntot_LN->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+	graph_ncog_LN->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+	graph_ncog_PER->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+	graph_nDC->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
     graph_teffgen->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+	graph_nbnd->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
 	if (!show_outputdata)
 	    graph_ncogseed->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
 }
@@ -1214,17 +1240,17 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 void MainWindow::drawGraphs()
 {
 	RESULT_SET *R;
-	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_max = 0, ncogseed_max = 0;
+	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_LN_max = 0, ncog_PER_max = 0, nbnd_max = 0, ncogseed_max = 0;
 	for (int k=0; k<Plot::ncmax; k++) {
 		R = graphResultSet[k];
 		if (R != 0) {
 			graph_act->redraw(R->tnow, R->act, R->nsteps, R->casename);
-			graph_ntot->redraw(R->tnow, R->ntot, R->nsteps, R->casename);
+			graph_ntot_LN->redraw(R->tnow, R->ntot_LN, R->nsteps, R->casename);
 			graph_nDC->redraw(R->tnow, R->nDC, R->nsteps, R->casename);
 			graph_teffgen->redraw(R->tnow, R->teffgen, R->nsteps, R->casename);
-//			graph_ncog->redraw2(tnow, ncogseed, ncog, step+1);	
-//			graph_ncog->redraw2(newR->tnow, newR->ncogseed, newR->tnow, newR->ncog, step+1, step+1);	
-			graph_ncog->redraw(R->tnow, R->ncog, R->nsteps, R->casename);
+			graph_ncog_LN->redraw(R->tnow, R->ncog_LN, R->nsteps, R->casename);
+			graph_ncog_PER->redraw(R->tnow, R->ncog_PER, R->nsteps, R->casename);
+			graph_nbnd->redraw(R->tnow, R->nbnd, R->nsteps, R->casename);
 			if (!show_outputdata)
 				graph_ncogseed->redraw(R->tnow, R->ncogseed, R->nsteps, R->casename);
 
@@ -1232,22 +1258,28 @@ void MainWindow::drawGraphs()
 			ntot_max = max(ntot_max,R->max_ntot);
 			nDC_max = max(nDC_max,R->max_nDC);
 			teffgen_max = max(teffgen_max,R->max_teffgen);
-			ncog_max = max(ncog_max,R->max_ncog);
+			ncog_LN_max = max(ncog_LN_max,R->max_ncog_LN);
+			ncog_PER_max = max(ncog_PER_max,R->max_ncog_PER);
 			ncogseed_max = max(ncogseed_max,R->max_ncogseed);
+			nbnd_max = max(nbnd_max,R->max_nbnd);
 		}
 	}
 	graph_act->setYScale(act_max);
-	graph_ntot->setYScale(ntot_max);
-	graph_ncog->setYScale(ncog_max);
+	graph_ntot_LN->setYScale(ntot_max);
+	graph_ncog_PER->setYScale(ntot_max);
+	graph_ncog_LN->setYScale(ncog_LN_max);
 	graph_nDC->setYScale(nDC_max);
 	graph_teffgen->setYScale(teffgen_max);
+	graph_nbnd->setYScale(nbnd_max);
 	if (!show_outputdata)
 		graph_ncogseed->setYScale(ncogseed_max);
 	graph_act->replot();
-	graph_ntot->replot();
-	graph_ncog->replot();
+	graph_ntot_LN->replot();
+	graph_ncog_PER->replot();
+	graph_ncog_LN->replot();
 	graph_nDC->replot();
 	graph_teffgen->replot();
+	graph_nbnd->replot();
 	if (!show_outputdata)
 		graph_ncogseed->replot();
 }
@@ -1290,19 +1322,21 @@ void MainWindow::showSummary()
 	newR->tnow[step] = step;		//summaryData[0];
 	newR->nDC[step] = summaryData[1];
 	newR->act[step] = summaryData[2]/100;
-	newR->ntot[step] = summaryData[3];
+	newR->ntot_LN[step] = summaryData[3];
 	newR->ncogseed[step] = summaryData[4];
-	newR->ncog[step] = summaryData[5];
-	newR->ndead[step] = summaryData[6];
-	newR->teffgen[step] = summaryData[7];
+	newR->ncog_LN[step] = summaryData[5];
+	newR->ncog_PER[step] = summaryData[6];
+	newR->ndead[step] = summaryData[7];
+	newR->teffgen[step] = summaryData[8];
+	newR->nbnd[step] = summaryData[9];
 
 	graph_act->redraw(newR->tnow, newR->act, step+1, casename);
-	graph_ntot->redraw(newR->tnow, newR->ntot, step+1, casename);
+	graph_ntot_LN->redraw(newR->tnow, newR->ntot_LN, step+1, casename);
+	graph_ncog_PER->redraw(newR->tnow, newR->ncog_PER, step+1, casename);
 	graph_nDC->redraw(newR->tnow, newR->nDC, step+1, casename);
 	graph_teffgen->redraw(newR->tnow, newR->teffgen, step+1, casename);
-//    graph_ncog->redraw2(tnow, ncogseed, ncog, step+1);
-//    graph_ncog->redraw2(newR->tnow, newR->ncogseed, newR->tnow, newR->ncog, step+1, step+1);
-	graph_ncog->redraw(newR->tnow, newR->ncog, step+1, casename);
+	graph_ncog_LN->redraw(newR->tnow, newR->ncog_LN, step+1, casename);
+	graph_nbnd->redraw(newR->tnow, newR->nbnd, step+1, casename);
 	if (!show_outputdata)
 		graph_ncogseed->redraw(newR->tnow, newR->ncogseed, step+1, casename);
 
@@ -1345,8 +1379,8 @@ void MainWindow::outputData(QString qdata)
 
 	
     QStringList dataList = qdata.split(" ",QString::SkipEmptyParts);
-	double data[9];
-	for (int k=0; k<9; k++) 
+	double data[10];
+	for (int k=0; k<10; k++)
 		data[k] = dataList[k].toDouble();
 	step++;
 	if (step >= newR->nsteps) {
@@ -1357,19 +1391,21 @@ void MainWindow::outputData(QString qdata)
     newR->tnow[step] = step;		//data[1];
     newR->nDC[step] = data[2];
     newR->act[step] = data[3];
-    newR->ntot[step] = data[4];
-    newR->ncogseed[step] = data[5];
-    newR->ncog[step] = data[6];
-    newR->ndead[step] = data[7];
-    newR->teffgen[step] = data[8];
-	
+	newR->ntot_LN[step] = data[4];
+	newR->ncogseed[step] = data[5];
+	newR->ncog_LN[step] = data[6];
+	newR->ncog_PER[step] = data[7];
+	newR->ndead[step] = data[8];
+	newR->teffgen[step] = data[9];
+	newR->nbnd[step] = data[10];
+
     graph_act->redraw(newR->tnow, newR->act, step+1, casename);
-    graph_ntot->redraw(newR->tnow, newR->ntot, step+1, casename);
-    graph_nDC->redraw(newR->tnow, newR->nDC, step+1, casename);
+	graph_ntot_LN->redraw(newR->tnow, newR->ntot_LN, step+1, casename);
+	graph_ncog_PER->redraw(newR->tnow, newR->ncog_PER, step+1, casename);
+	graph_nDC->redraw(newR->tnow, newR->nDC, step+1, casename);
     graph_teffgen->redraw(newR->tnow, newR->teffgen, step+1, casename);
-//    graph_ncog->redraw2(tnow, ncogseed, ncog, step+1);	
-//    graph_ncog->redraw2(newR->tnow, newR->ncogseed, newR->tnow, newR->ncog, step+1, step+1);	
-    graph_ncog->redraw(newR->tnow, newR->ncog, step+1, casename);	
+	graph_ncog_LN->redraw(newR->tnow, newR->ncog_LN, step+1, casename);
+	graph_nbnd->redraw(newR->tnow, newR->nbnd, step+1, casename);
 	if (!show_outputdata)
 		graph_ncogseed->redraw(newR->tnow, newR->ncogseed, step+1, casename);	
 }
@@ -1420,11 +1456,13 @@ void MainWindow::postConnection()
 	}
 	// Compute the maxima
 	newR->max_act = getMaximum(newR,newR->act);
-	newR->max_ncog = getMaximum(newR,newR->ncog);
+	newR->max_ncog_LN = getMaximum(newR,newR->ncog_LN);
+	newR->max_ncog_PER = getMaximum(newR,newR->ncog_PER);
 	newR->max_ncogseed = getMaximum(newR,newR->ncogseed);
 	newR->max_nDC = getMaximum(newR,newR->nDC);
 	newR->max_teffgen = getMaximum(newR,newR->teffgen);
-	newR->max_ntot = getMaximum(newR,newR->ntot);
+	newR->max_ntot = getMaximum(newR,newR->ntot_LN);
+	newR->max_nbnd = getMaximum(newR,newR->nbnd);
 	// Add the new result set to the list
 //	result_list.append(newR);
 //	vtk->renderCells(true,true);		// for the case that the VTK page is viewed only after the execution is complete
@@ -1494,10 +1532,12 @@ void MainWindow::clearAllGraphs()
 {
 	if (nGraphCases > 0) {
 		graph_act->removeAllCurves();
-		graph_ntot->removeAllCurves();
+		graph_ntot_LN->removeAllCurves();
+		graph_ncog_PER->removeAllCurves();
 		graph_nDC->removeAllCurves();
 		graph_teffgen->removeAllCurves();
-		graph_ncog->removeAllCurves();
+		graph_ncog_LN->removeAllCurves();
+		graph_nbnd->removeAllCurves();
 		if (!show_outputdata)
 			graph_ncogseed->removeAllCurves();
 		nGraphCases = 0;
@@ -1569,18 +1609,22 @@ void MainWindow::addGraph()
 	nGraphCases++;
 	// First add the curves
 	graph_act->addCurve(R->casename);
-	graph_ntot->addCurve(R->casename);
+	graph_ntot_LN->addCurve(R->casename);
+	graph_ncog_PER->addCurve(R->casename);
 	graph_nDC->addCurve(R->casename);
 	graph_teffgen->addCurve(R->casename);
-	graph_ncog->addCurve(R->casename);
+	graph_ncog_LN->addCurve(R->casename);
+	graph_nbnd->addCurve(R->casename);
 	if (!show_outputdata)
 		graph_ncogseed->addCurve(R->casename);
 	// Adjust the x axis scale
 	graph_act->setAxisAutoScale(QwtPlot::xBottom);
-    graph_ntot->setAxisAutoScale(QwtPlot::xBottom);
-    graph_ncog->setAxisAutoScale(QwtPlot::xBottom);
+	graph_ntot_LN->setAxisAutoScale(QwtPlot::xBottom);
+	graph_ncog_PER->setAxisAutoScale(QwtPlot::xBottom);
+	graph_ncog_LN->setAxisAutoScale(QwtPlot::xBottom);
     graph_nDC->setAxisAutoScale(QwtPlot::xBottom);
     graph_teffgen->setAxisAutoScale(QwtPlot::xBottom);
+	graph_nbnd->setAxisAutoScale(QwtPlot::xBottom);
 	if (!show_outputdata)
 	    graph_ncogseed->setAxisAutoScale(QwtPlot::xBottom);
 	// Now redraw with the data
@@ -1625,10 +1669,12 @@ void MainWindow::removeGraph()
 	RESULT_SET *R = graphResultSet[i];
 	// First remove the curves
 	graph_act->removeCurve(R->casename);
-	graph_ntot->removeCurve(R->casename);
+	graph_ntot_LN->removeCurve(R->casename);
+	graph_ncog_PER->removeCurve(R->casename);
 	graph_nDC->removeCurve(R->casename);
 	graph_teffgen->removeCurve(R->casename);
-	graph_ncog->removeCurve(R->casename);
+	graph_ncog_LN->removeCurve(R->casename);
+	graph_nbnd->removeCurve(R->casename);
 	if (!show_outputdata)
 		graph_ncogseed->removeCurve(R->casename);
 	// Then remove the graph case

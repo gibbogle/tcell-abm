@@ -146,12 +146,13 @@ void ExecThread::run()
 	*/
 #else
 	paused = false;
-//	LOG_MSG("execute called");
+	Sleep(100);
+	LOG_MSG("execute called");
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,outfile,&len_outfile);
-//	LOG_MSG("execute returned");
+	LOG_MSG("execute returned");
 	get_dimensions(&NX,&NY,&NZ);
-//	sprintf(msg,"exthread: nsteps: %d",nsteps);
-//	LOG_MSG(msg);
+	sprintf(msg,"exthread: nsteps: %d, NX,NY,NZ: %d %d %d",nsteps,NX,NY,NZ);
+	LOG_MSG(msg);
 	for (int i=1; i<= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {

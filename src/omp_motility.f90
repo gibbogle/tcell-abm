@@ -15,12 +15,12 @@ contains
 !--------------------------------------------------------------------------------
 subroutine jumper(kcell,indx1,kslot1,go,kpar)
 integer :: kpar,kcell,indx1(2),kslot1
-logical :: go   !Lwall, Rwall
+logical :: go
 type (cell_type), pointer :: cell
 integer :: fullslots1,fullslots2,site1(3),site2(3),kslot2,stype
 integer :: irel,dir1,lastdir1,indx2(2),k,z
 integer :: savesite2(3,MAXRELDIR), saveslots2(MAXRELDIR)
-real(DP) :: psum, p(MAXRELDIR), R    !, hole_p = 1.0, full_p = 0.2
+real(DP) :: psum, p(MAXRELDIR), R 
 
 cell => cellist(kcell)
 site1 = cell%site
@@ -28,8 +28,6 @@ if (site1(1) < 1) then
     write(*,*) 'jumper: bad site1: ',site1
     stop
 endif
-!if (CHECKING > 0) call checkslots('jumper1',site1)
-!fullslots1 = getslots(site1)
 fullslots1 = 0
 do k = 1,2
     if (indx1(k) > 0) then
@@ -40,9 +38,7 @@ if (kcell == idbug) then
     write(*,'(a,5i6)') 'jumper: ',indx1,site1
 endif
 if (fullslots1 /= BOTH) then
-!    call random_number(R)
     R = par_uni(kpar)
-!    if (dbug .and. kcell == 9007) write(nfres,'(a,i6,2f10.6)') 'go?: ',kcell,dirprob(0),R
     if (R <= dirprob(0)) then    ! case of no jump
 	    go = .false.
         return
@@ -62,7 +58,6 @@ do irel = 1,nreldir
 	if (inside_xyz(site2)) then
 	    indx2 = occupancy(site2(1),site2(2),site2(3))%indx
 		if (indx2(1) >= 0) then     ! not OUTSIDE_TAG or DC
-!            fullslots2 = getslots(site2)
             fullslots2 = 0
             do k = 1,2
                 if (indx2(k) > 0) then
@@ -99,13 +94,8 @@ else
 endif
 
 ! Now choose a direction on the basis of these probs p()
-!call random_number(R)
 R = 0
 R = par_uni(kpar)
-if (dbug .and. kcell >= 51123) then
-    write(nfres,'(a,i6,f10.6)') 'jumper: ',kcell,R
-    write(nfres,'(5f10.6)') p(1:nreldir)
-endif
 R = psum*R
 psum = 0
 do irel = 1,nreldir
@@ -129,7 +119,6 @@ endif
 
 fullslots2 = saveslots2(irel)
 if (fullslots2 == 0) then       ! randomly select a slot
-!    call random_number(R)
     R = par_uni(kpar)
     if (dbug .and. kcell >= 51123) write(nfres,'(a,i6,f15.9)') 'slot?: ',kcell,R
     if (R < 0.5) then
@@ -149,14 +138,6 @@ cell%site = site2
 cell%lastdir = dir1
 occupancy(site2(1),site2(2),site2(3))%indx(kslot2) = kcell
 occupancy(site1(1),site1(2),site1(3))%indx(kslot1) = 0
-
-!if (CHECKING > 0) then
-!    call checkslots('jumper2',site1)
-!    call checkslots('jumper3',site2)
-!endif
-
-if (dbug .and. kcell == 51124) stop
-
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -707,8 +688,10 @@ do kcell = 1,nlist
 	endif
     cell => cellist(kcell)
     if (cell%ID == 0) cycle             ! skip gaps in the list
-    call get_stage(cell%cptr,stage,region)
-    if (region /= LYMPHNODE) cycle
+    if (associated(cell%cptr)) then
+		call get_stage(cell%cptr,stage,region)
+		if (region /= LYMPHNODE) cycle
+	endif
     if (cell%step == istep) cycle
     if (cell%DCbound(1) /= 0 .or. cell%DCbound(2) /= 0) then
         cycle     ! skip cells bound to DC
@@ -731,7 +714,6 @@ do kcell = 1,nlist
     endif
 	if (use_chemotaxis) then
 		call chemo_jumper(kcell,indx,slot,go,kpar)
-		site = cellist(kcell)%site
 	else
 		call jumper(kcell,indx,slot,go,kpar)
 	endif

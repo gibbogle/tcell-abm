@@ -163,8 +163,11 @@ void Plot::redraw(double *x, double *y, int n, QString name)
 //-----------------------------------------------------------------------------------------
 void Plot::redraw2(double *x1, double *y1, double *x2, double *y2, int n1, int n2)
 {
+	LOG_MSG("redraw2");
 	if (n1 == 1) { // That is, this is the first plotting instance.
-        yscale = calc_yscale(y2[0]); 
+//        yscale = calc_yscale(y2[0]);
+		yscale = max(yscale,calc_yscale(y1[0]));
+		yscale = max(yscale,calc_yscale(y2[0]));
 		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
 	}
     curve[0]->setData(x1, y1, n1);
@@ -174,7 +177,11 @@ void Plot::redraw2(double *x1, double *y1, double *x2, double *y2, int n1, int n
 	curve[1]->setPen(*pen);
 	delete pen;
 	this->insertLegend(&QwtLegend(), QwtPlot::RightLegend);
-    double ylast = y2[n2-1];
+	double ylast = y1[n1-1];
+	double ylast2 = y2[n2-1];
+	if (ylast2 > ylast) {
+		ylast = ylast2;
+	}
 	if (ylast > yscale) {
         yscale = calc_yscale(ylast);
 		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);

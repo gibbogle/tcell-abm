@@ -9,7 +9,8 @@ INCLUDEPATH  += c:/qt/qwt-5.2.1/src
 
 FORMS         = ABM_GUI.ui
 HEADERS       = mainwindow.h qmylabel.h params.h plot.h log.h myvtk.h misc.h \
-    			libpara32.h
+    			libpara32.h \
+    result_set.h
 RESOURCES     += icons.qrc
 SOURCES       = main.cpp mainwindow.cpp params.cpp plot.cpp \
                 myvtk.cpp misc.cpp lognormal.cpp
@@ -42,4 +43,3 @@ LIBS += C:\windows\system\libpara32_ms.dll
 
 DEFINES += __COMPILETIME_LOADING__
 # Note: On Windows compile-time DLL loading apparently does not permit OpenMP to use multiple threads
-

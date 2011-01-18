@@ -218,7 +218,7 @@ else
     globalvar%Radius = 0
 endif
 
-max_nlist = NX*NY*NZ
+max_nlist = 1.5*NX*NY*NZ
 
 allocate(occupancy(NX,NY,NZ))
 allocate(cellist(max_nlist))
@@ -899,8 +899,10 @@ do kcell = 1,nlist
         cog_ptr => cell%cptr
         cognate = (associated(cog_ptr))
     endif
-	call get_region(cog_ptr,region)
-	if (region /= LYMPHNODE) cycle
+    if (cognate) then
+		call get_region(cog_ptr,region)
+		if (region /= LYMPHNODE) cycle
+	endif
 
     ! Handle unbinding first
     nbnd = 0
@@ -1521,18 +1523,16 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! In this test code the number of cells that leave exactly matches the number that enter.
+! The number of cells that leave exactly matches the number that enter.
 ! ZIN_FRACTION = fraction of radius over which inflow traffic occurs
 !-----------------------------------------------------------------------------------------
 subroutine traffic(ok)
 logical :: ok
 integer :: x, y, z, k, kcell, indx(2), ctype, gen, region, site(3), n, slot
 integer :: zin_min, zin_max, node_inflow, node_outflow, add(3), net_inflow, ihr
-!integer ::  zout_min, zout_max
 real(DP) :: R, df
 real :: tnow
 logical :: left
-!type(cog_type), pointer :: p
 integer :: kpar=0
 
 if (.not.use_blob) then
@@ -1546,7 +1546,6 @@ region = LYMPHNODE
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
 df = globalvar%InflowTotal - node_inflow
-!call random_number(R)
 R = par_uni(kpar)
 if (dbug) write(nfres,'(a,2f10.6)') 'traffic: in: ',df,R
 if (R < df) then
@@ -1569,9 +1568,6 @@ gen = 1
 add = 0
 zin_max = min(z0 + globalvar%Radius,real(NZ))
 zin_min = max(zin_max - ZIN_FRACTION*globalvar%Radius,1.0)
-!zout_min = max(z0 - globalvar%Radius,1.0)
-!zout_max = min(zout_min + ZOUT_FRACTION*globalvar%Radius,z0)
-!write(*,'(a,4i6)') 'zin,zout: ',zin_min,zin_max,zout_min,zout_max
 
 ! Inflow
 k = 0
@@ -1613,32 +1609,26 @@ do while (k < node_inflow)
         endif
         if (ctype /= NONCOG_TYPE_TAG) then
             ncogseed = ncogseed + 1
-!            write(nfout,*) 'add cell ctype: ',ctype,ncogseed
         endif
-!        add(ctype) = add(ctype) + 1
         call add_Tcell(site,ctype,gen,NAIVE,region,kcell,ok)
         if (dbug) then
             write(nfres,'(a,5i4,i6)') 'added cell: ',k,site,ctype,kcell
-!            call check_xyz(6)
          endif
         if (.not.ok) return
         k = k+1
         cycle
     endif
 enddo
-if (dbug) call check_xyz(4)
+
 ! Outflow
 k = 0
 do while (k < node_outflow)
-!    call random_number(R)
     R = par_uni(kpar)
     if (dbug) write(nfres,'(a,f10.6)') 'out x R: ',R
     x = 1 + R*NX
-!    call random_number(R)
     R = par_uni(kpar)
     if (dbug) write(nfres,'(a,f10.6)') 'out y R: ',R
     y = 1 + R*NY
-!    call random_number(R)
     R = par_uni(kpar)
     if (dbug) write(nfres,'(a,f10.6)') 'out z R: ',R
     z = 1 + R*NZ        ! any z is OK to exit
@@ -1646,12 +1636,9 @@ do while (k < node_outflow)
         ! accept it
     elseif (exit_region == EXIT_LOWERHALF) then
         if (z > z0) cycle
-!        z = 1 + R*NZ/2.     ! lower half of the blob
-!        z = random_int(zout_min,zout_max,kpar)
     endif
     indx = occupancy(x,y,z)%indx
     if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
-
     if (indx(2) > 0) then
         slot = 2
     elseif (indx(1) > 0) then
@@ -1682,14 +1669,6 @@ enddo
 nadd_sites = nadd_sites + net_inflow
 globalvar%NTcells = globalvar%NTcells + net_inflow
 globalvar%NTcellsPer = globalvar%NTcellsPer + node_outflow
-if (dbug) call check_xyz(5)
-!if (net_inflow /= 0) then
-!    write(*,*) 'traffic: net inflow: ',node_inflow,node_outflow,net_inflow,globalvar%NTcells
-!endif
-!if (avid_debug) then
-!    kcell = 39335
-!    write(nfout,'(a,i7,f8.4)') 'end of traffic: ',kcell, cellist(kcell)%cptr%avidity
-!endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1899,10 +1878,11 @@ subroutine cell_exit(kcell,slot,esite,left)
 integer :: kcell, slot, esite(3)
 logical :: left
 integer :: x, y, z, ctype, gen, stage, region
-!real :: tnow, tin
-logical :: cognate
+real :: tnow
+logical :: cognate, activated
 type(cog_type), pointer :: p
 
+tnow = istep*DELTA_T
 left = .false.
 if (cellist(kcell)%DCbound(1) /= 0) return     ! MUST NOT BE BOUND TO A DC!!!!!!!!!!!!!!!
 if (evaluate_residence_time .or. track_DCvisits) then
@@ -1928,11 +1908,7 @@ elseif (associated(cellist(kcell)%cptr)) then
 else
     cognate = .false.
 endif
-!ngaps = ngaps + 1
-!gaplist(ngaps) = kcell
-!cellist(kcell)%ID = 0
-region = PERIPHERY
-call set_stage_region(p,stage,region)
+! For initial testing, remove cells that leave the LN
 cellist(kcell)%DCbound = 0
 x = esite(1)
 y = esite(2)
@@ -1948,10 +1924,33 @@ else
     endif
 endif
 if (cognate) then
-    if (.not.evaluate_residence_time) then
-        call efferent(kcell)
+	if (stage > CLUSTERS) then
+		activated = .true.
+	else
+		activated = .false.
+	endif
+    if (.not.evaluate_residence_time .and. activated) then
+		call efferent(p,ctype)
+	endif
+	if (activated) then
+		write(logmsg,'(a,i4,2f6.1)') "activated cognate cell left: stage: ",stage,cellist(kcell)%entrytime,tnow
+		call logger(logmsg)
+	else
+!		call logger("non-activated cognate cell left") 
     endif
-    cognate_list(p%cogID) = 0
+	if (SIMULATE_PERIPHERY .and. activated) then 
+		region = PERIPHERY
+		call set_stage_region(p,stage,region)
+	else
+		ngaps = ngaps + 1
+		gaplist(ngaps) = kcell
+		cellist(kcell)%ID = 0
+	    cognate_list(p%cogID) = 0
+	endif
+else
+	ngaps = ngaps + 1
+	gaplist(ngaps) = kcell
+	cellist(kcell)%ID = 0
 endif
 left = .true.
 end subroutine
@@ -2186,7 +2185,7 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Sites are added to occupancy().  The general idea is to preserve the shape of the
+! Sites are added to occupancy().  The general idea is to preserve the shape of the 
 ! T cell zone, i.e. a spherical blob remains roughly spherical.
 !-----------------------------------------------------------------------------------------
 subroutine add_sites(n,ok)
@@ -2199,7 +2198,8 @@ integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
 ok = .true.
-!write(*,'(a,i6,f8.2)') 'add_sites: ',n,globalvar%Radius
+!write(logmsg,'(a,i5,i7,f8.2)') 'add_sites: ',n,globalvar%Nsites,globalvar%Radius
+!call logger(logmsg)
 r2 = globalvar%Radius*globalvar%Radius
 maxblist = 4*PI*r2*0.1*globalvar%Radius
 allocate(t(maxblist))
@@ -2464,19 +2464,12 @@ end subroutine
 ! Counts efferent cognate cells, and records their generation distribution.
 ! Only activated cells (stage >= CLUSTERS) are counted
 !--------------------------------------------------------------------------------
-subroutine efferent(kcell)
-integer :: kcell
-integer :: ctype, gen, stage, region, i
-real :: avid
+subroutine efferent(p,ctype)
 type (cog_type), pointer :: p
+integer :: ctype, gen, i
+real :: avid
 
-ctype = cellist(kcell)%ctype
-p => cellist(kcell)%cptr
-!stage = get_stage(p)
-call get_stage(p,stage,region)
 gen = get_generation(p)
-if (stage < CLUSTERS) return
-
 if (ctype > NCTYPES) then
     write(*,*) 'efferent: bad cell type:', ctype
     stop
@@ -3139,7 +3132,7 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog(2), noncog, ntot(2), stage, region, i, iseq, error
+integer :: kcell, ctype, stype, ncog(2), noncog, ntot, nbnd, stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
 type (cog_type), pointer :: p
@@ -3156,6 +3149,7 @@ tnow = istep*DELTA_T
 noncog = 0
 ncog = 0
 ntot = 0
+nbnd = 0
 nst = 0
 stim = 0
 IL2sig = 0
@@ -3164,13 +3158,22 @@ div_gendist = 0
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
     p => cellist(kcell)%cptr
-	call get_stage(p,stage,region)
-    ntot(region) = ntot(region) + 1
+    if (associated(p)) then
+		call get_stage(p,stage,region)
+	else
+		stage = 0
+		region = LYMPHNODE
+	endif
+	if (region == LYMPHNODE) then
+	    ntot = ntot + 1
+	endif
     ctype = cellist(kcell)%ctype
     stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
         ncog(region) = ncog(region) + 1
-!        stage = get_stage(p)
+		if (cellist(kcell)%DCbound(1) > 0 .or. cellist(kcell)%DCbound(2) > 0) then
+			nbnd = nbnd + 1
+		endif
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3255,7 +3258,7 @@ write(*,*) '========= Average time to IL2 threshold: ',nIL2thresh,tIL2thresh/max
 write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
-write(nfout,'(2(i8,f8.0),8i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
+write(nfout,'(2(i8,f8.0),7i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
     fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 
 if (use_tcp) then
@@ -3285,8 +3288,7 @@ if (save_DCbinding) then
 endif
 
 nact = 100*act
-summaryData(1:8) = (/istep,globalvar%NDCalive,nact,ntot(1),ncogseed,ncog(1),Ndead,teffgen/)
-
+summaryData(1:10) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd/)
 end subroutine
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
@@ -3541,6 +3543,9 @@ istep = istep + 1
 !write(logmsg,*) 'simulate_step: ',istep
 !call logger(logmsg)
 
+if (mod(istep,240) == 0) then
+    globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
+endif
 if (use_cytokines) then
     if (use_diffusion) then
         call diffuser
@@ -3555,7 +3560,10 @@ if (use_traffic .and. mod(istep,SCANNER_INTERVAL) == 0) then
 	if (dbug) write(*,*) 'did scanner'
 endif
 call mover(ok)
-if (.not.ok) return
+if (.not.ok) then
+	call logger("mover returned error")
+	return
+endif
 !	if (dbug) write(*,*) 'did mover'
 if (dbug) call check_xyz(1)
 
@@ -3904,7 +3912,7 @@ if (use_CPORT1) then
 	call logger(logmsg)
 endif
 ! Allow time for completion of the connection
-call sleeper(1)
+call sleeper(2)
 end subroutine
 
 
@@ -3945,6 +3953,7 @@ call logger(logmsg)
     endif
 #endif
 
+call logger("read_cell_params")
 call read_cell_params(ok)
 if (.not.ok) return
 

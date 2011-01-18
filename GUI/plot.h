@@ -31,14 +31,14 @@ public:
 	void removeAllCurves();
 	void redraw(double *, double *, int, QString);
 //    void redraw2(double *, double *, double *, int);
-    void redraw2(double *, double *, double *, double *, int, int);
-    void draw2(double *, double *, double *, double *, int, int);
+	void redraw2(double *, double *, double *, double *, int, int);
+	void draw2(double *, double *, double *, double *, int, int);
 	void setYScale(double);
 	double calc_yscale(double);
 
 	QString name;
-	static const int ncmax = 6;
-        QwtPlotCurve *curve[ncmax];
+	static const int ncmax = 8;
+	QwtPlotCurve *curve[ncmax];
 	double xscale;
 	double yscale;
 	int ncurves;

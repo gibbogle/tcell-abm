@@ -226,11 +226,15 @@ private:
 	RESULT_SET *newR;
 
 	Plot *graph_act;
-	Plot *graph_ntot;
-	Plot *graph_ncog;
+	Plot *graph_ntot_LN;
+	Plot *graph_ncog_PER;
+	Plot *graph_ncog_LN;
+//	Plot *graph_ncog;
 	Plot *graph_ncogseed;
 	Plot *graph_nDC;
 	Plot *graph_teffgen;
+	Plot *graph_nbnd;
+	Plot *graph_dummy;	// placeholder
 
 	int nGraphCases;
 	QString graphCaseName[Plot::ncmax];
