@@ -1,6 +1,6 @@
 #include <string>
 #include <fstream>
-#ifdef __WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 #include <QTcpServer>
@@ -41,6 +41,7 @@ SocketHandler::~SocketHandler() // make sure the worker object is destroyed
 //-----------------------------------------------------------------------------------------
 void SocketHandler::stop()
 {
+	LOG_MSG("SocketHandler::stop: set stopped");
 	stopped = true;
 }
 
@@ -56,6 +57,7 @@ void SocketHandler::run()
 	QHostAddress hostAddress;
 	hostAddress.setAddress(addressStr);
     tcpServer = new QTcpServer(this);
+	stopped = false;
 	connect(tcpServer, SIGNAL(newConnection()), this, SLOT(processor()), Qt::DirectConnection);
     if (!tcpServer->listen(hostAddress,qport)) {
  //       QMessageBox::critical(this, tr("Fortune Server"),
@@ -87,7 +89,10 @@ void SocketHandler::processor()
 	QByteArray ba;
 	ba.resize(1024);
 	while (true) {
-		if (stopped) break;
+		if (stopped) {
+			LOG_MSG("Stopped!");
+			break;
+		}
 		socket->waitForReadyRead(100);
 		int nb = socket->bytesAvailable();
 		if (nb > 0) {
@@ -146,13 +151,12 @@ void ExecThread::run()
 	*/
 #else
 	paused = false;
-	Sleep(100);
-	LOG_MSG("execute called");
+//	LOG_MSG("execute called");
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,outfile,&len_outfile);
-	LOG_MSG("execute returned");
+//	LOG_MSG("execute returned");
 	get_dimensions(&NX,&NY,&NZ);
-	sprintf(msg,"exthread: nsteps: %d, NX,NY,NZ: %d %d %d",nsteps,NX,NY,NZ);
-	LOG_MSG(msg);
+//	sprintf(msg,"exthread: nsteps: %d",nsteps);
+//	LOG_MSG(msg);
 	for (int i=1; i<= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {
@@ -218,6 +222,7 @@ void ExecThread::snapshot()
 //-----------------------------------------------------------------------------------------
 void ExecThread::stop()
 {
+	LOG_MSG("ExecThread::stop: set stopped");
 	stopped = true;
 }
 
