@@ -1528,9 +1528,9 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine traffic(ok)
 logical :: ok
-integer :: x, y, z, k, kcell, indx(2), ctype, gen, region, site(3), n, slot
+integer :: x, y, z, k, kcell, indx(2), ctype, gen, stage, region, site(3), n, slot
 integer :: zin_min, zin_max, node_inflow, node_outflow, add(3), net_inflow, ihr
-real(DP) :: R, df
+real(DP) :: R, df, prob
 real :: tnow
 logical :: left
 integer :: kpar=0
@@ -1638,7 +1638,7 @@ do while (k < node_outflow)
         if (z > z0) cycle
     endif
     indx = occupancy(x,y,z)%indx
-    if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
+    if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC 
     if (indx(2) > 0) then
         slot = 2
     elseif (indx(1) > 0) then
@@ -1647,6 +1647,20 @@ do while (k < node_outflow)
         cycle
     endif
     kcell = indx(slot)
+    if (SIMULATE_PERIPHERY) then
+		prob = 1/PERI_PROBFACTOR	! prob of allowing this cell to exit 
+		if (associated(cellist(kcell)%cptr)) then
+			gen = get_generation(cellist(kcell)%cptr)
+			call get_stage(cellist(kcell)%cptr,stage,region)
+			if (gen >= PERI_GENERATION .and. globalvar%NDCcapable == 0) then
+				prob = 1
+			elseif (gen == 1) then	! suppress egress for undivided cognate cells.  
+				prob = 0 
+			endif
+		endif
+		R = par_uni(kpar)
+		if (R > prob) cycle
+	endif
     site = (/x,y,z/)
     call cell_exit(kcell,slot,site,left)
     if (.not.left) cycle
@@ -1864,7 +1878,7 @@ total_out = total_out + ne
 globalvar%NTcells = globalvar%NTcells + net_inflow
 globalvar%NTcellsPer = globalvar%NTcellsPer + node_outflow
 globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
-!write(*,'(a,4i8)') 'chemo_traffic: ',node_inflow,ne,net_inflow,globalvar%NTcells
+!write(*,'(a,4i8)') 'chemo_traffic: ',node_inflow,ne,net_inflow,globalvar%NTcells 
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2051,20 +2065,20 @@ nadd_limit = 0.01*globalvar%NTcells0
 nadd_total = nadd_sites
 
 if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTERVAL)) then
-    if (dbug) write(*,*) 'balancer: nadd_total: ',nadd_total,nadd_limit,lastbalancetime,BALANCER_INTERVAL
-    if (dbug) write(*,*) 'call squeezer'
+    if (dbug) write(nflog,*) 'balancer: nadd_total: ',nadd_total,nadd_limit,lastbalancetime,BALANCER_INTERVAL
+    if (dbug) write(nflog,*) 'call squeezer'
 	call squeezer(.false.)
-	if (dbug) write(*,*) 'did squeezer'
+	if (dbug) write(nflog,*) 'did squeezer'
     ! adding/removal of sites on occupancy
     if (ndeadDC > 0) then
-		if (dbug) write(*,*) 'remove DCs'
+		if (dbug) write(nflog,*) 'remove DCs'
         do k = 1,ndeadDC
             idc = DCdeadlist(k)
             call clearDC(idc)
         enddo
         nadd_total = nadd_total - ndeadDC*NDCsites
         ndeadDC = 0
-        if (dbug) write(*,*) 'balancer: removed DCs: nadd_total: ',nadd_total
+        if (dbug) write(nflog,*) 'balancer: removed DCs: nadd_total: ',nadd_total
     endif
     naddDC = 0
     if (use_DC .and. use_DCflux) then    ! need to account for incoming DC
@@ -2073,23 +2087,23 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
 !			write(*,*) 'add DCs: ',naddDC
             call place_DCs(naddDC,nadded)
             nadd_total = nadd_total + nadded*NDCsites
-            if (dbug) write(*,*) 'balancer: added DCs: NDCtotal: ',NDCtotal
+            if (dbug) write(nflog,*) 'balancer: added DCs: NDCtotal: ',NDCtotal
         endif
     endif
-    if (dbug) write(*,*) 'nadd_total: ',nadd_total
+    if (dbug) write(nflog,*) 'nadd_total: ',nadd_total
     if (nadd_total > 0) then
         n = nadd_total
-	    if (dbug) write(*,*) 'call add_sites'
+	    if (dbug) write(nflog,*) 'call add_sites'
         call add_sites(n,ok)
         if (.not.ok) return
-	    if (dbug) write(*,*) 'did add_sites'
+	    if (dbug) write(nflog,*) 'did add_sites'
         blob_changed = .true.
     elseif (nadd_total < 0) then
         n = -nadd_total
-	    if (dbug) write(*,*) 'call remove_sites'
+	    if (dbug) write(nflog,*) 'call remove_sites'
         call remove_sites(n,ok)
         if (.not.ok) return
-	    if (dbug) write(*,*) 'did remove_sites'
+	    if (dbug) write(nflog,*) 'did remove_sites'
         blob_changed = .true.
     else
         n = 0
@@ -2105,10 +2119,10 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
 !        call test_moveDC
 !    endif
    if (naddDC > 0) then
-		if (dbug) write(*,*) 'call reassign_DC'
+		if (dbug) write(nflog,*) 'call reassign_DC'
         call reassign_DC(kpar,ok)
         if (.not.ok) return
-		if (dbug) write(*,*) 'did reassign_DC'
+		if (dbug) write(nflog,*) 'did reassign_DC'
     endif
     call growDC
 ! The cognate list is maintained at the time that a cell arrives or leaves
@@ -2122,12 +2136,12 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     lastbalancetime = tnow
     nadd_sites = 0
     if (blob_changed) then
-		if (dbug) write(*,*) 'call make_split'
+		if (dbug) write(nflog,*) 'call make_split'
         call make_split
         if (use_diffusion) then
             call setup_minmax
         endif
-        if (dbug) write(*,'(a,2i6)') 'balancer: nadd_total, radius: ',nadd_total,int(globalvar%radius)
+        if (dbug) write(nflog,'(a,2i6)') 'balancer: nadd_total, radius: ',nadd_total,int(globalvar%radius)
     endif
 else
     call set_globalvar
@@ -2165,7 +2179,7 @@ if (use_chemotaxis .and. use_traffic) then
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-            write(*,*) 'Nexits: ',globalvar%Nexits
+            write(nflog,*) 'Nexits: ',globalvar%Nexits
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
         endif
@@ -2176,7 +2190,7 @@ if (use_chemotaxis .and. use_traffic) then
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-            write(*,*) 'Nexits: ',globalvar%Nexits
+            write(nflog,*) 'Nexits: ',globalvar%Nexits
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
         endif
@@ -2633,7 +2647,7 @@ endif
 
 !call get_cognate_dist(ncog1,ncog2)
 
-write(nfout,'(2(i8,f8.0),6i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
+write(nfout,'(2(i8,f8.0),6i8,25f7.4)') istep,tnow/60,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
     fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 if (use_tcp) then
 !    if (.not.awp_1%is_open) then
@@ -3247,7 +3261,7 @@ write(*,*) '========= Average time to IL2 threshold: ',nIL2thresh,tIL2thresh/max
 write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
-write(nfout,'(2(i8,f8.0),7i8,25f7.4)') istep,tnow,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
+write(nfout,'(2(i8,f8.0),7i8,25f7.4)') istep,tnow/60,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
     fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 
 if (use_tcp) then
@@ -3278,8 +3292,9 @@ endif
 
 nact = 100*act
 summaryData(1:10) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd/)
+write(nflog,*) 'ndivisions = ',ndivisions
 end subroutine
-!--------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------- 
 !--------------------------------------------------------------------------------
 subroutine get_scene(nTC_list,TC_list,nDC_list,DC_list,nbond_list,bond_list) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_scene
@@ -3520,7 +3535,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine simulate_step(res) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step
+!DEC$ ATTRIBUTES DLLEXPORT :: simulate_step 
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 logical :: ok
@@ -3529,8 +3544,10 @@ res = 0
 dbug = .false.
 ok = .true.
 istep = istep + 1
-!write(logmsg,*) 'simulate_step: ',istep
-!call logger(logmsg)
+if (dbug) then
+	write(logmsg,*) 'simulate_step: ',istep
+	call logger(logmsg)
+endif
 
 if (mod(istep,240) == 0) then
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
@@ -3544,36 +3561,49 @@ if (use_cytokines) then
 endif
 
 if (use_traffic .and. mod(istep,SCANNER_INTERVAL) == 0) then
-	if (dbug) write(*,*) 'call scanner'
+	if (dbug) write(nflog,*) 'call scanner'
 	call scanner
-	if (dbug) write(*,*) 'did scanner'
+	if (dbug) write(nflog,*) 'did scanner'
 endif
+if (dbug) write(nflog,*) 'call mover'
 call mover(ok)
+if (dbug) write(nflog,*) 'did mover'
 if (.not.ok) then
 	call logger("mover returned error")
+	res = 1
 	return
 endif
-!	if (dbug) write(*,*) 'did mover'
-if (dbug) call check_xyz(1)
 
 if (use_DC .and. globalvar%NDCalive > 0) then
-	if (dbug) write(*,*) 'call binder'
+	if (dbug) write(nflog,*) 'call binder'
     call binder(ok)
-    if (.not.ok) return
-	if (dbug) write(*,*) 'did binder'
+    if (.not.ok) then
+		call logger('binder returned error')
+		res = 1
+		return
+	endif
+	if (dbug) write(nflog,*) 'did binder'
     if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-		if (dbug) write(*,*) 'call update_DCstate'
+		if (dbug) write(nflog,*) 'call update_DCstate'
         call update_DCstate(ok)
-        if (.not.ok) return
-		if (dbug) write(*,*) 'did update_DCstate'
+        if (.not.ok) then
+			call logger('update_DCstate returned error')
+			res = 1
+			return
+		endif
+		if (dbug) write(nflog,*) 'did update_DCstate'
     endif
 endif
 if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-!		if (dbug) write(*,*) 'call updater'
+	if (dbug) write(nflog,*) 'call updater'
     call updater(ok)
-    if (.not.ok) return
+	if (dbug) write(nflog,*) 'did updater'
+    if (.not.ok) then
+		call logger('updater returned error')
+		res = 1
+		return
+	endif
 endif
-if (dbug) call check_xyz(2)
 
 if (use_traffic) then
     if (vary_vascularity) then	! There is a problem with this system
@@ -3582,22 +3612,36 @@ if (use_traffic) then
     if (use_chemotaxis) then
 		if (dbug) write(*,*) 'call chemo_traffic'
         call chemo_traffic(ok)
-        if (.not.ok) return
+	    if (.not.ok) then
+			call logger('chemo_traffic returned error')
+			res = 1
+			return
+		endif
 		if (dbug) write(*,*) 'did chemo_traffic'
     else
+		if (dbug) write(nflog,*) 'call traffic'
         call traffic(ok)
-        if (.not.ok) return
+		if (dbug) write(nflog,*) 'did traffic'
+	    if (.not.ok) then
+			call logger('traffic returned error')
+			res = 1
+			return
+		endif
     endif
 endif
 if (dbug) call check_xyz(3)
 
-if (dbug) write(*,*) 'call balancer'
+if (dbug) write(nflog,*) 'call balancer'
 call balancer(ok)
-if (.not.ok) return
-if (dbug) write(*,*) 'did balancer'
-if (dbug) write(*,*) 'call set_globalvar'
+if (dbug) write(nflog,*) 'did balancer'
+if (.not.ok) then
+	call logger('balancer returned error')
+	res = 1
+	return
+endif
+if (dbug) write(nflog,*) 'call set_globalvar'
 call set_globalvar
-if (dbug) write(*,*) 'did set_globalvar'
+if (dbug) write(nflog,*) 'did set_globalvar'
 
 end subroutine
 
@@ -3635,8 +3679,6 @@ dbug = .false.
 do istep = 1,Nsteps
 !    call check_xyz(0)
     write(nfres,'(i6,f10.6)') istep,par_uni(kpar)
-!    if (istep == 1295) dbug = .true.
-!    if (istep == 1296) stop
 
 	inquire(file=stopfile,exist=stopped)
 	if (stopped) then
@@ -3951,6 +3993,7 @@ if (compute_travel_time .and. .not.IN_VITRO) then
 endif
 Fcognate = TC_COGNATE_FRACTION
 
+ndivisions = 0
 call CD69_setparameters(K1_S1P1,K2_S1P1,K1_CD69,K2_CD69)
 call array_initialisation(ok)
 if (.not.ok) return

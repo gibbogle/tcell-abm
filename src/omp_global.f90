@@ -152,14 +152,17 @@ real, parameter :: BIG_TIME = 100000
 real, parameter :: BALANCER_INTERVAL = 10
 integer, parameter :: SCANNER_INTERVAL = 100
 real, parameter :: DELTA_T = 0.25       ! minutes
-logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals
+logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals 
 logical, parameter :: save_input = .true.
 logical, parameter :: SIMULATE_PERIPHERY = .true.
+
+integer, parameter :: PERI_GENERATION = 2
+real, parameter :: PERI_PROBFACTOR = 8
 
 !logical, parameter :: IN_VITRO = .true.
 integer, parameter :: NZ_IN_VITRO = 3
 integer, parameter :: NDCcore_IN_VITRO = 8
-!real, parameter :: VITRO_FRACTION = 0.3		! temporary measure, for testing
+!real, parameter :: VITRO_FRACTION = 0.3		! temporary measure, for testing 
 real, parameter :: STACKRAD_2 = 3.5
 real, parameter :: STACKRAD_3 = 2.3
 
@@ -299,6 +302,7 @@ type global_type
     integer :: NTcellsPer
     integer :: NDC
     integer :: NDCalive
+    integer :: NDCcapable
     integer :: Nsites
     integer :: Nexits
     integer :: lastexit
@@ -589,7 +593,7 @@ integer :: DCstack(-4:4,-4:4,3)			! for 2D case
 integer :: lastID, MAX_COG, lastcogID, nlist, n2Dsites, ngaps, ntagged=0, ID_offset, ncogseed
 integer :: lastNTcells, k_nonrandom
 integer :: max_nlist, max_ngaps
-integer :: nadd_sites, MAX_DC, ndeadDC, NDCtotal
+integer :: nadd_sites, MAX_DC, ndeadDC, NDCtotal, ndivisions
 real :: excess_factor, lastbalancetime
 real :: scale_factor	! scaling from model to one (or more) whole LNs
 real :: Fcognate		! fraction of T cells in circulation that are cognate
@@ -799,16 +803,12 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine squeezer(force)
 logical :: force
-integer :: last,k,site(3),indx(2),i,n
-!type(cell_type), allocatable :: buffer(:)
+integer :: last, k, site(3), indx(2), i, n, region
 
 !write(*,*) 'squeezer'
 if (ngaps == 0) return
 if (.not.force .and. (ngaps < max_ngaps/2)) return
-if (dbug) write(*,*) 'squeezer: ',ngaps,max_ngaps,nlist
-
-!allocate(buffer(nlist))
-!buffer = cellist(1:nlist)
+if (dbug) write(nflog,*) 'squeezer: ',ngaps,max_ngaps,nlist
 
 n = 0
 do k = 1,nlist
@@ -827,7 +827,7 @@ do
         if (k == last) exit
         do
             if (last == 0) then
-                write(*,*) 'last = 0: k: ',k
+                write(nflog,*) 'last = 0: k: ',k
                 stop
             endif
             if (cellist(last)%ID == 0) then
@@ -841,21 +841,27 @@ do
         if (n == ngaps) exit
         call copycell2cell(cellist(last),cellist(k),k)
 !        cellist(k) = cellist(last)
-        site = cellist(last)%site
-        indx = occupancy(site(1),site(2),site(3))%indx
-        do i = 1,2
-            if (indx(i) == last) indx(i) = k
-        enddo
-        occupancy(site(1),site(2),site(3))%indx = indx
+		if (associated(cellist(last)%cptr)) then
+			call get_region(cellist(last)%cptr,region)
+		else
+			region = LYMPHNODE
+		endif
+		if (region == LYMPHNODE) then
+	        site = cellist(last)%site
+	        indx = occupancy(site(1),site(2),site(3))%indx
+	        do i = 1,2
+	            if (indx(i) == last) indx(i) = k
+	        enddo
+	        occupancy(site(1),site(2),site(3))%indx = indx
+	    endif
         last = last-1
         n = n+1
     endif
     if (n == ngaps) exit
 enddo
-!deallocate(buffer)
 nlist = nlist - ngaps
 ngaps = 0
-if (dbug) write(*,*) 'squeezed: ',n,nlist
+if (dbug) write(nflog,*) 'squeezed: ',n,nlist
 
 end subroutine
 
@@ -1885,12 +1891,14 @@ end subroutine
 subroutine update_DCstate(ok)
 logical :: ok
 real :: tnow, tfactor, decay_factor
-integer :: idc, nalive, nbound, ncbound
+integer :: idc, nalive, nbound, ncbound, ncapable
 
 if (globalvar%NDCalive == 0) then
+	globalvar%NDCcapable = 0
 	ok = .true.
 	return
 endif
+ncapable = 0
 tfactor = 0.1**(DELTA_T/(60*DC_ACTIV_TAPER))
 tnow = istep*DELTA_T
 decay_factor = 1 - DCdecayrate*DELTA_T
@@ -1899,10 +1907,6 @@ do idc = 1,globalvar%NDC
     if (DClist(idc)%alive) then
         if (.not.IN_VITRO .and. DC_outside(idc)) then	! A kludge to remove DCs stranded outside the blob
             DClist(idc)%dietime = min(DClist(idc)%dietime,tnow)
-!            if (DClist(idc)%capable) then
-!				write(logmsg,*) 'DC outside, incapable, dying: ',idc, ' Radius: ',globalvar%Radius
-!				call logger(logmsg)
-!			endif
 		endif
         nbound = DClist(idc)%nbound
         ncbound = DClist(idc)%ncogbound
@@ -1912,7 +1916,6 @@ do idc = 1,globalvar%NDC
         if (tnow > DClist(idc)%dietime) then
             DClist(idc)%capable = .false.
             if (nbound /= 0) then
-!                write(*,*) 'DC dies but T cells still bound: ',idc,DClist(idc)%nbound
             elseif (nbound == 0) then
 				write(logmsg,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
 				write(nflog,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
@@ -1945,13 +1948,19 @@ do idc = 1,globalvar%NDC
         endif
     endif
     if (DClist(idc)%alive) nalive = nalive + 1
+    if (DClist(idc)%capable) ncapable = ncapable + 1
 enddo
 globalvar%NDCalive = nalive
+globalvar%NDCcapable = ncapable
 !write(nflog,*) 'update_DCstate: live DCs: ',nalive
 if (nalive == 0) then
     write(logmsg,*) 'No live DC'
     call logger(logmsg)
 endif
+!if (ncapable == 0) then
+!	call logger("No capable DC")
+!	return
+!endif
 ok = .true.
 end subroutine
 
@@ -2083,6 +2092,8 @@ real :: DCrate0
 real(DP) :: R
 real, save :: dn_last = 0
 
+!write(logmsg,*) 'DCinflux: dn_last ',dn_last
+!call logger(logmsg)
 DCrate0 = DC_FACTOR*DCrate_100k*(globalvar%NTcells0/1.0e5)     ! DC influx is scaled by the initial T cell population
 !DCrate0 = DCrate0*(200./TC_TO_DC)                              ! and scaled by 1/TC_TO_DC (TRY CANCELLING THIS)
 if (t1 > T_DC2*60) then
@@ -2107,8 +2118,8 @@ else
     DCinflux = temp
     dn_last = temp - DCinflux
 endif
-!write(logmsg,*) 'DC rate: ',rate,DCinflux,dn
-!call logger(logmsg)
+write(logmsg,*) 'DC rate: ',rate,DCinflux,dn_last
+call logger(logmsg)
 end function
 
 !--------------------------------------------------------------------------------

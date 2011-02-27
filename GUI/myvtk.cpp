@@ -22,8 +22,6 @@ class MouseInteractorStyle4 : public vtkInteractorStyleTrackballCamera
 
 	virtual void OnLeftButtonDown()
 	{
-//	  std::cout << "Pressed left mouse button." << std::endl;
-//	  LOG_QMSG("Pressed left mouse button.");
 	  leftb = true;
 	  // Forward events
 	  vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
@@ -31,7 +29,7 @@ class MouseInteractorStyle4 : public vtkInteractorStyleTrackballCamera
 
 	virtual void OnMiddleButtonDown()
 	{
-	  std::cout << "Pressed middle mouse button." << std::endl;
+//	  std::cout << "Pressed middle mouse button." << std::endl;
 	  // Forward events
 	  vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
 	}
@@ -96,11 +94,8 @@ MyVTK::MyVTK(QWidget *page)
 //	ren->SetBackground(0.1, 0.2, 0.4);		// backgroundColor
 	ren->ResetCamera();
 	iren = qvtkWidget->GetInteractor();
-//	iren->Initialize();
-//	ren->RemoveAllViewProps();
 
-	vtkSmartPointer<MouseInteractorStyle4> style =
-	  vtkSmartPointer<MouseInteractorStyle4>::New();
+	vtkSmartPointer<MouseInteractorStyle4> style = vtkSmartPointer<MouseInteractorStyle4>::New();
 	iren->SetInteractorStyle( style );
 
 	iren->Initialize();
@@ -139,9 +134,6 @@ MyVTK::MyVTK(QWidget *page)
 	paused = false;
 
 	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
-
-//	DCColor = new double (1.0, 0.0, 0.0);
-//	TCColor = new double (0.0, 0.0, 1.0);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -156,8 +148,6 @@ void MyVTK::get_cell_positions(bool fast)
 {
 	double TC_diam = 0.9;
 	double DC_diam = 1.8;
-//	sprintf(msg,"VTK: get_cell_positions: %d %d %d",nTC_list,nDC_list,nbond_list);
-//	LOG_MSG(msg);
 	TCpos_list.clear();
 	DCpos_list.clear();
 	bondpos_list.clear();
@@ -190,14 +180,12 @@ void MyVTK::get_cell_positions(bool fast)
 		cp.DCtag = bond_list[j+1];
 		bondpos_list.append(cp);
 	}
-//	LOG_MSG("VTK: did get_cell_positions");
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool savepos)
 {	
-//	LOG_MSG("VTK: read_cell_positions");
     TCpos_list.clear();
     DCpos_list.clear();
     bondpos_list.clear();
@@ -212,7 +200,6 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 		}
 		out = new QTextStream(vtkdata);
 	}
-//	LOG_MSG("VTK: ready to read posdata");
 	QFile posdata(infileName);
 	if (posdata.open(QFile::ReadOnly)) {
 		QTextStream in(&posdata);
@@ -255,7 +242,6 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 		} while (!line.isNull());
 	}
 	posdata.close();
-//	LOG_MSG("VTK: did read posdata");
 	if (savepos) {
 		delete out;
 		vtkdata->close();
@@ -305,16 +291,12 @@ void MyVTK::cleanup()
 //---------------------------------------------------------------------------------------------
 void MyVTK::renderCells(bool redo, bool zzz)
 {
-//	LOG_MSG("VTK: renderCells");
 	process_Tcells();
     process_Dcells(redo);
     process_bonds();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
-//		ren->RemoveAllViewProps();
 		ren->ResetCamera();
-//		ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
-//		iren->Initialize();
 	}
 	iren->Render();
 	first_VTK = false;	
@@ -326,7 +308,6 @@ void MyVTK::process_Tcells()
 {
 	int i, tag;
 	double r, g, b, genfac;
-//	double activated = 9.0;
 	double TC_MAX_GEN = 15;
 	CELL_POS cp;
 	vtkActor *actor;
@@ -356,12 +337,9 @@ void MyVTK::process_Tcells()
 			actor = vtkActor::New();
             actor->SetMapper(TcellMapper);
             actor->GetProperty()->SetColor(TCColor);
-//            actor->GetProperty()->SetColor(0.0,0.0,1.0);	// TCColor
             ren->AddActor(actor);
             T_Actor_list.append(actor);
             na = tag + 1;
-//			sprintf(msg,"added T_actor: %d  %p  %p",tag,ren,actor);
-//			LOG_MSG(msg);
 		}
 		if (cp.state == -1) {	// non-cognate
 			r = 0.5; g = 0.5; b = 0.5;
@@ -375,17 +353,6 @@ void MyVTK::process_Tcells()
 		} else {
 			r = 1.0; g = 0.6; b = 0.0;
 		}
-		/*
-        r = 0.4;
-        g = 0.4;
-        b = float(cp.state)/5;		// cp.state <= 6 is proportional to the generation
-//		b = 1.0/5;
-		if (b > 7.0/5) {			// a bound cell
-            r = 1.0;
-            g = 0.5;
-            b = 0.1;
-		}
-           */
         actor = T_Actor_list[tag];
         actor->GetProperty()->SetColor(r, g, b);
         actor->SetPosition(cp.x, cp.y, cp.z);
@@ -444,14 +411,11 @@ void MyVTK::process_Dcells(bool redo)
 			actor = vtkActor::New();
             actor->SetMapper(DcellMapper);
             actor->GetProperty()->SetColor(DCColor);
-//            actor->GetProperty()->SetColor(0.7,0.2,0.3);	// DCColor
 
             ren->AddActor(actor);
             D_Actor_list.append(actor);
             na = tag + 1;
             newDC = true;
-//			sprintf(msg,"added D_actor: %d",tag);
-//			LOG_MSG(msg);
 		} else {
 			actor = D_Actor_list[tag];
 		}
@@ -502,7 +466,6 @@ void MyVTK::process_bonds()
 	double Pi = 3.15159;
 	double *tcpos, *dcpos;
 	double bondColor[] = {0.5,0.0,0.0};
-//	double DCColor[] = {1.0,0.0,0.0};
 
     int na = B_Actor_list.length();
     int np = bondpos_list.length();
@@ -520,7 +483,6 @@ void MyVTK::process_bonds()
 		actor = vtkActor::New();
         actor->SetMapper(bondMapper);
 		actor->GetProperty()->SetColor(bondColor);
-//        actor->GetProperty()->SetColor(0.7,0.2,0.3);	// bondColor
 		T_actor = T_Actor_list[bp.TCtag];
 		if (T_actor != 0)
 	        tcpos = T_actor->GetPosition();
@@ -565,9 +527,7 @@ void MyVTK::process_bonds()
 //-----------------------------------------------------------------------------------------
 bool MyVTK::startPlayer(QString posfile, QTimer *theTimer, bool save)
 {
-//	casename = acasename;
 	save_image = save;
-//	posfile = casename + ".pos";
 	LOG_QMSG(posfile);
 	timer = theTimer;
 	playerData = new QFile(posfile);
@@ -587,17 +547,10 @@ bool MyVTK::startPlayer(QString posfile, QTimer *theTimer, bool save)
 		w2i->SetInput(renWin);	//the render window
 //		writer = vtkSmartPointer<vtkPNGWriter>::New();
 		writer = vtkSmartPointer<vtkJPEGWriter>::New();
-
-//		castFilter = vtkSmartPointer<vtkImageCast>::New();
-//		castFilter->SetOutputScalarTypeToUnsignedChar ();
-//		castFilter->SetInputConnection(w2i->GetOutputPort());
-//		castFilter->Update();
-
 		writer->SetInputConnection(w2i->GetOutputPort()); 
 		framenum = 0;
 		LOG_MSG("set up writer");
 	}
-
 	LOG_MSG("playing");
 	return true;
 }
@@ -675,7 +628,6 @@ bool MyVTK::nextFrame()
 //-----------------------------------------------------------------------------------------
 void MyVTK::saveSnapshot(QString fileName, QString imgType)
 {
-//	vtkWindowToImageFilter *w2img = vtkWindowToImageFilter::New();
 	w2img->SetInput(renWin);
 	if (imgType.compare("png") == 0) {
 		vtkSmartPointer<vtkPNGWriter> pngwriter = vtkPNGWriter::New();

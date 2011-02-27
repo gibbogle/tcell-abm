@@ -1068,6 +1068,7 @@ endif
 p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1P1 expression
 p2%S1P1 = p1%S1P1
 
+ndivisions = ndivisions + 1
 if (region /= LYMPHNODE) then
 	globalvar%NTcellsPer = globalvar%NTcellsPer + 1
 	return
@@ -2038,7 +2039,8 @@ if (use_DC) then   ! DC placement needs to be checked to account for SOI overlap
     enddo
     call check_DCproximity
 endif
-
+write(logmsg,*) 'Number of DCs: ',globalvar%NDC
+call logger(logmsg)
 
 if (IN_VITRO) then
 	nzlim = 1
@@ -2751,7 +2753,8 @@ p => cellist(kcell)%cptr
 call get_stage(p,stage,region)
 if (stage >= CLUSTERS) then
     if (.not.cansurvive(p)) then
-        write(*,*) 'cell IL2 store too low: ',kcell,p%cogID
+        write(logmsg,*) 'cell IL2 store too low: ',kcell,p%cogID
+        call logger(logmsg)
         p%dietime = tnow
         stage = FINISHED
         call set_stage(p,stage)
@@ -2849,7 +2852,8 @@ p => cellist(kcell)%cptr
 call get_stage(p,stage,region)
 if (stage >= CLUSTERS) then
     if (.not.cansurvive(p)) then
-        write(*,*) 'cell IL2 store too low: ',kcell,p%cogID
+        write(logmsg,*) 'cell IL2 store too low: ',kcell,p%cogID
+        call logger(logmsg)
         p%dietime = tnow
         stage = FINISHED
         call set_stage(p,stage)

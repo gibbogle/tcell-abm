@@ -47,7 +47,6 @@ void Plot::mousePressEvent (QMouseEvent *event) {
 		int w = this->width();
 		int h = this->height();
 		QPixmap pixmap(w, h);
-//		QPixmap pixmap(600, 600);
 		pixmap.fill(Qt::white); // Qt::transparent ?
 
 		QwtPlotPrintFilter filter;
@@ -58,7 +57,6 @@ void Plot::mousePressEvent (QMouseEvent *event) {
 
 		this->print(pixmap, filter);
 
-//		QString fileName = "zzz.png";
 		QString fileName = getImageFile();
 		if (fileName.isEmpty()) {
 			return;
@@ -165,7 +163,6 @@ void Plot::redraw2(double *x1, double *y1, double *x2, double *y2, int n1, int n
 {
 	LOG_MSG("redraw2");
 	if (n1 == 1) { // That is, this is the first plotting instance.
-//        yscale = calc_yscale(y2[0]);
 		yscale = max(yscale,calc_yscale(y1[0]));
 		yscale = max(yscale,calc_yscale(y2[0]));
 		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);

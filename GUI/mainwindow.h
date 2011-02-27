@@ -205,10 +205,10 @@ private:
 	int currentDescription;
 	QString defaultInputFile;
 	QString inputFile;
-	QString stopfile;
-	QString pausefile;
+//	QString stopfile;
+//	QString pausefile;
 	QString cellfile;
-	QString dll_path;
+//	QString dll_path;
 	QString vtkfile;
 	QTextBrowser *box_outputData;
 	SocketHandler *sthread0;
@@ -259,7 +259,6 @@ public:
 
 	QValidator::State validate ( QString &input, int &pos ) const
 	{
-//		LOG_QMSG(input);
 		if ( input.isEmpty() || input == "." ) {
 			return Intermediate;
 		}

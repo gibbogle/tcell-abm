@@ -87,28 +87,28 @@ MainWindow::MainWindow(QWidget *parent)
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
 	}
-    stopfile = "stop_dll";
-    pausefile = "pause_dll";
-    cellfile = "cell_pos.dat";
+//    stopfile = "stop_dll";
+//    pausefile = "pause_dll";
+//    cellfile = "cell_pos.dat";
 //#ifdef __GFORTRAN_DLL__
 //	dll_path = "libpara32.dll";
 //#else
 //	dll_path = "libpara32_ms.dll";
 //#endif
-	dll_path = " ";
+//	dll_path = " ";
 	vtkfile = "basecase.pos";
 	savepos_start = 0;
 	ntimes = 0;
 	hour = 0;
 
-	QFileInfo cellfile_info(cellfile);
-	LOG_QMSG(cellfile_info.fileName());
-	if (QFile::exists(cellfile))
-		QFile::remove(cellfile);
-	if (QFile::exists(stopfile))
-		QFile::remove(stopfile);
-	if (QFile::exists(pausefile))
-		QFile::remove(pausefile);
+//	QFileInfo cellfile_info(cellfile);
+//	LOG_QMSG(cellfile_info.fileName());
+//	if (QFile::exists(cellfile))
+//		QFile::remove(cellfile);
+//	if (QFile::exists(stopfile))
+//		QFile::remove(stopfile);
+//	if (QFile::exists(pausefile))
+//		QFile::remove(pausefile);
 
 	param_to_sliderIndex = NULL;
 	defaultInputFile = "basecase.inp";
@@ -1030,10 +1030,10 @@ void MainWindow::runServer()
 
 	if (use_CPORT1) {
 
-		if (QFile::exists(cellfile))
-			QFile::remove(cellfile);
-		if (QFile::exists(stopfile))
-			QFile::remove(stopfile);
+//		if (QFile::exists(cellfile))
+//			QFile::remove(cellfile);
+//		if (QFile::exists(stopfile))
+//			QFile::remove(stopfile);
 
 
 		// Port 5001
@@ -1067,7 +1067,7 @@ void MainWindow::runServer()
 		}
 	}
 	started = true;
-	exthread = new ExecThread(inputFile,dll_path);
+	exthread = new ExecThread(inputFile);
 	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
 	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
 	exthread->ncpu = ncpu;
@@ -1379,8 +1379,8 @@ void MainWindow::outputData(QString qdata)
 
 	
     QStringList dataList = qdata.split(" ",QString::SkipEmptyParts);
-	double data[10];
-	for (int k=0; k<10; k++)
+	double data[11];
+	for (int k=0; k<11; k++)
 		data[k] = dataList[k].toDouble();
 	step++;
 	if (step >= newR->nsteps) {
@@ -1424,21 +1424,7 @@ void MainWindow::postConnection()
 			LOG_MSG("sthread1 did not terminate");
 		}
 	}
-	/*
-	sthread0->socket->close();
-	sthread0->tcpServer->close();
-	sthread0->quit();
-	sthread0->wait(100);
-	if (sthread0->isRunning()) {
-		LOG_MSG("sthread0 did not terminate");
-	}
-	*/
-/*
-	exthread->wait(1000);
-	if (exthread->isRunning()) {
-		LOG_MSG("exthread did not terminate");
-	}
-*/
+
     action_run->setEnabled(true);
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
@@ -1484,9 +1470,6 @@ void MainWindow::pauseServer()
 		vtk->pause();
 		LOG_MSG("Paused the player");
 	} else {
-//		QFile file(pausefile);
-//		file.open(QIODevice::WriteOnly);
-//		file.close();
 		exthread->pause();
 		LOG_MSG("Paused the ABM program.");
 	}

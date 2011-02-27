@@ -40,10 +40,8 @@ class ExecThread: public QThread
 {
 	Q_OBJECT
 	QString inputFile;
-	QString dll_path;
 public:
-//	ExecThread::ExecThread(QString, QString);
-	ExecThread(QString, QString);
+	ExecThread(QString);
 	void run();
 	void snapshot();
 	void pause();

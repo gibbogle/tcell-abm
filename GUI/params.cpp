@@ -38,7 +38,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "1st division time shape parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters."},
 
-{"DIVIDE2_MEDIAN", 5.0, 3.0, 10.0,
+{"DIVIDE2_MEDIAN", 5.0, 0, .0,
 "Later division time median parameter",
 "The time taken for later T cell divisions has a lognormal distribution, described by the median and shape parameters.\n\
 [hours]"},

@@ -44,7 +44,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="-Zm200 -w34100 -w34189 -w34100 -w34189"
 				Optimization="2"
-				AdditionalIncludeDirectories="&quot;$(QTDIR)\include\QtCore&quot;;&quot;$(QTDIR)\include\QtNetwork&quot;;&quot;$(QTDIR)\include\QtGui&quot;;&quot;$(QTDIR)\include&quot;;..\..\VTK;&quot;..\..\VTK-src\GUISupport\Qt&quot;;&quot;..\..\VTK-src\common&quot;;&quot;..\..\VTK-src\rendering&quot;;&quot;..\..\VTK-src\graphics&quot;;&quot;..\..\VTK-src\filtering&quot;;&quot;..\..\VTK-src\IO&quot;;&quot;..\..\VTK-src\imaging&quot;;INCLUDEPATH;&quot;..\..\qt\qwt-5.2.0\src&quot;;&quot;$(QTDIR)\include\ActiveQt&quot;;release;.;&quot;$(QTDIR)\mkspecs\win32-msvc2008&quot;;&quot;..\..\vtk\include\vtk-5.4&quot;"
+				AdditionalIncludeDirectories="&quot;$(QTDIR)\include\QtCore&quot;;&quot;$(QTDIR)\include\QtNetwork&quot;;&quot;$(QTDIR)\include\QtGui&quot;;&quot;$(QTDIR)\include&quot;;\VTK;&quot;\VTK-src\GUISupport\Qt&quot;;&quot;\VTK-src\common&quot;;&quot;\VTK-src\rendering&quot;;&quot;\VTK-src\graphics&quot;;&quot;\VTK-src\filtering&quot;;&quot;\VTK-src\IO&quot;;&quot;\VTK-src\imaging&quot;;INCLUDEPATH;&quot;\qt\qwt-5.2.1\src&quot;;&quot;$(QTDIR)\include\ActiveQt&quot;;release;.;&quot;$(QTDIR)\mkspecs\win32-msvc2008&quot;;\VTK\Rendering"
 				PreprocessorDefinitions="QT_NO_DEBUG;NDEBUG;_WINDOWS;UNICODE;WIN32;QT_LARGEFILE_SUPPORT;__MSVS_DLL__;__COMPILETIME_LOADING__;QT_DLL;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;QT_THREAD_SUPPORT;_CRT_SECURE_NO_WARNINGS"
 				GeneratePreprocessedFile="0"
 				ExceptionHandling="1"
@@ -73,11 +73,11 @@
 				Name="VCLinkerTool"
 				IgnoreImportLibrary="true"
 				AdditionalOptions="&quot;/MANIFESTDEPENDENCY:type=&apos;win32&apos; name=&apos;Microsoft.Windows.Common-Controls&apos; version=&apos;6.0.0.0&apos; publicKeyToken=&apos;6595b64144ccf1df&apos; language=&apos;*&apos; processorArchitecture=&apos;*&apos;&quot; &quot;/MANIFESTDEPENDENCY:type=&apos;win32&apos; name=&apos;Microsoft.Windows.Common-Controls&apos; version=&apos;6.0.0.0&apos; publicKeyToken=&apos;6595b64144ccf1df&apos; language=&apos;*&apos; processorArchitecture=&apos;*&apos;&quot;"
-				AdditionalDependencies="libpara32_ms.lib \qt\qwt-5.2.0\lib\qwt5.lib QtCore4.lib QtGui4.lib qtmain.lib QtNetwork4.lib QVTK.lib vtkCommon.lib vtkFiltering.lib vtkGraphics.lib vtkImaging.lib vtkIO.lib vtkRendering.lib"
+				AdditionalDependencies="libpara32_ms.lib qwt5.lib QtCore4.lib QtGui4.lib qtmain.lib QtNetwork4.lib QVTK.lib vtkCommon.lib vtkFiltering.lib vtkGraphics.lib vtkImaging.lib vtkIO.lib vtkRendering.lib"
 				OutputFile="release\ABM_GUI.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="&quot;$(QTDIR)\lib&quot;;&quot;\VTK-src\build\bin\release&quot;;&quot;\qt\qwt-5.2.0\lib&quot;;..\Build32msvs\release"
+				AdditionalLibraryDirectories="&quot;$(QTDIR)\lib&quot;;&quot;\VTK-src\build\bin\release&quot;;&quot;\qt\qwt-5.2.1\lib&quot;;..\Build32msvs\release"
 				GenerateDebugInformation="false"
 				ProgramDatabaseFile=""
 				SubSystem="2"
@@ -485,10 +485,10 @@
 			UniqueIdentifier="{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}"
 			>
 			<File
-				RelativePath="release\qrc_icons.cpp"
+				RelativePath="debug\qrc_icons.cpp"
 				>
 				<FileConfiguration
-					Name="Debug|Win32"
+					Name="Release|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -497,10 +497,10 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="debug\qrc_icons.cpp"
+				RelativePath="release\qrc_icons.cpp"
 				>
 				<FileConfiguration
-					Name="Release|Win32"
+					Name="Debug|Win32"
 					ExcludedFromBuild="true"
 					>
 					<Tool

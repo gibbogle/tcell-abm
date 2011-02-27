@@ -123,10 +123,9 @@ void SocketHandler::processor()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-ExecThread::ExecThread(QString infile, QString dllfile)
+ExecThread::ExecThread(QString infile)
 {
 	inputFile = infile;
-	dll_path = dllfile;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -134,7 +133,8 @@ ExecThread::ExecThread(QString infile, QString dllfile)
 void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
-	const char *infile;	// *resfile, *runfile;
+	int res=0;
+	const char *infile;
 	char *outfile = "para.out";
 	int len_outfile = strlen(outfile);
 	QString infile_path = inputFile;
@@ -167,8 +167,8 @@ void ExecThread::run()
 			Sleep(100);
 		}
 		if (stopped) break;
-		int res=0;
 		simulate_step(&res);
+		if (res == 1) break;
 		if (stopped) break;
 		if (i%240 == 0) {
 			mutex1.lock();
@@ -187,8 +187,7 @@ void ExecThread::run()
 	}
 	snapshot();
 	Sleep(10);
-	int result = 0;
-	terminate_run(&result);
+	terminate_run(&res);
 #endif
 #endif
 	return;
@@ -200,8 +199,6 @@ void ExecThread::snapshot()
 {
 	mutex2.lock();
 	get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
-//	sprintf(msg,"got: nTC %d nDC %d nbond %d ",nTC_list,nDC_list,nbond_list);
-//	LOG_MSG(msg);
 	if (nTC_list > MAX_TC) {
 		LOG_MSG("Error: MAX_TC exceeded");
 		exit(1);
@@ -222,7 +219,6 @@ void ExecThread::snapshot()
 //-----------------------------------------------------------------------------------------
 void ExecThread::stop()
 {
-	LOG_MSG("ExecThread::stop: set stopped");
 	stopped = true;
 }
 

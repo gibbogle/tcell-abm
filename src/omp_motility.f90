@@ -34,9 +34,6 @@ do k = 1,2
         fullslots1 = fullslots1 + k
     endif
 enddo
-if (kcell == idbug) then
-    write(*,'(a,5i6)') 'jumper: ',indx1,site1
-endif
 if (fullslots1 /= BOTH) then
     R = par_uni(kpar)
     if (R <= dirprob(0)) then    ! case of no jump
@@ -100,7 +97,6 @@ R = psum*R
 psum = 0
 do irel = 1,nreldir
    	psum = psum + p(irel)
-    if (dbug .and. kcell >= 51123) write(nfres,'(i4,2f20.10)') irel,R,psum
    	if (R <= psum) then
    		exit
    	endif
@@ -108,11 +104,9 @@ enddo
 if (irel > nreldir) irel = nreldir
 dir1 = reldir(lastdir1,irel)
 site2 = savesite2(:,irel)
-if (dbug .and. kcell >= 51123) write(nfres,*) 'lastdir1,irel,dir1: ',lastdir1,irel,dir1
 ! new code
 if (diagonal_jumps) then
 	dir1 = fix_lastdir(dir1,kpar)
-    if (dbug .and. kcell >= 51123) write(nfres,'(a,i6,f15.9)') 'fix: ',kcell,par_uni(kpar)
 elseif (dir1 == 0) then
 	dir1 = random_int(1,6,kpar)
 endif
@@ -120,7 +114,6 @@ endif
 fullslots2 = saveslots2(irel)
 if (fullslots2 == 0) then       ! randomly select a slot
     R = par_uni(kpar)
-    if (dbug .and. kcell >= 51123) write(nfres,'(a,i6,f15.9)') 'slot?: ',kcell,R
     if (R < 0.5) then
         kslot2 = SLOT_NUM1
     else
