@@ -702,6 +702,8 @@ if (TC_COGNATE_FRACTION == 0 .or. .not.use_DC) then
 else
     use_cognate = .true.
 endif
+write(*,*) 'TC_COGNATE_FRACTION, use_DC, use_cognate: ',TC_COGNATE_FRACTION, use_DC, use_cognate
+!stop
 
 if (exit_region == EXIT_CHEMOTAXIS) then
     use_chemotaxis = .true.
@@ -2130,7 +2132,7 @@ nlist = id	! this is already the case for 3D blob
 globalvar%NTcells = nlist
 globalvar%Nsites = globalvar%NTcells + globalvar%NDC*NDCsites	! not relevant for IN_VITRO
 globalvar%NTcells0 = globalvar%NTcells
-
+globalvar%Radius0 = globalvar%Radius
 scale_factor = real(NTC_LN)*NLN_RESPONSE/globalvar%NTcells0
 !write(*,*) 'scale_factor: ',scale_factor
 
@@ -2188,6 +2190,21 @@ ok = .true.
 end subroutine
 
 !---------------------------------------------------------------------
+! Returns the number of exits required for the current cell population.
+!---------------------------------------------------------------------
+integer function requiredExits(ncells)
+integer :: ncells
+integer :: Nex
+
+if (PORTAL_EXIT) then
+	Nex = exit_fraction*4*PI*globalvar%Radius0**2
+else
+	Nex = exit_fraction*ncells
+endif
+requiredExits = Nex
+end function
+
+!---------------------------------------------------------------------
 ! Currently, exit locations are distributed randomly through the blob.
 ! Sites within the SOI of an exit are labelled with %exitnum, unless
 ! the site is also within the SOI of another exit, in which case the
@@ -2219,7 +2236,8 @@ else
     globalvar%lastexit = 0
     globalvar%Nexits = 0
     if (use_traffic) then
-        Nex = exit_fraction*globalvar%NTcells0
+!        Nex = exit_fraction*globalvar%NTcells0
+		Nex = requiredExits(globalvar%NTcells0)
         max_exits = 10*Nex
         allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
     else
@@ -2227,7 +2245,7 @@ else
         write(*,*) 'No exits'
         return
     endif
-!    write(*,*) 'Nexits: ',Nex
+    write(*,*) 'Nexits: ',Nex
     do i = 1,Nex
         call place_exit
     enddo
@@ -2236,34 +2254,115 @@ end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
+integer function blobNeighbours(x,y,z)
+integer :: x,y,z
+integer :: nb, k, xx, yy, zz
+
+nb = 0
+blobNeighbours = 0
+if (x<1 .or. x>NX) return
+if (y<1 .or. y>NY) return
+if (z<1 .or. z>NZ) return
+if (occupancy(x,y,z)%indx(1) < 0) return
+do k = 1,27
+	if (k == 14) cycle
+	xx = x + jumpvec(1,k)
+	yy = y + jumpvec(2,k)
+	zz = z + jumpvec(3,k)
+	if (occupancy(xx,yy,zz)%indx(1) >= 0) nb = nb + 1
+enddo
+blobNeighbours = nb
+end function
+
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
+subroutine getBoundarySite(u,site,ok)
+real :: u(3)
+integer :: site(3)
+logical :: ok
+integer :: k, x, y, z, nb
+real :: r0, r
+
+ok = .false.		
+r0 = globalvar%radius
+do k = -10,10
+	r = r0 + k*0.5
+	x = x0 + u(1)*r
+	y = y0 + u(2)*r
+	z = z0 + u(3)*r
+	nb = blobNeighbours(x,y,z)
+	if (nb == 0) then
+		exit
+	elseif (nb <= 17) then
+		ok = .true.		
+		exit
+	endif
+enddo
+site = (/x,y,z/)
+end subroutine
+
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
 subroutine place_exit
 integer :: iexit, kexit, x, y, z, x2, y2, z2, site(3), ek(3), vk(3), ns
 integer :: xex, yex, zex, xmin, xmax, ymin, ymax, zmin, zmax
 real(DP) :: R
-real :: d2, d2k, prox
+real :: d2, d2k, prox, u(3), theta, rx
 integer :: kpar = 0
+logical :: ok
 
 !write(*,*) 'place_exit'
-do
-    R = par_uni(kpar)
-    xex = 1 + R*NX
-    R = par_uni(kpar)
-    yex = 1 + R*NY
-    R = par_uni(kpar)
-    zex = 1 + R*NZ
-    site = (/xex,yex,zex/)
-    if (occupancy(xex,yex,zex)%indx(1) < 0) cycle     ! OUTSIDE_TAG or DC
-    if (use_DC) then
-!        write(*,*) 'use_DC?'
-!        stop
-        if (toonearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
-    endif
-    prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
-    if (toonearexit(site,prox)) cycle       ! too near another exit
-    prox = 0.5*exit_prox*chemo_N
-    if (toonearbdry(site,prox)) cycle       ! too near the blob boundary
-    exit
-enddo
+if (PORTAL_EXIT) then
+	! randomly choose direction in 3D, then locate sites near this vector on the blob boundary
+	! Need to restrict the sinus interface by removing the follicle interface.
+	! Assume that the follicle interface is a cap from (normalized) x = XFOLLICLE (< 1)
+	do
+		R = par_uni(kpar)
+		u(1) = 2*R - 1
+		if (u(1) > XFOLLICLE) cycle
+		rx = sqrt(1-u(1)*u(1))
+		R = par_uni(kpar)
+		theta = 2*PI*R
+		u(2) = rx*cos(theta)
+		u(3) = rx*sin(theta)
+		call getBoundarySite(u,site,ok)
+		if (.not.ok) cycle
+		xex = site(1)
+		yex = site(2)
+		zex = site(3)
+		if (use_DC) then
+			if (toonearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
+		endif
+		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
+		if (PORTAL_EXIT) then
+			prox = 0.5*prox
+		endif
+		if (toonearexit(site,prox)) cycle       ! too near another exit		
+		exit
+	enddo
+else
+	do
+		R = par_uni(kpar)
+		xex = 1 + R*NX
+		R = par_uni(kpar)
+		yex = 1 + R*NY
+		R = par_uni(kpar)
+		zex = 1 + R*NZ
+		site = (/xex,yex,zex/)
+		if (occupancy(xex,yex,zex)%indx(1) < 0) cycle     ! OUTSIDE_TAG or DC
+		if (use_DC) then
+	!        write(*,*) 'use_DC?'
+	!        stop
+			if (toonearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
+		endif
+		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
+		if (toonearexit(site,prox)) cycle       ! too near another exit
+		prox = 0.5*exit_prox*chemo_N
+		if (toonearbdry(site,prox)) cycle       ! too near the blob boundary
+		exit
+	enddo
+endif
+
 globalvar%lastexit = globalvar%lastexit + 1
 globalvar%Nexits = globalvar%Nexits + 1
 if (globalvar%Nexits > max_exits) then
@@ -2356,7 +2455,7 @@ xex = site(1)
 yex = site(2)
 zex = site(3)
 iexit = -occupancy(xex,yex,zex)%exitnum
-write(*,*) 'remove_exit: ',site,iexit
+!write(*,*) 'remove_exit: ',site,iexit
 exitlist(iexit)%ID = 0
 occupancy(xex,yex,zex)%exitnum = iexit      ! to ensure that the site is processed in the next section
 
@@ -2400,6 +2499,7 @@ do x = xmin,xmax
     enddo
 enddo
 globalvar%Nexits = globalvar%Nexits - 1
+!write(*,*) 'remove_exit: Nexits: ',globalvar%Nexits
 end subroutine
 
 !---------------------------------------------------------------------

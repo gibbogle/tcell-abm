@@ -1,4 +1,4 @@
-! This is the general version, for M nodes in a cuboid blob.
+! This is the general version, for M nodes in a cuboid blob. 
 
 ! Extension to general geometry:
 ! We need to be able to handle a spherical blob, for example.
@@ -1826,52 +1826,60 @@ enddo
 ! Outflow
 ne = 0
 if (.not.suppress_exit) then
-if (globalvar%lastexit > max_exits) then
-    write(logmsg,'(a,2i4)') 'Error: chemo_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
-    call logger(logmsg)
-    ok = .false.
-    return
-endif
-allocate(permex(globalvar%lastexit))
-do k = 1,globalvar%lastexit
-    permex(k) = k
-enddo
-call permute(permex,globalvar%lastexit,kpar)
-do ipermex = 1,globalvar%lastexit
-    iexit = permex(ipermex)
-    if (exitlist(iexit)%ID == 0) cycle
-    esite = exitlist(iexit)%site
-    indx = occupancy(esite(1),esite(2),esite(3))%indx
-    do slot = 2,1,-1
-        kcell = indx(slot)
-        if (kcell > 0 .and. par_uni(kpar) < exit_prob) then
-            call cell_exit(kcell,slot,esite,left)
-            if (left) then
-                ne = ne + 1
-                if (evaluate_residence_time) then
-                    if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
-                        noutflow_tag = noutflow_tag + 1
-                        restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
-                        ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
-                        Tres_dist(ihr) = Tres_dist(ihr) + 1
-!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
-                    endif
-                endif
-                if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-                    nv = cellist(kcell)%visits
-                    DCvisits(nv) = DCvisits(nv) + 1
-                    DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
-                endif
-                if (ne == node_outflow) exit
-            endif
-        endif
-    enddo
-    if (ne == node_outflow) exit
-enddo
-deallocate(permex)
+	if (globalvar%lastexit > max_exits) then
+		write(logmsg,'(a,2i4)') 'Error: chemo_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+	allocate(permex(globalvar%lastexit))
+	do k = 1,globalvar%lastexit
+		permex(k) = k
+	enddo
+	call permute(permex,globalvar%lastexit,kpar)
+	do ipermex = 1,globalvar%lastexit
+		iexit = permex(ipermex)
+		if (exitlist(iexit)%ID == 0) cycle
+		esite = exitlist(iexit)%site
+		indx = occupancy(esite(1),esite(2),esite(3))%indx
+		do slot = 2,1,-1
+			kcell = indx(slot)
+			if (kcell > 0 .and. par_uni(kpar) < exit_prob) then
+				call cell_exit(kcell,slot,esite,left)
+				if (left) then
+					ne = ne + 1
+					if (evaluate_residence_time) then
+						if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
+							noutflow_tag = noutflow_tag + 1
+							restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
+							ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
+							Tres_dist(ihr) = Tres_dist(ihr) + 1
+	!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
+						endif
+					endif
+					if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
+						nv = cellist(kcell)%visits
+						DCvisits(nv) = DCvisits(nv) + 1
+						DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+					endif
+					if (ne == node_outflow .and. .not.PORTAL_EXIT) exit
+				endif
+			endif
+		enddo
+		if (ne == node_outflow .and. .not.PORTAL_EXIT) exit
+	enddo
+	deallocate(permex)
 endif
 
+!if (ne > node_outflow) then
+!	write(*,*) 'Excess egress: ',ne - node_outflow
+!else
+!	write(*,*) 'Deficit outflow: ',node_outflow - ne
+!endif
 net_inflow = node_inflow - ne
+!if (net_inflow < 0) then
+!	write(*,*) 'Net outflow: ',-net_inflow,node_inflow,ne,globalvar%Vascularity
+!endif
 nadd_sites = nadd_sites + net_inflow
 total_in = total_in + node_inflow
 total_out = total_out + ne
@@ -2147,29 +2155,31 @@ else
     call set_globalvar
 endif
 if (use_chemotaxis .and. use_traffic) then
-    if (globalvar%NTcells < globalvar%NTcells0) then
-        ! Set Nexits = Nexits0 for steady-state maintenance.  To wrap up the end of the response.
-        Nexits0 = exit_fraction*globalvar%NTcells0
-        if (globalvar%Nexits < Nexits0) then
-            do k = 1,Nexits0 - globalvar%Nexits
-                call place_exit()
-            enddo
-            write(*,*) '-------------------------------------'
-            write(*,*) 'Set Nexits to base steady-state level'
-            write(*,*) '--------------------------'
-            write(*,*) 'Nexits: ',globalvar%Nexits
-            write(*,*) '--------------------------'
-        elseif (globalvar%Nexits > Nexits0) then
-            call remove_exits(globalvar%Nexits - Nexits0)
-            write(*,*) '-------------------------------------'
-            write(*,*) 'Set Nexits to base steady-state level'
-            write(*,*) '--------------------------'
-            write(*,*) 'Nexits: ',globalvar%Nexits
-            write(*,*) '--------------------------'
-        endif
-        return
-    endif
-    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits
+	if (globalvar%NTcells < globalvar%NTcells0 .and. .not.PORTAL_EXIT) then
+		! Set Nexits = Nexits0 for steady-state maintenance.  To wrap up the end of the response.
+!        Nexits0 = exit_fraction*globalvar%NTcells0
+		Nexits0 = requiredExits(globalvar%NTcells0)
+		if (globalvar%Nexits < Nexits0) then
+			do k = 1,Nexits0 - globalvar%Nexits
+				call place_exit()
+			enddo
+!			write(*,*) '-------------------------------------'
+!			write(*,*) 'Set Nexits to base steady-state level'
+!			write(*,*) '--------------------------'
+!			write(*,*) 'Nexits: ',globalvar%Nexits
+!			write(*,*) '--------------------------'
+		elseif (globalvar%Nexits > Nexits0) then
+			call remove_exits(globalvar%Nexits - Nexits0)
+!			write(*,*) '-------------------------------------'
+!			write(*,*) 'Set Nexits to base steady-state level'
+!			write(*,*) '--------------------------'
+!			write(*,*) 'Nexits: ',globalvar%Nexits
+!			write(*,*) '--------------------------'
+		endif
+		return
+	endif
+!    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits
+    dexit = requiredExits(globalvar%NTcells) - globalvar%Nexits
     if (dexit > 0) then
         naddex = dexit
         if (naddex > 0) then
@@ -2183,17 +2193,16 @@ if (use_chemotaxis .and. use_traffic) then
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
         endif
-    else
+    elseif (dexit < 0) then
         nremex = -dexit
-        if (nremex > 0) then
-            call remove_exits(nremex)
+        write(nflog,*) 'balancer: dexit < 0: ',requiredExits(globalvar%NTcells),globalvar%Nexits
+        call remove_exits(nremex)
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-            write(nflog,*) 'Nexits: ',globalvar%Nexits
+        write(nflog,*) 'Nexits: ',globalvar%Nexits
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
-        endif
     endif
 endif
 end subroutine
@@ -2404,6 +2413,7 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
+				write(nflog,*) 'remove_sites:  need to move exit'
                 call remove_exit(site0)
             endif
             globalvar%Nsites = globalvar%Nsites - 1
@@ -2609,8 +2619,9 @@ if (teffgen > 0) then
 else
     fac = 0
 endif
-if (.not.use_TCP) then
+if (.not.use_TCP .and. use_cognate) then
 write(*,'(a)') '----------------------------------------------------------------------'
+write(*,*) 'use_cognate: ',use_cognate
 write(*,'(a,i6,3i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
@@ -3231,7 +3242,7 @@ if (teffgen > 0) then
 else
     fac = 0
 endif
-if (.not.use_TCP) then
+if (.not.use_TCP .and. use_cognate) then
 write(*,'(a)') '----------------------------------------------------------------------'
 write(*,'(a,i6,4i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst

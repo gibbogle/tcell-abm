@@ -103,7 +103,7 @@ if (compute_travel_time) then
 
 	do k_travel_cog = 1, N_TRAVEL_COG
 		do k_travel_dc = 1,N_TRAVEL_DC
-			call execute(ncpu,infile,inbuflen,outfile,outbuflen)
+			call execute(ncpu,infile,inbuflen,outfile,outbuflen) 
 			if (ntravel > 0) then
 				travel_dist(k_travel_cog,k_travel_dc,:) = travel_dist(k_travel_cog,k_travel_dc,:)/ntravel
 			endif

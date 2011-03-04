@@ -134,14 +134,20 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
-	const char *infile;
-	char *outfile = "para.out";
-	int len_outfile = strlen(outfile);
-	QString infile_path = inputFile;
+	const char *infile, *outfile;
+//	char *outfile = "para.out";
+	QString infile_path, outfile_path;
+	int len_infile, len_outfile;
+	infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
-	int len_infile = infile_path.length();
+	len_infile = infile_path.length();
 	std::string std_infile = infile_path.toStdString();
 	infile = std_infile.c_str();
+	outfile_path = casename.append(".out");
+	len_outfile = outfile_path.length();
+	std::string std_outfile = outfile_path.toStdString();
+	outfile = std_outfile.c_str();
+
 
 #ifdef __COMPILETIME_LOADING__
 
@@ -152,7 +158,7 @@ void ExecThread::run()
 #else
 	paused = false;
 //	LOG_MSG("execute called");
-	execute(&ncpu,const_cast<char *>(infile),&len_infile,outfile,&len_outfile);
+	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
 //	LOG_MSG("execute returned");
 	get_dimensions(&NX,&NY,&NZ);
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);

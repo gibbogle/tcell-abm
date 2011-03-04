@@ -157,7 +157,7 @@ logical, parameter :: save_input = .true.
 logical, parameter :: SIMULATE_PERIPHERY = .true.
 
 integer, parameter :: PERI_GENERATION = 2
-real, parameter :: PERI_PROBFACTOR = 8
+real, parameter :: PERI_PROBFACTOR = 10
 
 !logical, parameter :: IN_VITRO = .true.
 integer, parameter :: NZ_IN_VITRO = 3
@@ -245,7 +245,7 @@ integer, parameter :: n_multiple_runs = 1
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.  ! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: suppress_exit = .false.        ! to test effect of S1P1 agonist, e.g. SEW8721 (Rosen hypothesis)
-logical, parameter :: L_selectin = .true.              ! T cell inflow is suppressed
+logical, parameter :: L_selectin = .false.              ! T cell inflow is suppressed
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -307,6 +307,7 @@ type global_type
     integer :: Nexits
     integer :: lastexit
     real :: Radius
+    real :: Radius0
 !    real :: DCactivity
     real :: InflowTotal
     real :: OutflowTotal
@@ -669,6 +670,8 @@ logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: dbug = .false.
+logical :: PORTAL_EXIT = .true.		! testing egress to the sinus at portals on the blob surface
+real :: XFOLLICLE = 0.6				! normalized x boundary of follicular interface "cap"
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
