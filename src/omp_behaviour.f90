@@ -702,8 +702,6 @@ if (TC_COGNATE_FRACTION == 0 .or. .not.use_DC) then
 else
     use_cognate = .true.
 endif
-write(*,*) 'TC_COGNATE_FRACTION, use_DC, use_cognate: ',TC_COGNATE_FRACTION, use_DC, use_cognate
-!stop
 
 if (exit_region == EXIT_CHEMOTAXIS) then
     use_chemotaxis = .true.
@@ -2245,7 +2243,6 @@ else
         write(*,*) 'No exits'
         return
     endif
-    write(*,*) 'Nexits: ',Nex
     do i = 1,Nex
         call place_exit
     enddo
