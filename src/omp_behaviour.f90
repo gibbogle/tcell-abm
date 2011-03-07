@@ -766,11 +766,11 @@ Vc = FLUID_FRACTION*Ve
 Nsteps = days*60*24/DELTA_T
 !write(*,'(a,f6.2,a,i4)') 'DELTA_X: ',DELTA_X,'  DC_RADIUS: ',DC_RADIUS
 open(nfout,file=outputfile,status='replace')
-if (save_input) then
-    call save_inputfile(inputfile)
-    call save_parameters
-	call save_inputfile(fixedfile)
-endif
+!if (save_input) then
+!    call save_inputfile(inputfile)
+!    call save_parameters
+!	call save_inputfile(fixedfile)
+!endif
 
 call setup_dists
 
@@ -2195,7 +2195,11 @@ integer :: ncells
 integer :: Nex
 
 if (PORTAL_EXIT) then
-	Nex = exit_fraction*4*PI*globalvar%Radius0**2
+	if (FIXED_NEXITS) then
+		Nex = exit_fraction*4*PI*globalvar%Radius0**2
+	else
+		Nex = exit_fraction*4*PI*globalvar%Radius**2
+	endif
 else
 	Nex = exit_fraction*ncells
 endif
@@ -3002,6 +3006,8 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 		if (gen == TC_MAX_GEN) then
             call set_stage(p,FINISHED)
 			p%stagetime = BIG_TIME
+			write(logmsg,*) 'updatestage: division limit reached for cell: ',kcell
+			call logger(logmsg)
 		elseif (candivide(p,ctype)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then
@@ -3182,7 +3188,6 @@ if (optionA == 1) then
 	    p%stagetime = BIG_TIME
 	endif
 elseif (optionA == 2) then
-!    write(*,*) 'act, div_thresh: ',act,div_thresh
     if (act > div_thresh) then ! allow division
 	    if (gen > TC_MAX_GEN) then
 		    write(*,*) 'candivide: bad gen: ',gen

@@ -266,7 +266,7 @@ logical, parameter :: save_DCbinding = .false.
 logical, parameter :: track_DCvisits = .false.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
-logical, parameter :: log_traffic = .false.
+logical, parameter :: log_traffic = .true.
 integer, parameter :: istep_res1 = 10000
 integer, parameter :: istep_res2 = istep_res1 + 5000
 integer, parameter :: TCR_nlevels = 10
@@ -671,7 +671,9 @@ logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: dbug = .false.
 logical :: PORTAL_EXIT = .true.		! testing egress to the sinus at portals on the blob surface
+logical :: FIXED_NEXITS = .false.
 real :: XFOLLICLE = 0.6				! normalized x boundary of follicular interface "cap"
+real :: EGRESS_SUPPRESSION_TIME = 18	! hours
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
@@ -1291,6 +1293,10 @@ if (use_chemotaxis .and. globalvar%NTcells < globalvar%NTcells0) then
     steadystate = .true.
 else
     globalvar%OutflowTotal = outflow
+endif
+if (mod(istep,240) == 0) then
+	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
+	call logger(logmsg)
 endif
 end subroutine
 

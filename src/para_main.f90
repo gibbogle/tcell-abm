@@ -6,11 +6,11 @@
 PROGRAM omp_para
 use omp_main_mod
 use omp_global
-integer :: ncpu, res, summarydata(10)
+integer :: ncpu, res, summarydata(100)
 character*(128) :: infile,outfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-!integer :: NX, NY, NZ, Nsteps, res
+integer :: jstep, hour, ntot, ncog(2), inflow, nexits
 character*(128) :: b, c, progname
 
 call process_command_line(ncpu,infile,outfile)
@@ -121,12 +121,17 @@ endif
 write(*,*) 'call execute'
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call get_dimensions(NX,NY,NZ,Nsteps)
-do istep = 1,Nsteps
+do jstep = 1,Nsteps
 	call simulate_step(res)
-	if (mod(istep,240) == 0) then
+	if (mod(jstep,240) == 0) then
 		call get_summary(summarydata)
-!summaryData(1:10) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd/)
-		write(*,'(10i7)') summarydata
+!summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
+		hour = summaryData(1)/240
+		ntot = summaryData(4)
+		ncog(1:2) = summaryData(6:7)
+		inflow = summaryData(11)
+		nexits = summaryData(12)
+		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', nexits		
 	endif
 enddo
 end

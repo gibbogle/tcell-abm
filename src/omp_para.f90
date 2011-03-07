@@ -180,7 +180,7 @@ ID_offset = BIG_INT/Mnodes
 nlist = 0
 MAX_COG = 0.5*NX*NY*NZ
 if (use_DC) then
-    MAX_DC = (NX*NX*NX)/TC_TO_DC
+    MAX_DC = 5*(NX*NX*NX)/TC_TO_DC
 else
     MAX_DC = 10
 endif
@@ -314,6 +314,8 @@ totalres%dN_EffCogTC = 0
 totalres%dN_EffCogTCGen = 0
 totalres%N_EffCogTC = 0
 totalres%N_EffCogTCGen = 0
+totalres%N_dead = 0
+totalres%dN_dead = 0
 
 if (optionA == 1 .and. .not.use_cytokines) then
     write(logmsg,*) 'optionA == 1 => use_cytokines must be true'
@@ -556,7 +558,7 @@ endif
 end function
 
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------- 
 subroutine initialise_vascularity
 if (VEGF_MODEL == 2) then
 	VEGF_beta = 0
@@ -1825,7 +1827,7 @@ enddo
 
 ! Outflow
 ne = 0
-if (.not.suppress_exit) then
+if (.not.suppress_exit .and. tnow > EGRESS_SUPPRESSION_TIME*60) then
 	if (globalvar%lastexit > max_exits) then
 		write(logmsg,'(a,2i4)') 'Error: chemo_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
 		call logger(logmsg)
@@ -2009,7 +2011,7 @@ if (.not.vary_vascularity) then
     return
 endif
 if (VEGF_MODEL == 1) then
-    VEGFsignal = get_inflammation() ! Rate of secretion of VEGF is proportional to inflammation
+    VEGFsignal = get_inflammation() ! Rate of secretion of VEGF is proportional to inflammation 
 elseif (VEGF_MODEL == 2) then
     VEGFsignal = get_DCactivity()   ! Rate of secretion of VEGF is proportional to total DC antigen activity
 endif
@@ -2023,8 +2025,8 @@ else	! VEGF_MODEL = 1
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
 endif
 globalvar%Vascularity = globalvar%Vascularity + dVdt*DELTA_T
-!if (mod(istep,240) == 0) then
-!	write(logmsg,'(a,i6,e10.3,3f8.3)') 'vasc: ',istep/240,c_vegf,globalvar%VEGF, &
+!if (mod(istep,10) == 0) then
+!	write(logmsg,'(a,i6,2e10.3,3f8.3)') 'vasc: ',istep/240,VEGFsignal,c_vegf,globalvar%VEGF, &
 !		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
 !	call logger(logmsg)
 !endif
@@ -2178,7 +2180,7 @@ if (use_chemotaxis .and. use_traffic) then
 		endif
 		return
 	endif
-!    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits
+!    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits 
     dexit = requiredExits(globalvar%NTcells) - globalvar%Nexits
     if (dexit > 0) then
         naddex = dexit
@@ -2189,7 +2191,7 @@ if (use_chemotaxis .and. use_traffic) then
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-            write(nflog,*) 'Nexits: ',globalvar%Nexits
+            write(nflog,*) 'added: Nexits: ',globalvar%Nexits
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
         endif
@@ -2200,7 +2202,7 @@ if (use_chemotaxis .and. use_traffic) then
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-        write(nflog,*) 'Nexits: ',globalvar%Nexits
+        write(nflog,*) 'removed: Nexits: ',globalvar%Nexits
 !            write(logmsg,*) 'Nexits: ',globalvar%Nexits
 !            call logger(logmsg)
     endif
@@ -3302,7 +3304,7 @@ if (save_DCbinding) then
 endif
 
 nact = 100*act
-summaryData(1:10) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd/)
+summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
 write(nflog,*) 'ndivisions = ',ndivisions
 end subroutine
 !-------------------------------------------------------------------------------- 
@@ -3538,7 +3540,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Until I find a time function in gfortran
-!-----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------- 
 !real(8) function timef()
 !timef = 0
 !end function
@@ -3562,6 +3564,12 @@ endif
 
 if (mod(istep,240) == 0) then
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
+    if (log_traffic) then
+        write(nftraffic,'(5i8,3f8.3)') istep, globalvar%NTcells, globalvar%Nexits, total_in, total_out, &
+                globalvar%InflowTotal, globalvar%vascularity
+    endif
+    total_in = 0
+    total_out = 0
 endif
 if (use_cytokines) then
     if (use_diffusion) then
@@ -3650,13 +3658,13 @@ if (.not.ok) then
 	res = 1
 	return
 endif
-if (dbug) write(nflog,*) 'call set_globalvar'
+!if (dbug) write(nflog,*) 'call set_globalvar'
 call set_globalvar
-if (dbug) write(nflog,*) 'did set_globalvar'
+!if (dbug) write(nflog,*) 'did set_globalvar'
 
 end subroutine
 
-!-----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------- 
 ! This is the original version, using files to communicate signals and data with the Qt main.
 ! NOT USED
 !-----------------------------------------------------------------------------------------
@@ -4055,6 +4063,11 @@ call init_counters
 !    call arrayview(NX)
 !    read(*,*)
 !    stop
+if (save_input) then
+    call save_inputfile(inputfile)
+    call save_parameters
+	call save_inputfile(fixedfile)
+endif
 
 initialized = .true.
 
