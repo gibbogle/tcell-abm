@@ -72,18 +72,19 @@ TYPE(winsockport), INTENT(IN)   :: wp
 CHARACTER(LEN=*), INTENT(IN)    :: outbuf
 INTEGER, INTENT(IN)             :: ncout
 INTEGER	                        :: error
-CHARACTER(LEN=128)              :: msg
+!CHARACTER(LEN=128)              :: msg
 
 error = 0
-msg = outbuf(1:ncout)
+!msg = outbuf(1:ncout)
 IF (.NOT.wp%is_open) then
-    write(nflog_ws,*) 'Winsock_send: ',msg
+    write(nflog_ws,*) 'Winsock_send: ',outbuf(1:ncout)	!msg
     write(nflog_ws,*) 'port not open: ',wp%ip_port
     error = 1
     RETURN
 endif
 
-call tcp_write(wp%handle,msg,ncout,error)
+!call tcp_write(wp%handle,msg,ncout,error)
+call tcp_write(wp%handle,outbuf(1:ncout),ncout,error)
 
 end subroutine
 

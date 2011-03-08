@@ -1987,12 +1987,11 @@ end subroutine
 ! (VEGF_MODEL_2) the total DC activity level (i.e. antigen load).
 !
 ! In Model 1
-!   VEGF_baserate = constitutive rate of VEGF production (per LN volume, i.e. per T cell)
-!   vasc_factor = factor that relates vascularity level V to VEGF concentration
-!   VEGF_decayrate = rate of decay of VEGF
+!	VEGFsignal depends on the inflammation level
 ! In Model 2
-!   VEGFsignal = total DC activity = total antigen density (normalized)
-!   VEGF_rate = normalized VEGF secretion rate/unit of DC activity (artificial units)
+!   VEGFsignal depends on total DC activity = total antigen density (normalized)
+!
+!   VEGF_baserate = constitutive rate of VEGF production (per LN volume, i.e. per T cell)
 !   dVEGFdt = current rate of VEGF secretion (artificial units)
 !   VEGF = current total mass of VEGF (artificial units)
 !   c_vegf = current VEGF concentration (artificial units)
@@ -2001,6 +2000,8 @@ end subroutine
 !   vasc_maxrate = maximum rate constant for growth of relative vascularity
 !   vasc_decayrate = rate constant for decline of relative vascularity
 !   Vascularity = current relative vascularity
+!   Note: if inflammation = 0, i.e. VEGFsignal = 0, there should be no change in vascularity,
+!   i.e. we should have dVdt = 0.
 !-----------------------------------------------------------------------------------------
 subroutine vascular
 real :: VEGFsignal=0, dVEGFdt, c_vegf, dVdt
@@ -2015,9 +2016,9 @@ if (VEGF_MODEL == 1) then
 elseif (VEGF_MODEL == 2) then
     VEGFsignal = get_DCactivity()   ! Rate of secretion of VEGF is proportional to total DC antigen activity
 endif
-dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate
+dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate - VEGF_decayrate*globalvar%VEGF
 ! Mass of VEGF is augmented by rate, and is subject to decay
-globalvar%VEGF = globalvar%VEGF*(1-VEGF_decayrate*DELTA_T) + dVEGFdt*DELTA_T
+globalvar%VEGF = globalvar%VEGF + dVEGFdt*DELTA_T
 c_vegf = globalvar%VEGF/globalvar%NTcells   ! concentration (proportional to, anyway)
 if (VEGF_MODEL == 2) then
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta,vasc_n)*globalvar%Vascularity - vasc_decayrate*(globalvar%Vascularity - 1)
@@ -2030,6 +2031,7 @@ globalvar%Vascularity = globalvar%Vascularity + dVdt*DELTA_T
 !		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
 !	call logger(logmsg)
 !endif
+!write(*,*) 'dVEGFdt, c_vegf, dVdt: ',dVEGFdt, c_vegf, dVdt, globalvar%Vascularity
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2310,12 +2312,34 @@ do i = 1,nadd
 	        endif
         enddo
     endif
+    ! Check for adjacent exit site (portal), and if necessary move it.
+    call check_portal(site)
 enddo
 n = n - nadd
 globalvar%Nsites = globalvar%Nsites + nadd
 deallocate(t)
 deallocate(bdrylist)
 deallocate(r2list)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Look at all sites near the newly added site.
+! If a nearby site (x,y,z) is an exit portal:
+!   n
+!-----------------------------------------------------------------------------------------
+subroutine check_portal(newsite)
+integer :: newsite(3)
+integer :: x, y, z, dx, dy, dz
+
+do dx = -2, 2
+	x = newsite(1) + dx
+	do dy = -2, 2
+		y = newsite(2) + dy
+		do dz = -2, 2
+			z = newsite(3) + dz
+			
+		
+
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4040,6 +4064,9 @@ else
 endif
 if (vary_vascularity) then
 	call initialise_vascularity
+endif
+if (inflammation_level == 0) then
+	EGRESS_SUPPRESSION_TIME = 0
 endif
 !write(*,*) 'NTcells, NDCalive, NTsites: ',globalvar%NTcells, globalvar%NDCalive, globalvar%Nsites
 !write(*,*) 'nlist: ',nlist

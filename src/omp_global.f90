@@ -1262,6 +1262,7 @@ if (traffic_mode == TRAFFIC_MODE_1) then    ! naive
     outflow = inflow0*(1 + Kflow2*expansion)
     outflow = max(outflow,inflow0)
 else        !traffic_mode == TRAFFIC_MODE_2 or TRAFFIC_MODE_3
+	! Note: if inflammation signal = 0 the vascularity (and inflow) should be constant
     tnow = istep*DELTA_T
     inflow = inflow0*globalvar%Vascularity   ! level of vascularity (1 = steady-state)
     if (tnow <= T1) then
