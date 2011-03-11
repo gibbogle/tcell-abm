@@ -1295,10 +1295,10 @@ if (use_chemotaxis .and. globalvar%NTcells < globalvar%NTcells0) then
 else
     globalvar%OutflowTotal = outflow
 endif
-if (mod(istep,240) == 0) then
-	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
-	call logger(logmsg)
-endif
+!if (mod(istep,240) == 0) then
+!	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
+!	call logger(logmsg)
+!endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1510,7 +1510,7 @@ write(*,'(a,3f8.2)') 'avidity, stimulation, IL2 store:: ', p%avidity,p%stimulati
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Called whenever balancer carries out add_sites or remove_sites.
+! Called whenever balancer carries out add_sites or removeSites.
 ! cognate_list(k) = 0 when the kth cognate cell has gone (left or died).
 ! If Mnodes = 1 this is called only once, after place_cells.  After that the list
 ! is maintained directly when cognate cells arrive or leave.
@@ -1927,9 +1927,9 @@ do idc = 1,globalvar%NDC
             DClist(idc)%capable = .false.
             if (nbound /= 0) then
             elseif (nbound == 0) then
-				write(logmsg,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
-				write(nflog,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
-				call logger(logmsg)
+!				write(logmsg,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
+!				write(nflog,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
+!				call logger(logmsg)
                 DClist(idc)%alive = .false.
                 ndeadDC = ndeadDC + 1
                 DCdeadlist(ndeadDC) = idc
@@ -2128,8 +2128,8 @@ else
     DCinflux = temp
     dn_last = temp - DCinflux
 endif
-write(logmsg,*) 'DC rate: ',rate,DCinflux,dn_last
-call logger(logmsg)
+!write(logmsg,*) 'DC rate: ',rate,DCinflux,dn_last
+!call logger(logmsg)
 end function
 
 !--------------------------------------------------------------------------------
@@ -2196,6 +2196,8 @@ integer :: x, y, z, k, r(3), s(3)
 real :: r2, s2, rmod,smod,cosa
 real, allocatable :: w(:)
 
+write(logmsg,*) 'chemo_setup'
+call logger(logmsg)
 allocate(chemo_r(0:chemo_N,0:chemo_N,0:chemo_N))
 allocate(chemo_p(-chemo_N:chemo_N,-chemo_N:chemo_N,-chemo_N:chemo_N,njumpdirs))
 allocate(w(njumpdirs))
@@ -2221,6 +2223,7 @@ do x = -chemo_N,chemo_N
             chemo_p(x,y,z,:) = w
             if (x >= 0 .and. y >= 0 .and. z >= 0) then
                 chemo_r(x,y,z) = sqrt(r2)
+                write(*,*) x,y,z,chemo_r(x,y,z)
             endif
         enddo
     enddo
@@ -2550,6 +2553,24 @@ do kcell = 1,nlist
 enddo
 write(nfres,'(2i6,3i12)') istep,k,xyzsum
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine checkExits
+integer :: iexit,site(3)
+logical :: ok = .true.
+
+do iexit = 1,globalvar%lastexit
+    if (exitlist(iexit)%ID == 0) cycle
+	site = exitlist(iexit)%site
+	if (occupancy(site(1),site(2),site(3))%exitnum /= -exitlist(iexit)%ID) then
+		write(*,*) 'checkExits: ',iexit,site,occupancy(site(1),site(2),site(3))%exitnum
+		ok = .false.
+	endif
+enddo
+if (.not.ok) stop
+end subroutine
+
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
 subroutine check_exit(iexit)

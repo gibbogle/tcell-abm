@@ -2192,13 +2192,27 @@ end subroutine
 !---------------------------------------------------------------------
 integer function requiredExits(ncells)
 integer :: ncells
-integer :: Nex
+integer :: Nex, Nex0
+real :: tnow, alfa
 
+tnow = istep*DELTA_T
+Nex0 = exit_fraction*4*PI*globalvar%Radius0**2 + 0.5
 if (PORTAL_EXIT) then
 	if (FIXED_NEXITS) then
-		Nex = exit_fraction*4*PI*globalvar%Radius0**2
+		Nex = Nex0
 	else
-		Nex = exit_fraction*4*PI*globalvar%Radius**2
+		Nex = exit_fraction*4*PI*globalvar%Radius**2 + 0.5
+		if (EGRESS_SUPPRESSION_TIME > 0) then
+			if (tnow/60 <= EGRESS_SUPPRESSION_TIME) then
+				alfa = 0
+			elseif (tnow/60 > EGRESS_SUPPRESSION_TIME .and. tnow/60 <= 1.5*EGRESS_SUPPRESSION_TIME) then
+				alfa = (tnow/60 - EGRESS_SUPPRESSION_TIME)/(0.5*EGRESS_SUPPRESSION_TIME)
+			else
+				alfa = 1
+			endif
+			Nex = (1-alfa)*Nex0 + alfa*Nex
+!			write(nflog,*) tnow/60,alfa,Nex
+		endif
 	endif
 else
 	Nex = exit_fraction*ncells
@@ -2212,6 +2226,7 @@ end function
 ! the site is also within the SOI of another exit, in which case the
 ! site is labelled with the exit index of the nearest exit, or in
 ! the case of a tie the choice is made randomly.
+! When a site is an exit, %exitnum = -(the exit index)
 ! Note:
 ! When the blob grows, more exits will be added, and when the blob
 ! shrinks again exits must be removed.  When an exit is removed from
@@ -2221,7 +2236,7 @@ end function
 ! This is analogous to the treatment of DCs
 !---------------------------------------------------------------------
 subroutine place_exits
-integer :: Nex, i
+integer :: Nex, iexit, site(3)
 logical :: testing = .false.
 
 if (exit_region /= EXIT_CHEMOTAXIS) then
@@ -2247,10 +2262,50 @@ else
         write(*,*) 'No exits'
         return
     endif
-    do i = 1,Nex
-        call place_exit
+    do iexit = 1,Nex
+		call addExit
     enddo
 endif
+end subroutine
+
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
+subroutine getExitNum(iexit)
+integer :: iexit
+integer :: i
+
+iexit = 0
+! First look for an unused index
+do i = 1,globalvar%lastexit
+	if (exitlist(i)%ID == 0) then
+		iexit = i
+		exit
+	endif
+enddo
+if (iexit == 0) then
+	globalvar%lastexit = globalvar%lastexit + 1
+	iexit = globalvar%lastexit
+endif
+end subroutine
+
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
+subroutine addExit
+integer :: site(3)
+integer :: iexit
+
+call chooseExitSite(site)
+!write(logmsg,*) 'addExit: ',site
+!call logger(logmsg)
+call getExitNum(iexit)
+globalvar%Nexits = globalvar%Nexits + 1
+if (globalvar%lastexit > max_exits) then
+	write(*,*) 'Error: addExit: too many exits: need to increase max_exits: ',max_exits
+	stop
+endif
+call placeExit(iexit,site)
+!write(logmsg,*) 'addExit: did placeExit: ',iexit,site
+!call logger(logmsg)
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2304,15 +2359,15 @@ end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
-subroutine place_exit
-integer :: iexit, kexit, x, y, z, x2, y2, z2, site(3), ek(3), vk(3), ns
-integer :: xex, yex, zex, xmin, xmax, ymin, ymax, zmin, zmax
+subroutine chooseExitSite(site)
+integer :: site(3)
+integer :: xex, yex, zex
 real(DP) :: R
-real :: d2, d2k, prox, u(3), theta, rx
+real :: prox, u(3), theta, rx
 integer :: kpar = 0
 logical :: ok
 
-!write(*,*) 'place_exit'
+!write(*,*) 'chooseExitSite'
 if (PORTAL_EXIT) then
 	! randomly choose direction in 3D, then locate sites near this vector on the blob boundary
 	! Need to restrict the sinus interface by removing the follicle interface.
@@ -2363,20 +2418,31 @@ else
 		exit
 	enddo
 endif
+end subroutine
 
-globalvar%lastexit = globalvar%lastexit + 1
-globalvar%Nexits = globalvar%Nexits + 1
-if (globalvar%Nexits > max_exits) then
-    write(*,*) 'Error: too many exits: need to increase max_exits: ',max_exits
-    stop
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
+subroutine placeExit(iexit,site)
+integer :: iexit, site(3)
+integer :: kexit, x, y, z, x2, y2, z2, ek(3), vk(3), ns
+integer :: xex, yex, zex, xmin, xmax, ymin, ymax, zmin, zmax
+real(DP) :: R
+real :: d2, d2k
+integer :: kpar = 0
+
+if (iexit == globalvar%lastexit + 1) then
+	globalvar%lastexit = iexit
 endif
-iexit = globalvar%lastexit
-!write(*,*) 'place exit: ',iexit,site
-
 ns = 0
 exitlist(iexit)%ID = iexit      ! when an exit site is lost (because the blob retracted) set %ID = 0
 exitlist(iexit)%site = site
-occupancy(xex,yex,zex)%exitnum = -iexit     ! This site holds an exit
+xex = site(1)
+yex = site(2)
+zex = site(3)
+occupancy(xex,yex,zex)%exitnum = -iexit     ! This site holds an exit 
+!write(logmsg,*) 'placeExit: site,exitnum: ',xex,yex,zex,-iexit
+!call logger(logmsg)
+
 xmin = xex - chemo_N
 xmax = xex + chemo_N
 ymin = yex - chemo_N
@@ -2401,7 +2467,7 @@ do x = xmin,xmax
      ! NOTE!!!  If this site is already marked as within another exit's SOI, we need to
      ! determine which exit is closer, and set %exitnum to this exit's ID
                     kexit = occupancy(x,y,z)%exitnum
-                    if (kexit /= 0) then
+                    if (kexit > 0) then
                         ek = exitlist(kexit)%site
                         vk = (/x,y,z/) - ek
                         d2k = dot_product(vk,vk)    ! distance from the other exit (kexit)
@@ -2416,7 +2482,7 @@ do x = xmin,xmax
                         endif
                         occupancy(x,y,z)%exitnum = iexit  ! the site is closer to iexit than to kexit
                         ns = ns + 1
-                    else
+                    elseif (kexit == 0) then
                         occupancy(x,y,z)%exitnum = iexit    ! this site is closest to exit iexit
                         ns = ns + 1
                     endif
@@ -2429,36 +2495,48 @@ enddo
 end subroutine
 
 !---------------------------------------------------------------------
+! Remove the last nremex exits in the list.
 !---------------------------------------------------------------------
-subroutine remove_exits(nremex)
+subroutine removeExits(nremex)
 integer :: nremex
 integer :: Nex, k, iexit, site(3)
 
+!write(*,*) 'removeExits: ',nremex
 Nex = globalvar%lastexit
 k = 0
 do iexit = Nex,1,-1
     if (exitlist(iexit)%ID == 0) cycle
     k = k+1
     site = exitlist(iexit)%site
-    call remove_exit(site)
+    call removeExit(site)
     if (k == nremex) exit
 enddo
 end subroutine
 
 !---------------------------------------------------------------------
+! Remove the exit at site.
 !---------------------------------------------------------------------
-subroutine remove_exit(site)
+subroutine removeExit(site)
 integer :: site(3)
-integer :: iexit,xex,yex,zex,xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,ek(3),vk(3),k,kmin
+integer :: iexit,xex,yex,zex,xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,ek(3),vk(3),k,kmin,i
 real :: d2k, d2min
 
 xex = site(1)
 yex = site(2)
 zex = site(3)
 iexit = -occupancy(xex,yex,zex)%exitnum
-!write(*,*) 'remove_exit: ',site,iexit
+if (iexit <= 0) then
+	write(logmsg,*) 'Error: removeExit: no exit at: ',site,iexit
+	call logger(logmsg)
+	do i = 1,globalvar%lastexit
+		site = exitlist(i)%site
+		write(*,*) 'exit: ',i,site,occupancy(site(1),site(2),site(3))%exitnum
+	enddo
+	stop
+endif
 exitlist(iexit)%ID = 0
 occupancy(xex,yex,zex)%exitnum = iexit      ! to ensure that the site is processed in the next section
+!write(*,*) 'removeExit: site,exitnum: ',site,iexit
 
 xmin = xex - chemo_N
 xmax = xex + chemo_N
@@ -2494,13 +2572,17 @@ do x = xmin,xmax
 		        enddo
 		        if (kmin > 0) then
 		            occupancy(x,y,z)%exitnum = kmin
+!					write(*,*) '  removeExit: site,exitnum: ',x,y,z,kmin
 		        endif
             endif
         enddo
     enddo
 enddo
+if (iexit == globalvar%lastexit) then
+	globalvar%lastexit = globalvar%lastexit - 1
+endif
 globalvar%Nexits = globalvar%Nexits - 1
-!write(*,*) 'remove_exit: Nexits: ',globalvar%Nexits
+!write(*,*) 'removeExit: Nexits: ',globalvar%Nexits
 end subroutine
 
 !---------------------------------------------------------------------
@@ -3006,8 +3088,8 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 		if (gen == TC_MAX_GEN) then
             call set_stage(p,FINISHED)
 			p%stagetime = BIG_TIME
-			write(logmsg,*) 'updatestage: division limit reached for cell: ',kcell
-			call logger(logmsg)
+!			write(logmsg,*) 'updatestage: division limit reached for cell: ',kcell
+!			call logger(logmsg)
 		elseif (candivide(p,ctype)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then

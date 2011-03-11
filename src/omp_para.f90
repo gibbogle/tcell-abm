@@ -1744,7 +1744,7 @@ real(DP) :: R, df
 logical :: left
 integer, allocatable :: permex(:)
 integer :: kpar = 0
-real :: tnow, fract
+real :: tnow, ssfract, exfract
 real :: exit_prob   ! 12 hr => 0.2, 24 hr => 0.1
 
 ok = .true.
@@ -1759,13 +1759,13 @@ if (R < df) then
 endif
 
 if (steadystate) then
-    fract = real(globalvar%NTcells)/globalvar%NTcells0
-    if (fract > 1.01) then
+    ssfract = real(globalvar%NTcells)/globalvar%NTcells0
+    if (ssfract > 1.01) then
         node_inflow = node_inflow - 1
-    elseif (fract < 0.99) then
+    elseif (ssfract < 0.99) then
         node_inflow = node_inflow + 1
     endif
-    exit_prob = fract*exit_prob
+    exit_prob = ssfract*exit_prob
 else
     df = globalvar%OutflowTotal - node_outflow
     R = par_uni(kpar)
@@ -1775,6 +1775,10 @@ else
 endif
 
 tnow = istep*DELTA_T
+exfract = 1
+if (tnow/60 > EGRESS_SUPPRESSION_TIME .and. tnow/60 < 1.5*EGRESS_SUPPRESSION_TIME) then
+	exfract = (tnow/60 - EGRESS_SUPPRESSION_TIME)/(0.5*EGRESS_SUPPRESSION_TIME)
+endif
 
 ! Inflow
 gen = 1
@@ -1827,7 +1831,7 @@ enddo
 
 ! Outflow
 ne = 0
-if (.not.suppress_exit .and. tnow > EGRESS_SUPPRESSION_TIME*60) then
+if (.not.suppress_exit .and. tnow/60 > EGRESS_SUPPRESSION_TIME) then
 	if (globalvar%lastexit > max_exits) then
 		write(logmsg,'(a,2i4)') 'Error: chemo_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
 		call logger(logmsg)
@@ -1842,6 +1846,8 @@ if (.not.suppress_exit .and. tnow > EGRESS_SUPPRESSION_TIME*60) then
 	do ipermex = 1,globalvar%lastexit
 		iexit = permex(ipermex)
 		if (exitlist(iexit)%ID == 0) cycle
+	    R = par_uni(kpar)
+	    if (R > exfract) cycle
 		esite = exitlist(iexit)%site
 		indx = occupancy(esite(1),esite(2),esite(3))%indx
 		do slot = 2,1,-1
@@ -2054,8 +2060,8 @@ end function
 subroutine balancer(ok)
 logical :: ok
 integer :: nadd_total, nadd_limit, n, nadded
-integer :: k, idc, naddDC, naddex, nremex, Nexits0
-real :: tnow, dexit
+integer :: k, idc, naddDC, naddex, nremex, Nexits0, dexit
+real :: tnow
 !real, save :: lasttime = 0
 integer :: kpar = 0
 logical :: blob_changed
@@ -2106,16 +2112,16 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     if (nadd_total > 0) then
         n = nadd_total
 	    if (dbug) write(nflog,*) 'call add_sites'
-        call add_sites(n,ok)
+        call addSites(n,ok)
         if (.not.ok) return
 	    if (dbug) write(nflog,*) 'did add_sites'
         blob_changed = .true.
     elseif (nadd_total < 0) then
         n = -nadd_total
-	    if (dbug) write(nflog,*) 'call remove_sites'
-        call remove_sites(n,ok)
+	    if (dbug) write(nflog,*) 'call removeSites'
+        call removeSites(n,ok)
         if (.not.ok) return
-	    if (dbug) write(nflog,*) 'did remove_sites'
+	    if (dbug) write(nflog,*) 'did removeSites'
         blob_changed = .true.
     else
         n = 0
@@ -2155,6 +2161,9 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
         endif
         if (dbug) write(nflog,'(a,2i6)') 'balancer: nadd_total, radius: ',nadd_total,int(globalvar%radius)
     endif
+    if (PORTAL_EXIT) then
+		call adjustExits
+	endif
 else
     call set_globalvar
 endif
@@ -2165,7 +2174,7 @@ if (use_chemotaxis .and. use_traffic) then
 		Nexits0 = requiredExits(globalvar%NTcells0)
 		if (globalvar%Nexits < Nexits0) then
 			do k = 1,Nexits0 - globalvar%Nexits
-				call place_exit()
+				call addExit()
 			enddo
 !			write(*,*) '-------------------------------------'
 !			write(*,*) 'Set Nexits to base steady-state level'
@@ -2173,7 +2182,7 @@ if (use_chemotaxis .and. use_traffic) then
 !			write(*,*) 'Nexits: ',globalvar%Nexits
 !			write(*,*) '--------------------------'
 		elseif (globalvar%Nexits > Nexits0) then
-			call remove_exits(globalvar%Nexits - Nexits0)
+			call removeExits(globalvar%Nexits - Nexits0)
 !			write(*,*) '-------------------------------------'
 !			write(*,*) 'Set Nexits to base steady-state level'
 !			write(*,*) '--------------------------'
@@ -2184,29 +2193,27 @@ if (use_chemotaxis .and. use_traffic) then
 	endif
 !    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits 
     dexit = requiredExits(globalvar%NTcells) - globalvar%Nexits
-    if (dexit > 0) then
-        naddex = dexit
-        if (naddex > 0) then
-            do k = 1,naddex
-                call place_exit()
-            enddo
+    if (dexit > 1) then
+        naddex = dexit-1
+!       write(*,*) '--------------------------'
+!       write(*,*) 'Nexits: ',globalvar%Nexits
+!       write(*,*) '--------------------------'
+!       write(nflog,*) 'added: Nexits: ',naddex, globalvar%Nexits
+!        write(logmsg,*) 'add: Nexits: ',naddex, requiredExits(globalvar%NTcells), globalvar%Nexits,globalvar%NTcells
+!        call logger(logmsg) 
+        do k = 1,naddex
+            call addExit()
+        enddo
+    elseif (dexit < -1) then
+        nremex = -dexit-1
+!        write(nflog,*) 'balancer: dexit < 0: ',requiredExits(globalvar%NTcells)
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
-            write(nflog,*) 'added: Nexits: ',globalvar%Nexits
-!            write(logmsg,*) 'Nexits: ',globalvar%Nexits
-!            call logger(logmsg)
-        endif
-    elseif (dexit < 0) then
-        nremex = -dexit
-        write(nflog,*) 'balancer: dexit < 0: ',requiredExits(globalvar%NTcells),globalvar%Nexits
-        call remove_exits(nremex)
-!            write(*,*) '--------------------------'
-!            write(*,*) 'Nexits: ',globalvar%Nexits
-!            write(*,*) '--------------------------'
-        write(nflog,*) 'removed: Nexits: ',globalvar%Nexits
-!            write(logmsg,*) 'Nexits: ',globalvar%Nexits
-!            call logger(logmsg)
+!	        write(nflog,*) 'removed: Nexits: ',nremex,globalvar%Nexits
+!        write(logmsg,*) 'remove: Nexits: ',nremex,requiredExits(globalvar%NTcells),globalvar%Nexits,globalvar%NTcells
+!        call logger(logmsg)
+        call removeExits(nremex)
     endif
 endif
 end subroutine
@@ -2215,7 +2222,7 @@ end subroutine
 ! Sites are added to occupancy().  The general idea is to preserve the shape of the 
 ! T cell zone, i.e. a spherical blob remains roughly spherical.
 !-----------------------------------------------------------------------------------------
-subroutine add_sites(n,ok)
+subroutine addSites(n,ok)
 integer :: n
 logical :: ok
 integer :: maxblist,x,y,z,i,k,nb,nadd,idc,kdc,site0(3),site(3)
@@ -2313,7 +2320,7 @@ do i = 1,nadd
         enddo
     endif
     ! Check for adjacent exit site (portal), and if necessary move it.
-    call check_portal(site)
+!    call adjustExit(site)
 enddo
 n = n - nadd
 globalvar%Nsites = globalvar%Nsites + nadd
@@ -2323,30 +2330,64 @@ deallocate(r2list)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Look at all sites near the newly added site.
-! If a nearby site (x,y,z) is an exit portal:
-!   n
+!   removeExit(site)
+!   placeExit(iexit,site) 
 !-----------------------------------------------------------------------------------------
-subroutine check_portal(newsite)
-integer :: newsite(3)
-integer :: x, y, z, dx, dy, dz
+subroutine adjustExits
+integer :: x, y, z, dx, dy, dz, iexit, dir, site1(3), site2(3)
+real :: u(3)
+logical :: ok
 
-do dx = -2, 2
-	x = newsite(1) + dx
-	do dy = -2, 2
-		y = newsite(2) + dy
-		do dz = -2, 2
-			z = newsite(3) + dz
-			
-		
-
+!write(*,*) 'adjustExits'
+do iexit = 1,globalvar%lastexit
+    if (exitlist(iexit)%ID == 0) cycle
+	site1 = exitlist(iexit)%site
+	ok = .false.
+	do dir = 1,27
+		if (dir == 14) cycle
+		x = site1(1) + jumpvec(1,dir)
+		if (x < 1 .or. x > NX) cycle
+		y = site1(2) + jumpvec(2,dir)
+		if (y < 1 .or. y > NY) cycle
+		z = site1(3) + jumpvec(3,dir)
+		if (z < 1 .or. z > NZ) cycle
+		if (occupancy(x,y,z)%indx(1) < 0) then
+			ok = .true.		! site1 is on the blob boundary 
+			exit
+		endif
+	enddo
+	if (ok) cycle
+	! The exit portal has been enclosed, need to move it to site2 on the boundary if possible
+	u = site1 - Centre
+	u = u/sqrt(dot_product(u,u))
+	call getBoundarySite(u,site2,ok)
+	if (.not.ok) cycle
+	if (use_DC) then
+		if (toonearDC(site2,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
+	endif
+	call removeExit(site1)
+!	write(logmsg,*) 'adjustExits: did removeExit: ',iexit,site1
+!	call logger(logmsg)
+!	call checkExits
+	
+	! Note: since we are reusing an existing exit index, no need to increment %lastexit
+	globalvar%Nexits = globalvar%Nexits + 1
+	if (globalvar%Nexits > max_exits) then
+		write(*,*) 'Error: adjustExit: too many exits: need to increase max_exits: ',max_exits
+		stop
+	endif
+	call placeExit(iexit,site2)
+!	write(logmsg,*) 'adjustExits: did placeExit: ',iexit,site2
+!	call logger(logmsg)
+!	call checkExits
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Try to remove n sites from the boundary of the blob (occupancy).
 ! A boundary site is one with at least 3 Neumann neighbours outside the blob.
 !-----------------------------------------------------------------------------------------
-subroutine remove_sites(n,ok)
+subroutine removeSites(n,ok)
 integer :: n
 logical :: ok
 integer :: maxblist,x,y,z,i,nout,k,nb,nr,count,site0(3),site(3),indx(2),kcell
@@ -2356,7 +2397,7 @@ logical :: moved
 integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
-!write(*,'(a,i6)') 'remove_sites: ',n
+!write(*,'(a,i6)') 'removeSites: ',n
 ok = .true.
 r2 = globalvar%Radius*globalvar%Radius
 maxblist = 4*PI*r2*0.1*globalvar%Radius
@@ -2396,7 +2437,7 @@ do z = 1,NZ
                         k = k+1
                         bdrylist(:,k) = site0
                         if (r2 > r2max) then
-                            write(logmsg,'(a,4i6,f8.2)') 'Error: remove_sites: bad r2: ',k,x,y,z,r2
+                            write(logmsg,'(a,4i6,f8.2)') 'Error: removeSites: bad r2: ',k,x,y,z,r2
                             call logger(logmsg)
                             ok = .false.
                             return
@@ -2422,7 +2463,7 @@ do i = nb,1,-1
     indx = occupancy(site0(1),site0(2),site0(3))%indx
     if (indx(1) > 0 .and. indx(2) > 0) cycle    ! consider only sites with 0 or 1 cell
     if (indx(1) < 0) then
-        write(logmsg,'(a,i6)') 'Error: remove_sites: site has a DC: ',indx(1)
+        write(logmsg,'(a,i6)') 'Error: removeSites: site has a DC: ',indx(1)
         call logger(logmsg)
         ok = .false.
         return
@@ -2439,14 +2480,15 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
-				write(nflog,*) 'remove_sites:  need to move exit'
-                call remove_exit(site0)
+				write(*,*) 'removeSites:  need to move exit'
+                call removeExit(site0)
+                ! Let the balancer add a site back again (if needed)
             endif
             globalvar%Nsites = globalvar%Nsites - 1
             count = count + 1
             moved = .true.
         elseif (kcell < 0) then
-            write(logmsg,'(a,5i6)') 'Error: remove_sites: negative indx: ',site0,indx
+            write(logmsg,'(a,5i6)') 'Error: removeSites: negative indx: ',site0,indx
             call logger(logmsg)
             ok = .false.
             return
@@ -3585,6 +3627,7 @@ if (dbug) then
 	write(logmsg,*) 'simulate_step: ',istep
 	call logger(logmsg)
 endif
+call checkExits
 
 if (mod(istep,240) == 0) then
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
@@ -3653,14 +3696,14 @@ if (use_traffic) then
         call vascular
     endif
     if (use_chemotaxis) then
-		if (dbug) write(*,*) 'call chemo_traffic'
+		if (dbug) write(nflog,*) 'call chemo_traffic'
         call chemo_traffic(ok)
 	    if (.not.ok) then
 			call logger('chemo_traffic returned error')
 			res = 1
 			return
 		endif
-		if (dbug) write(*,*) 'did chemo_traffic'
+		if (dbug) write(nflog,*) 'did chemo_traffic'
     else
 		if (dbug) write(nflog,*) 'call traffic'
         call traffic(ok)

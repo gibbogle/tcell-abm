@@ -123,6 +123,10 @@ call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call get_dimensions(NX,NY,NZ,Nsteps)
 do jstep = 1,Nsteps
 	call simulate_step(res)
+	if (res /= 0) then
+		write(*,*) 'Error exit'
+		stop
+	endif
 	if (mod(jstep,240) == 0) then
 		call get_summary(summarydata)
 !summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)

@@ -349,6 +349,12 @@ real(DP) :: p(MAXRELDIR+1),psum, R, pR, psumm, stay_prob, f, c
 real :: rad, chemo_exit=0, chemo_DC=0
 real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 
+if (kcell == 310 .and. istep == 4801) then
+	dbug = .true.
+else
+	dbug = .false.
+endif
+
 cell => cellist(kcell)
 site1 = cell%site
 if (site1(1) < 1) then
@@ -370,6 +376,12 @@ if (globalvar%Nexits > 0) then
         ! Then need to determine if the cell is within the SOI of any exits.
 !        call nearest_exit(site1,in_exit_SOI,e)
         call near_exits(site1,ne,ee) ! new
+        if (dbug) then
+			write(*,*) 'Near exits: ',ne
+			do k = 1,ne
+				write(*,*) 'ee: ',k,ee(:,k)
+			enddo
+		endif
     endif
 endif
 nd = 0
@@ -387,6 +399,7 @@ if (ne > 0) then
 		e = ee(:,k) ! new
 		v = site1 - e
 		vv(:,k) = v ! new
+		if (dbug) write(*,*) 'site1,v: ',site1,v
 		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
 		if (rad == 0) then
 			go = .false.
@@ -395,6 +408,7 @@ if (ne > 0) then
 		ff(k) = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to
 												  ! change ep_factor in chemo_traffic()
 		vsum = vsum + (ff(k)/norm(vv(:,k)))*vv(:,k) ! new
+		if (dbug) write(*,*) k,ne,rad,ff(k),norm(vv(:,k))
 	enddo ! new
 endif
 if (nd > 0) then
@@ -519,7 +533,7 @@ if (dir1 > njumpdirs) then
         endif
     enddo
     if (dir1 == 0) then
-        write(*,*) 'chemo_jumper: bad dir1: ',dir1
+        write(*,*) 'chemo_jumper: bad dir1: ',dir1,kcell,istep
         write(*,*) 'R, psum, psumm: ',R,psum,psumm
         write(*,*) p
         stop
@@ -531,19 +545,6 @@ site2 = savesite2a(:,dir1)
 
 !fullslots2 = saveslots2(irel)
 fullslots2 = saveslots2a(dir1)
-if (istep == -730 .and. kpar == 0 .and. kcell == 25257) then
-    write(*,*) 'p:'
-    write(*,'(10f7.4)') p(1:njumpdirs)
-    write(*,*) 'saveslots2a: '
-    write(*,'(10i7)') saveslots2a
-    write(*,*) 'dir1, fullslots2: ',dir1, fullslots2
-    do k = 1,njumpdirs+1
-        write(*,'(4i6)') k,savesite2a(:,k)
-    enddo
-endif
-!if (in_exit_SOI) then
-!    write(*,'(a,5i4)') 'dir1,site2,fullslots2: ',dir1,site2,fullslots2
-!endif
 ! new code
 if (diagonal_jumps) then
 	dir1 = fix_lastdir(dir1,kpar)
