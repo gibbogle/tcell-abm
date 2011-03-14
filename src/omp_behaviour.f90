@@ -487,7 +487,8 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
-integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, usetraffic
+integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected
+integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow
 character(4) :: logstr
 
 ok = .false.
@@ -566,12 +567,14 @@ read(nfcell,*) T_DC_INJECTION				! Time of DC injection
 !read(nfcell,*) DC_FRACTION					! Fraction of DCs that are bearing antigen
 
 read(nfcell,*) usetraffic					! use T cell trafficking
+read(nfcell,*) useexitchemo                 ! use exit chemotaxis
+read(nfcell,*) useDCchemo					! use DC chemotaxis
+read(nfcell,*) computedoutflow				! compute outflow (with inflow)
 read(nfcell,*) RESIDENCE_TIME               ! T cell residence time in hours -> inflow rate
 ! Vascularity parameters
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
 read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
-read(nfcell,*) exit_rule                    ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD
 read(nfcell,*) exit_region                  ! blob region for cell exits (1 = all z, 2 = lower half, 3 = chemotaxis)
 !read(nfcell,*) efactor                     ! If constant_efactor = true, this is the factor for the p correction
 !read(nfcell,*) VEGF_MODEL                  ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
@@ -623,6 +626,35 @@ if (usetraffic == 1) then
 	USE_TRAFFIC = .true.
 else
 	USE_TRAFFIC = .false.
+endif
+if (useexitchemo == 1) then
+	use_exit_chemotaxis = .true.
+else
+	use_exit_chemotaxis = .false.
+endif
+if (useDCchemo == 1) then
+	use_DC_chemotaxis = .true.
+else
+	use_DC_chemotaxis = .false.
+endif
+if (computedoutflow == 1) then
+	computed_outflow = .true.
+else
+	computed_outflow = .false.
+endif
+
+if (exit_region == EXIT_BLOB_PORTALS .or. exit_region == EXIT_SURFACE_PORTALS) then
+	use_portal_egress = .true.
+else
+	use_portal_egress = .false.
+endif
+
+if ((exit_region == EXIT_EVERYWHERE .or. exit_region == EXIT_LOWERHALF) .and.  &
+	use_exit_chemotaxis) then
+	write(logmsg,*) 'Error: chemotaxis requires portal egress'
+	call logger(logmsg)
+	ok = .false.
+	return
 endif
 
 call read_fixed_params(ok)
@@ -703,15 +735,15 @@ else
     use_cognate = .true.
 endif
 
-if (exit_region == EXIT_CHEMOTAXIS) then
-    use_chemotaxis = .true.
-    if (exit_rule /= 3) then
-        call logger('EXIT_CHEMOTAXIS needs exit_rule = 3')
-        stop
-    endif
-else
-    use_chemotaxis = .false.
-endif
+!if (exit_region == EXIT_CHEMOTAXIS) then
+!    use_chemotaxis = .true.
+!    if (exit_rule /= 3) then
+!        call logger('EXIT_CHEMOTAXIS needs exit_rule = 3')
+!        stop
+!    endif
+!else
+!    use_chemotaxis = .false.
+!endif
 
 if (chemo_K_exit == 0.0) then
     ep_factor = 2.4
@@ -832,7 +864,9 @@ write(nfout,*) 'BALANCER_INTERVAL: ',BALANCER_INTERVAL
 write(nfout,*) 'use_add_count: ',use_add_count
 write(nfout,*) 'use_blob: ',use_blob
 write(nfout,*) 'use_traffic: ',use_traffic
-write(nfout,*) 'use_chemotaxis: ',use_chemotaxis
+write(nfout,*) 'use_exit_chemotaxis: ',use_exit_chemotaxis
+write(nfout,*) 'use_DC_chemotaxis: ',use_DC_chemotaxis
+write(nfout,*) 'computed_outflow: ',computed_outflow
 write(nfout,*) 'use_cytokines: ',use_cytokines
 write(nfout,*) 'use_cognate: ',use_cognate
 write(nfout,*) 'random_cognate: ',random_cognate
@@ -2197,7 +2231,7 @@ real :: tnow, alfa
 
 tnow = istep*DELTA_T
 Nex0 = exit_fraction*4*PI*globalvar%Radius0**2 + 0.5
-if (PORTAL_EXIT) then
+if (SURFACE_PORTALS) then
 	if (FIXED_NEXITS) then
 		Nex = Nex0
 	else
@@ -2211,7 +2245,6 @@ if (PORTAL_EXIT) then
 				alfa = 1
 			endif
 			Nex = (1-alfa)*Nex0 + alfa*Nex
-!			write(nflog,*) tnow/60,alfa,Nex
 		endif
 	endif
 else
@@ -2239,10 +2272,10 @@ subroutine place_exits
 integer :: Nex, iexit, site(3)
 logical :: testing = .false.
 
-if (exit_region /= EXIT_CHEMOTAXIS) then
-    write(*,*) 'Error: place_exits: not EXIT_CHEMOTAXIS'
-    stop
-endif
+!if (exit_region /= EXIT_CHEMOTAXIS) then
+!    write(*,*) 'Error: place_exits: not EXIT_CHEMOTAXIS'
+!    stop
+!endif
 if (testing) then
     globalvar%lastexit = 1
     globalvar%Nexits = globalvar%lastexit
@@ -2358,6 +2391,7 @@ site = (/x,y,z/)
 end subroutine
 
 !---------------------------------------------------------------------
+! Exit sites (portals) are either on the blob surface, or within the blob
 !---------------------------------------------------------------------
 subroutine chooseExitSite(site)
 integer :: site(3)
@@ -2368,7 +2402,7 @@ integer :: kpar = 0
 logical :: ok
 
 !write(*,*) 'chooseExitSite'
-if (PORTAL_EXIT) then
+if (SURFACE_PORTALS) then
 	! randomly choose direction in 3D, then locate sites near this vector on the blob boundary
 	! Need to restrict the sinus interface by removing the follicle interface.
 	! Assume that the follicle interface is a cap from (normalized) x = XFOLLICLE (< 1)
@@ -2390,13 +2424,13 @@ if (PORTAL_EXIT) then
 			if (toonearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
 		endif
 		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
-		if (PORTAL_EXIT) then
+!		if (USE_PORTAL_EGRESS) then
 			prox = 0.5*prox
-		endif
+!		endif
 		if (toonearexit(site,prox)) cycle       ! too near another exit		
 		exit
 	enddo
-else
+else	! blob portals
 	do
 		R = par_uni(kpar)
 		xex = 1 + R*NX
@@ -2874,7 +2908,7 @@ do kcell = 1,nlist
 			endif
 		endif
 
-		if (use_chemotaxis) then
+		if (use_S1P) then
 			! Note that stimrate is normalized with TC_STIM_RATE_CONSTANT for consistency
 			! with the calibration of S1P1/CD69 dynamics, which was carried out with
 			! normalized stimulation of approx. 1  This is easier than adjusting K1_CD69

@@ -65,8 +65,10 @@ integer, parameter :: TRAFFIC_MODE_1 = 1
 integer, parameter :: TRAFFIC_MODE_2 = 2
 integer, parameter :: EXIT_EVERYWHERE = 1
 integer, parameter :: EXIT_LOWERHALF = 2
-integer, parameter :: EXIT_CHEMOTAXIS = 3
-integer, parameter :: EXIT_NONE = 4
+!integer, parameter :: EXIT_CHEMOTAXIS = 3
+integer, parameter :: EXIT_BLOB_PORTALS = 3
+integer, parameter :: EXIT_SURFACE_PORTALS = 4
+integer, parameter :: EXIT_NONE = 5
 integer, parameter :: TASK_TAG = 1
 integer, parameter :: CELL_TAG = 2
 integer, parameter :: LOC_TAG  = 3
@@ -193,7 +195,9 @@ logical, parameter :: random_cognate = .false.          ! number of cognate seed
 integer, parameter :: MMAX_GEN = 25     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 5     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of chemotactic influence (at r = chemo_radius)
-
+integer :: exit_rule = 3                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
+logical :: USE_S1P = .true.				! this is the default
+logical :: COMPUTE_OUTFLOW = .false.
 
 character*(64), parameter :: fixedfile = 'fixed.inpdata'
 
@@ -432,7 +436,6 @@ real :: DC_DENS_HALFLIFE                ! half-life of DC activity (hours)
 integer :: optionA
 integer :: optionB
 integer :: optionC
-integer :: exit_rule                    ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
 real :: IL2_PRODUCTION_TIME			    ! duration of IL2/CD25 production (hrs)
 real :: IL2_THRESHOLD			        ! TCR stimulation needed to initiate IL-2/CD25 production
 real :: ACTIVATION_THRESHOLD    		! combined stimulation needed for activation
@@ -469,6 +472,10 @@ real :: T_DC2                           ! Time of cessation of DC influx (hours)
 logical :: DC_INJECTION					! DCs were injected into experimental animals?
 real :: T_DC_INJECTION					! Time of DC injection
 !real :: DC_FRACTION						! Fraction of DCs that are bearing antigen
+logical :: use_traffic = .true.
+logical :: use_exit_chemotaxis
+logical :: use_DC_chemotaxis
+logical :: computed_outflow
 
 real :: RESIDENCE_TIME                  ! T cell residence time in hours -> inflow rate
 ! Vascularity parameters
@@ -507,7 +514,6 @@ logical :: IV_SHOW_NONCOGNATE = .false.	! display non-cognate T cells
 integer :: NX = 100
 
 ! T cell parameters
-logical :: use_traffic = .true.
 logical :: TCR_splitting = .false.      ! enable sharing of integrated TCR signal between progeny cells
 real :: transient_stagetime				! stagetime for TRANSIENT (Stage 1)
 real :: clusters_stagetime				! stagetime for CLUSTERS (Stage 2)
@@ -572,7 +578,6 @@ integer :: nreldir2D, njumpdirs2D
 integer :: reldir2D(8,8)
 real(DP) :: dirprob2D(0:8)
 logical :: diagonal_jumps
-logical :: use_chemotaxis
 real :: ep_factor      ! (25k) 2.4 when K1_S1P1 = 0.01, 2.8 when K1_S1P1 = 0.001  ! based on no-DC case!
                        ! (50k) 2.3 when K1_S1P1 = 0.01, chemo_K_exit = 0.3
 
@@ -670,7 +675,8 @@ logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: dbug = .false.
-logical :: PORTAL_EXIT = .true.		! testing egress to the sinus at portals on the blob surface
+logical :: USE_PORTAL_EGRESS = .true.
+logical :: SURFACE_PORTALS = .true.		! egress to the sinus at portals on the blob surface
 logical :: FIXED_NEXITS = .false.
 real :: XFOLLICLE = 0.6				! normalized x boundary of follicular interface "cap"
 real :: EGRESS_SUPPRESSION_TIME = 18	! hours
@@ -1289,7 +1295,7 @@ endif
 globalvar%InflowTotal = inflow
 ! This is a kludge to induce a return to steady-state maintenance when NTcells drops
 ! back to "close enough" to the steady-state value.
-if (use_chemotaxis .and. globalvar%NTcells < globalvar%NTcells0) then
+if (use_exit_chemotaxis .and. globalvar%NTcells < globalvar%NTcells0) then
     globalvar%OutflowTotal = globalvar%InflowTotal      ! => steady-state with chemotaxis
     steadystate = .true.
 else
@@ -2280,7 +2286,7 @@ end function
 !--------------------------------------------------------------------------------
 ! Determines the degree to which a cell is subject to chemotaxis.
 ! (Determined by CD69 level, or S1P1 level.)
-! If use_chemotaxis is true, i.e. chemotaxis is used to control cell exit, any cell
+! If use_exit_chemotaxis is true, i.e. chemotaxis is used to control cell exit, any cell
 ! that gets close enough to the exit will leave the paracortex.  Is this
 ! acceptable?
 !--------------------------------------------------------------------------------

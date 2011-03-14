@@ -118,6 +118,10 @@ private:
 	void disableDCInjection();
 	void enableUseTraffic();
 	void disableUseTraffic();
+	void enableUseExitChemotaxis();
+	void disableUseExitChemotaxis();
+	void enableUseDCChemotaxis();
+	void disableUseDCChemotaxis();
 	void writeout();
 	void execute_para();
 	void init_VTK();

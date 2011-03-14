@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'ABM_GUI.ui'
 **
-** Created: Wed 19. Jan 13:42:55 2011
+** Created: Mon 14. Mar 15:13:55 2011
 **      by: Qt User Interface Compiler version 4.6.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -201,9 +201,6 @@ public:
     QMyLabel *label_INFLAMM_LEVEL;
     QSpacerItem *horizontalSpacer_24;
     QLineEdit *line_INFLAMM_LEVEL;
-    QMyLabel *label_EXIT_RULE;
-    QSpacerItem *horizontalSpacer_25;
-    QComboBox *comb_EXIT_RULE;
     QMyLabel *label_EXIT_REGION;
     QSpacerItem *horizontalSpacer_26;
     QComboBox *comb_EXIT_REGION;
@@ -261,6 +258,9 @@ public:
     QCheckBox *cbox_USE_TRAFFIC;
     QRadioButton *rbut_SPECIES_1;
     QRadioButton *rbut_SPECIES_0;
+    QCheckBox *cbox_USE_EXIT_CHEMOTAXIS;
+    QCheckBox *cbox_USE_DC_CHEMOTAXIS;
+    QCheckBox *cbox_COMPUTED_OUTFLOW;
     QLabel *label_input;
     QTextEdit *text_more;
     QWidget *page_output;
@@ -1127,95 +1127,79 @@ public:
 
         gridLayout_4->addWidget(line_INFLAMM_LEVEL, 13, 2, 1, 1);
 
-        label_EXIT_RULE = new QMyLabel(layoutWidget2);
-        label_EXIT_RULE->setObjectName(QString::fromUtf8("label_EXIT_RULE"));
-        label_EXIT_RULE->setMouseTracking(false);
-        label_EXIT_RULE->setWordWrap(false);
-
-        gridLayout_4->addWidget(label_EXIT_RULE, 14, 0, 1, 1);
-
-        horizontalSpacer_25 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        gridLayout_4->addItem(horizontalSpacer_25, 14, 1, 1, 1);
-
-        comb_EXIT_RULE = new QComboBox(layoutWidget2);
-        comb_EXIT_RULE->setObjectName(QString::fromUtf8("comb_EXIT_RULE"));
-        comb_EXIT_RULE->setMaximumSize(QSize(120, 16777215));
-
-        gridLayout_4->addWidget(comb_EXIT_RULE, 14, 2, 1, 1);
-
         label_EXIT_REGION = new QMyLabel(layoutWidget2);
         label_EXIT_REGION->setObjectName(QString::fromUtf8("label_EXIT_REGION"));
         label_EXIT_REGION->setMouseTracking(false);
         label_EXIT_REGION->setWordWrap(false);
 
-        gridLayout_4->addWidget(label_EXIT_REGION, 15, 0, 1, 1);
+        gridLayout_4->addWidget(label_EXIT_REGION, 14, 0, 1, 1);
 
         horizontalSpacer_26 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_26, 15, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_26, 14, 1, 1, 1);
 
         comb_EXIT_REGION = new QComboBox(layoutWidget2);
         comb_EXIT_REGION->setObjectName(QString::fromUtf8("comb_EXIT_REGION"));
+        comb_EXIT_REGION->setEnabled(true);
         comb_EXIT_REGION->setMaximumSize(QSize(120, 16777215));
 
-        gridLayout_4->addWidget(comb_EXIT_REGION, 15, 2, 1, 1);
+        gridLayout_4->addWidget(comb_EXIT_REGION, 14, 2, 1, 1);
 
         label_CHEMO_RADIUS = new QMyLabel(layoutWidget2);
         label_CHEMO_RADIUS->setObjectName(QString::fromUtf8("label_CHEMO_RADIUS"));
 
-        gridLayout_4->addWidget(label_CHEMO_RADIUS, 16, 0, 1, 1);
+        gridLayout_4->addWidget(label_CHEMO_RADIUS, 15, 0, 1, 1);
 
         horizontalSpacer_27 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_27, 16, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_27, 15, 1, 1, 1);
 
         line_CHEMO_RADIUS = new QLineEdit(layoutWidget2);
         line_CHEMO_RADIUS->setObjectName(QString::fromUtf8("line_CHEMO_RADIUS"));
         line_CHEMO_RADIUS->setMaximumSize(QSize(120, 16777215));
         line_CHEMO_RADIUS->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
-        gridLayout_4->addWidget(line_CHEMO_RADIUS, 16, 2, 1, 1);
+        gridLayout_4->addWidget(line_CHEMO_RADIUS, 15, 2, 1, 1);
 
         label_CHEMO_K_EXIT = new QMyLabel(layoutWidget2);
         label_CHEMO_K_EXIT->setObjectName(QString::fromUtf8("label_CHEMO_K_EXIT"));
         label_CHEMO_K_EXIT->setMouseTracking(false);
         label_CHEMO_K_EXIT->setWordWrap(false);
 
-        gridLayout_4->addWidget(label_CHEMO_K_EXIT, 17, 0, 1, 1);
+        gridLayout_4->addWidget(label_CHEMO_K_EXIT, 16, 0, 1, 1);
 
         horizontalSpacer_28 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_28, 17, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_28, 16, 1, 1, 1);
 
         line_CHEMO_K_EXIT = new QLineEdit(layoutWidget2);
         line_CHEMO_K_EXIT->setObjectName(QString::fromUtf8("line_CHEMO_K_EXIT"));
         line_CHEMO_K_EXIT->setMaximumSize(QSize(120, 16777215));
         line_CHEMO_K_EXIT->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
-        gridLayout_4->addWidget(line_CHEMO_K_EXIT, 17, 2, 1, 1);
+        gridLayout_4->addWidget(line_CHEMO_K_EXIT, 16, 2, 1, 1);
 
         label_NDAYS = new QMyLabel(layoutWidget2);
         label_NDAYS->setObjectName(QString::fromUtf8("label_NDAYS"));
         label_NDAYS->setMouseTracking(false);
         label_NDAYS->setWordWrap(false);
 
-        gridLayout_4->addWidget(label_NDAYS, 19, 0, 1, 1);
+        gridLayout_4->addWidget(label_NDAYS, 18, 0, 1, 1);
 
         horizontalSpacer_29 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_29, 19, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_29, 18, 1, 1, 1);
 
         label_SEED1 = new QMyLabel(layoutWidget2);
         label_SEED1->setObjectName(QString::fromUtf8("label_SEED1"));
         label_SEED1->setMouseTracking(false);
         label_SEED1->setWordWrap(false);
 
-        gridLayout_4->addWidget(label_SEED1, 20, 0, 1, 1);
+        gridLayout_4->addWidget(label_SEED1, 19, 0, 1, 1);
 
         horizontalSpacer_30 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_30, 20, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_30, 19, 1, 1, 1);
 
         spin_SEED1 = new QSpinBox(layoutWidget2);
         spin_SEED1->setObjectName(QString::fromUtf8("spin_SEED1"));
@@ -1223,18 +1207,18 @@ public:
         spin_SEED1->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         spin_SEED1->setMaximum(999999999);
 
-        gridLayout_4->addWidget(spin_SEED1, 20, 2, 1, 1);
+        gridLayout_4->addWidget(spin_SEED1, 19, 2, 1, 1);
 
         label_SEED2 = new QMyLabel(layoutWidget2);
         label_SEED2->setObjectName(QString::fromUtf8("label_SEED2"));
         label_SEED2->setMouseTracking(false);
         label_SEED2->setWordWrap(false);
 
-        gridLayout_4->addWidget(label_SEED2, 21, 0, 1, 1);
+        gridLayout_4->addWidget(label_SEED2, 20, 0, 1, 1);
 
         horizontalSpacer_31 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_31, 21, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_31, 20, 1, 1, 1);
 
         spin_SEED2 = new QSpinBox(layoutWidget2);
         spin_SEED2->setObjectName(QString::fromUtf8("spin_SEED2"));
@@ -1242,7 +1226,7 @@ public:
         spin_SEED2->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         spin_SEED2->setMaximum(999999999);
 
-        gridLayout_4->addWidget(spin_SEED2, 21, 2, 1, 1);
+        gridLayout_4->addWidget(spin_SEED2, 20, 2, 1, 1);
 
         line_TC_TO_DC = new QLineEdit(layoutWidget2);
         line_TC_TO_DC->setObjectName(QString::fromUtf8("line_TC_TO_DC"));
@@ -1256,7 +1240,7 @@ public:
         line_NDAYS->setMaximumSize(QSize(120, 16777215));
         line_NDAYS->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
-        gridLayout_4->addWidget(line_NDAYS, 19, 2, 1, 1);
+        gridLayout_4->addWidget(line_NDAYS, 18, 2, 1, 1);
 
         label_FLUID_FRACTION = new QMyLabel(layoutWidget2);
         label_FLUID_FRACTION->setObjectName(QString::fromUtf8("label_FLUID_FRACTION"));
@@ -1268,11 +1252,11 @@ public:
         label_NT_ANIMATION = new QMyLabel(layoutWidget2);
         label_NT_ANIMATION->setObjectName(QString::fromUtf8("label_NT_ANIMATION"));
 
-        gridLayout_4->addWidget(label_NT_ANIMATION, 23, 0, 1, 1);
+        gridLayout_4->addWidget(label_NT_ANIMATION, 22, 0, 1, 1);
 
         horizontalSpacer_32 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_32, 23, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_32, 22, 1, 1, 1);
 
         spin_NT_ANIMATION = new QSpinBox(layoutWidget2);
         spin_NT_ANIMATION->setObjectName(QString::fromUtf8("spin_NT_ANIMATION"));
@@ -1280,33 +1264,33 @@ public:
         spin_NT_ANIMATION->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         spin_NT_ANIMATION->setMaximum(999999999);
 
-        gridLayout_4->addWidget(spin_NT_ANIMATION, 23, 2, 1, 1);
+        gridLayout_4->addWidget(spin_NT_ANIMATION, 22, 2, 1, 1);
 
         label_CHEMO_K_DC = new QMyLabel(layoutWidget2);
         label_CHEMO_K_DC->setObjectName(QString::fromUtf8("label_CHEMO_K_DC"));
 
-        gridLayout_4->addWidget(label_CHEMO_K_DC, 18, 0, 1, 1);
+        gridLayout_4->addWidget(label_CHEMO_K_DC, 17, 0, 1, 1);
 
         line_CHEMO_K_DC = new QLineEdit(layoutWidget2);
         line_CHEMO_K_DC->setObjectName(QString::fromUtf8("line_CHEMO_K_DC"));
         line_CHEMO_K_DC->setMaximumSize(QSize(120, 16777215));
         line_CHEMO_K_DC->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
 
-        gridLayout_4->addWidget(line_CHEMO_K_DC, 18, 2, 1, 1);
+        gridLayout_4->addWidget(line_CHEMO_K_DC, 17, 2, 1, 1);
 
         horizontalSpacer_33 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_33, 18, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_33, 17, 1, 1, 1);
 
         units_CHEMO_RADIUS = new QLabel(layoutWidget2);
         units_CHEMO_RADIUS->setObjectName(QString::fromUtf8("units_CHEMO_RADIUS"));
 
-        gridLayout_4->addWidget(units_CHEMO_RADIUS, 16, 3, 1, 1);
+        gridLayout_4->addWidget(units_CHEMO_RADIUS, 15, 3, 1, 1);
 
         units_NDAYS = new QLabel(layoutWidget2);
         units_NDAYS->setObjectName(QString::fromUtf8("units_NDAYS"));
 
-        gridLayout_4->addWidget(units_NDAYS, 19, 3, 1, 1);
+        gridLayout_4->addWidget(units_NDAYS, 18, 3, 1, 1);
 
         units_INFLAMM1 = new QLabel(layoutWidget2);
         units_INFLAMM1->setObjectName(QString::fromUtf8("units_INFLAMM1"));
@@ -1326,11 +1310,11 @@ public:
         label_NCPU = new QMyLabel(layoutWidget2);
         label_NCPU->setObjectName(QString::fromUtf8("label_NCPU"));
 
-        gridLayout_4->addWidget(label_NCPU, 22, 0, 1, 1);
+        gridLayout_4->addWidget(label_NCPU, 21, 0, 1, 1);
 
         horizontalSpacer_34 = new QSpacerItem(40, 13, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_4->addItem(horizontalSpacer_34, 22, 1, 1, 1);
+        gridLayout_4->addItem(horizontalSpacer_34, 21, 1, 1, 1);
 
         spin_NCPU = new QSpinBox(layoutWidget2);
         spin_NCPU->setObjectName(QString::fromUtf8("spin_NCPU"));
@@ -1338,7 +1322,7 @@ public:
         spin_NCPU->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         spin_NCPU->setMaximum(999999999);
 
-        gridLayout_4->addWidget(spin_NCPU, 22, 2, 1, 1);
+        gridLayout_4->addWidget(spin_NCPU, 21, 2, 1, 1);
 
         label_T_DC_INJECTION = new QMyLabel(layoutWidget2);
         label_T_DC_INJECTION->setObjectName(QString::fromUtf8("label_T_DC_INJECTION"));
@@ -1366,7 +1350,7 @@ public:
         cbox_savepos = new QCheckBox(layoutWidget2);
         cbox_savepos->setObjectName(QString::fromUtf8("cbox_savepos"));
 
-        gridLayout_4->addWidget(cbox_savepos, 24, 2, 1, 1);
+        gridLayout_4->addWidget(cbox_savepos, 23, 2, 1, 1);
 
         cbox_IN_VITRO = new QCheckBox(tab_run);
         cbox_IN_VITRO->setObjectName(QString::fromUtf8("cbox_IN_VITRO"));
@@ -1444,6 +1428,15 @@ public:
         rbut_SPECIES_0->setObjectName(QString::fromUtf8("rbut_SPECIES_0"));
         rbut_SPECIES_0->setGeometry(QRect(470, 10, 71, 18));
         rbut_SPECIES_0->setChecked(true);
+        cbox_USE_EXIT_CHEMOTAXIS = new QCheckBox(tab_run);
+        cbox_USE_EXIT_CHEMOTAXIS->setObjectName(QString::fromUtf8("cbox_USE_EXIT_CHEMOTAXIS"));
+        cbox_USE_EXIT_CHEMOTAXIS->setGeometry(QRect(450, 450, 131, 18));
+        cbox_USE_DC_CHEMOTAXIS = new QCheckBox(tab_run);
+        cbox_USE_DC_CHEMOTAXIS->setObjectName(QString::fromUtf8("cbox_USE_DC_CHEMOTAXIS"));
+        cbox_USE_DC_CHEMOTAXIS->setGeometry(QRect(450, 480, 121, 18));
+        cbox_COMPUTED_OUTFLOW = new QCheckBox(tab_run);
+        cbox_COMPUTED_OUTFLOW->setObjectName(QString::fromUtf8("cbox_COMPUTED_OUTFLOW"));
+        cbox_COMPUTED_OUTFLOW->setGeometry(QRect(450, 400, 141, 18));
         tabs->addTab(tab_run, QString());
 
         verticalLayout->addWidget(tabs);
@@ -1576,8 +1569,7 @@ public:
         QWidget::setTabOrder(line_RESIDENCE_TIME, line_INFLAMM_DAYS1);
         QWidget::setTabOrder(line_INFLAMM_DAYS1, line_INFLAMM_DAYS2);
         QWidget::setTabOrder(line_INFLAMM_DAYS2, line_INFLAMM_LEVEL);
-        QWidget::setTabOrder(line_INFLAMM_LEVEL, comb_EXIT_RULE);
-        QWidget::setTabOrder(comb_EXIT_RULE, comb_EXIT_REGION);
+        QWidget::setTabOrder(line_INFLAMM_LEVEL, comb_EXIT_REGION);
         QWidget::setTabOrder(comb_EXIT_REGION, line_CHEMO_RADIUS);
         QWidget::setTabOrder(line_CHEMO_RADIUS, line_CHEMO_K_EXIT);
         QWidget::setTabOrder(line_CHEMO_K_EXIT, line_NDAYS);
@@ -1723,13 +1715,6 @@ public:
         label_INFLAMM_DAYS1->setText(QApplication::translate("MainWindow", "label_INFLAMM_DAYS1", 0, QApplication::UnicodeUTF8));
         label_INFLAMM_DAYS2->setText(QApplication::translate("MainWindow", "label_INFLAMM_DAYS2", 0, QApplication::UnicodeUTF8));
         label_INFLAMM_LEVEL->setText(QApplication::translate("MainWindow", "label_INFLAMM_LEVEL", 0, QApplication::UnicodeUTF8));
-        label_EXIT_RULE->setText(QApplication::translate("MainWindow", "label_EXIT_RULE", 0, QApplication::UnicodeUTF8));
-        comb_EXIT_RULE->clear();
-        comb_EXIT_RULE->insertItems(0, QStringList()
-         << QApplication::translate("MainWindow", "Use NGEN_EXIT", 0, QApplication::UnicodeUTF8)
-         << QApplication::translate("MainWindow", "Use EXIT_THRESHOLD", 0, QApplication::UnicodeUTF8)
-         << QApplication::translate("MainWindow", "No restriction", 0, QApplication::UnicodeUTF8)
-        );
 #ifndef QT_NO_TOOLTIP
         label_EXIT_REGION->setToolTip(QApplication::translate("MainWindow", "determines blob region for cell exits", 0, QApplication::UnicodeUTF8));
 #endif // QT_NO_TOOLTIP
@@ -1738,7 +1723,8 @@ public:
         comb_EXIT_REGION->insertItems(0, QStringList()
          << QApplication::translate("MainWindow", "everywhere", 0, QApplication::UnicodeUTF8)
          << QApplication::translate("MainWindow", "lower half of blob", 0, QApplication::UnicodeUTF8)
-         << QApplication::translate("MainWindow", "by chemotaxis, via discrete exits", 0, QApplication::UnicodeUTF8)
+         << QApplication::translate("MainWindow", "blob portals", 0, QApplication::UnicodeUTF8)
+         << QApplication::translate("MainWindow", "surface portals", 0, QApplication::UnicodeUTF8)
         );
         label_CHEMO_RADIUS->setText(QApplication::translate("MainWindow", "label_CHEMO_RADIUS", 0, QApplication::UnicodeUTF8));
 #ifndef QT_NO_TOOLTIP
@@ -1785,6 +1771,9 @@ public:
         cbox_USE_TRAFFIC->setText(QApplication::translate("MainWindow", "T cell trafficking? ", 0, QApplication::UnicodeUTF8));
         rbut_SPECIES_1->setText(QApplication::translate("MainWindow", "Human", 0, QApplication::UnicodeUTF8));
         rbut_SPECIES_0->setText(QApplication::translate("MainWindow", "Mouse", 0, QApplication::UnicodeUTF8));
+        cbox_USE_EXIT_CHEMOTAXIS->setText(QApplication::translate("MainWindow", "Use exit chemotaxis?", 0, QApplication::UnicodeUTF8));
+        cbox_USE_DC_CHEMOTAXIS->setText(QApplication::translate("MainWindow", "Use DC chemotaxis?", 0, QApplication::UnicodeUTF8));
+        cbox_COMPUTED_OUTFLOW->setText(QApplication::translate("MainWindow", "Compute T cell outflow?", 0, QApplication::UnicodeUTF8));
         tabs->setTabText(tabs->indexOf(tab_run), QApplication::translate("MainWindow", "Run", 0, QApplication::UnicodeUTF8));
         label_input->setText(QApplication::translate("MainWindow", "Inputs", 0, QApplication::UnicodeUTF8));
         text_more->setDocumentTitle(QString());

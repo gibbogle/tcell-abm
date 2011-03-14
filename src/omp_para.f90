@@ -1736,7 +1736,7 @@ end function
 ! The number of exits is greater than 1/2 the desired outflow, and the calibration
 ! parameter exit_prob is used to adjust the mean outflow.
 !-----------------------------------------------------------------------------------------
-subroutine chemo_traffic(ok)
+subroutine portal_traffic(ok)
 logical :: ok
 integer :: iexit, esite(3), site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv
 integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow
@@ -1833,7 +1833,7 @@ enddo
 ne = 0
 if (.not.suppress_exit .and. tnow/60 > EGRESS_SUPPRESSION_TIME) then
 	if (globalvar%lastexit > max_exits) then
-		write(logmsg,'(a,2i4)') 'Error: chemo_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
+		write(logmsg,'(a,2i4)') 'Error: portal_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
 		call logger(logmsg)
 		ok = .false.
 		return
@@ -1870,11 +1870,11 @@ if (.not.suppress_exit .and. tnow/60 > EGRESS_SUPPRESSION_TIME) then
 						DCvisits(nv) = DCvisits(nv) + 1
 						DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
 					endif
-					if (ne == node_outflow .and. .not.PORTAL_EXIT) exit
+					if (ne == node_outflow .and. computed_outflow) exit
 				endif
 			endif
 		enddo
-		if (ne == node_outflow .and. .not.PORTAL_EXIT) exit
+		if (ne == node_outflow .and. computed_outflow) exit
 	enddo
 	deallocate(permex)
 endif
@@ -1894,7 +1894,7 @@ total_out = total_out + ne
 globalvar%NTcells = globalvar%NTcells + net_inflow
 globalvar%NTcellsPer = globalvar%NTcellsPer + node_outflow
 globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
-!write(*,'(a,4i8)') 'chemo_traffic: ',node_inflow,ne,net_inflow,globalvar%NTcells 
+!write(*,'(a,4i8)') 'portal_traffic: ',node_inflow,ne,net_inflow,globalvar%NTcells 
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2161,14 +2161,14 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
         endif
         if (dbug) write(nflog,'(a,2i6)') 'balancer: nadd_total, radius: ',nadd_total,int(globalvar%radius)
     endif
-    if (PORTAL_EXIT) then
+    if (USE_PORTAL_EGRESS) then
 		call adjustExits
 	endif
 else
     call set_globalvar
 endif
-if (use_chemotaxis .and. use_traffic) then
-	if (globalvar%NTcells < globalvar%NTcells0 .and. .not.PORTAL_EXIT) then
+if (use_portal_egress .and. use_traffic) then
+	if (globalvar%NTcells < globalvar%NTcells0 .and. .not.SURFACE_PORTALS) then
 		! Set Nexits = Nexits0 for steady-state maintenance.  To wrap up the end of the response.
 !        Nexits0 = exit_fraction*globalvar%NTcells0
 		Nexits0 = requiredExits(globalvar%NTcells0)
@@ -3695,15 +3695,15 @@ if (use_traffic) then
     if (vary_vascularity) then	! There is a problem with this system
         call vascular
     endif
-    if (use_chemotaxis) then
-		if (dbug) write(nflog,*) 'call chemo_traffic'
-        call chemo_traffic(ok)
+    if (use_portal_egress) then
+		if (dbug) write(nflog,*) 'call portal_traffic'
+        call portal_traffic(ok)
 	    if (.not.ok) then
-			call logger('chemo_traffic returned error')
+			call logger('portal_traffic returned error')
 			res = 1
 			return
 		endif
-		if (dbug) write(nflog,*) 'did chemo_traffic'
+		if (dbug) write(nflog,*) 'did portal_traffic'
     else
 		if (dbug) write(nflog,*) 'call traffic'
         call traffic(ok)
@@ -3851,11 +3851,11 @@ do istep = 1,Nsteps
         if (vary_vascularity) then	! There is a problem with this system
             call vascular
         endif
-        if (use_chemotaxis) then
-			if (dbug) write(*,*) 'call chemo_traffic'
-            call chemo_traffic(ok)
+        if (use_portal_egress) then
+			if (dbug) write(*,*) 'call portal_traffic'
+            call portal_traffic(ok)
             if (.not.ok) return
-			if (dbug) write(*,*) 'did chemo_traffic'
+			if (dbug) write(*,*) 'did portal_traffic'
         else
             call traffic(ok)
             if (dbug) write(nfres,'(a,i6,f10.6)') 'traffic: ',istep,par_uni(kpar)
@@ -4098,13 +4098,17 @@ call place_cells(ok)
 
 if (.not.ok) return
 
-if (exit_region == EXIT_CHEMOTAXIS) then
-	call chemo_setup
+if (use_portal_egress) then
     call place_exits
 else
     globalvar%Nexits = 0
     globalvar%lastexit = 0
 endif
+
+if (use_exit_chemotaxis) then
+	call chemo_setup
+endif
+
 if (vary_vascularity) then
 	call initialise_vascularity
 endif

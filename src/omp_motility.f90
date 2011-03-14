@@ -178,7 +178,7 @@ if (in_exit_SOI) then
 		go = .false.
 		return
 	endif
-	f = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to												  ! change ep_factor in chemo_traffic()
+	f = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to												  ! change ep_factor in portal_traffic()
     stay_prob = dirprob(0)
     c = 1
 !    c = CCR7_ligand(rad)
@@ -349,11 +349,11 @@ real(DP) :: p(MAXRELDIR+1),psum, R, pR, psumm, stay_prob, f, c
 real :: rad, chemo_exit=0, chemo_DC=0
 real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 
-if (kcell == 310 .and. istep == 4801) then
-	dbug = .true.
-else
+!if (kcell == 310 .and. istep == 4801) then
+!	dbug = .true.
+!else
 	dbug = .false.
-endif
+!endif
 
 cell => cellist(kcell)
 site1 = cell%site
@@ -385,7 +385,7 @@ if (globalvar%Nexits > 0) then
     endif
 endif
 nd = 0
-if (chemo_K_DC > 0 .and. globalvar%NDC > 0) then
+if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
     chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_DC > 0) then
         ! Then need to determine if the cell is within the SOI of any DCs.
@@ -406,7 +406,7 @@ if (ne > 0) then
 			return
 		endif
 		ff(k) = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to
-												  ! change ep_factor in chemo_traffic()
+												  ! change ep_factor in portal_traffic()
 		vsum = vsum + (ff(k)/norm(vv(:,k)))*vv(:,k) ! new
 		if (dbug) write(*,*) k,ne,rad,ff(k),norm(vv(:,k))
 	enddo ! new
@@ -706,7 +706,7 @@ do kcell = 1,nlist
         write(*,'(a,6i8)') 'Error: par_mover: bad indx: ',kcell,site1,indx
         stop
     endif
-	if (use_chemotaxis) then
+	if (use_exit_chemotaxis) then
 		call chemo_jumper(kcell,indx,slot,go,kpar)
 	else
 		call jumper(kcell,indx,slot,go,kpar)
@@ -763,7 +763,7 @@ do kcell = 1,nlist
         ok = .false.
         return
     endif
-    if (use_chemotaxis) then
+    if (use_exit_chemotaxis) then
         call chemo_jumper2D(kcell,indx,slot,go,kpar)
         site = cellist(kcell)%site
     else

@@ -393,6 +393,26 @@ void MainWindow::loadParams()
 							if (use_traffic)
 								disableUseTraffic();
 						}
+						bool use_exit_chemotaxis = qsname.contains("USE_EXIT_CHEMOTAXIS");
+						if (p.value == 1) {
+							w_cb->setChecked(true);
+							if (use_exit_chemotaxis)
+								enableUseExitChemotaxis();
+						} else {
+							w_cb->setChecked(false);
+							if (use_exit_chemotaxis)
+								disableUseExitChemotaxis();
+						}
+						bool use_DC_chemotaxis = qsname.contains("USE_DC_CHEMOTAXIS");
+						if (p.value == 1) {
+							w_cb->setChecked(true);
+							if (use_DC_chemotaxis)
+								enableUseDCChemotaxis();
+						} else {
+							w_cb->setChecked(false);
+							if (use_DC_chemotaxis)
+								disableUseDCChemotaxis();
+						}
 					} else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
 						if (p.value == rbutton_case) {
@@ -582,6 +602,26 @@ void MainWindow::reloadParams()
 							w_cb->setChecked(false);
 							if (use_traffic)
 								disableUseTraffic();
+						}
+						bool use_exit_chemotaxis = qsname.contains("USE_EXIT_CHEMOTAXIS");
+						if (p.value == 1) {
+							w_cb->setChecked(true);
+							if (use_exit_chemotaxis)
+								enableUseExitChemotaxis();
+						} else {
+							w_cb->setChecked(false);
+							if (use_exit_chemotaxis)
+								disableUseExitChemotaxis();
+						}
+						bool use_DC_chemotaxis = qsname.contains("USE_DC_CHEMOTAXIS");
+						if (p.value == 1) {
+							w_cb->setChecked(true);
+							if (use_DC_chemotaxis)
+								enableUseDCChemotaxis();
+						} else {
+							w_cb->setChecked(false);
+							if (use_DC_chemotaxis)
+								disableUseDCChemotaxis();
 						}
 					} else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
@@ -1709,6 +1749,8 @@ void MainWindow::changeParam()
     QObject *w = sender(); // Gets the pointer to the object that invoked the changeParam slot.
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
+//		LOG_QMSG("changeParam:");
+//		LOG_QMSG(wname);
 		if (wname.contains("line_")) {
 			QString wtag = wname.mid(5);
 			QLineEdit *lineEdit = (QLineEdit *)w;
@@ -1779,6 +1821,26 @@ void MainWindow::changeParam()
 				if (use_traffic)
 					disableUseTraffic();
 			}
+			bool use_exit_chemotaxis = wname.contains("USE_EXIT_CHEMOTAXIS");
+			if (checkBox->isChecked()) {
+				v = 1;
+				if (use_exit_chemotaxis)
+					enableUseExitChemotaxis();
+			} else {
+				v = 0;
+				if (use_exit_chemotaxis)
+					disableUseExitChemotaxis();
+			}
+			bool use_DC_chemotaxis = wname.contains("USE_DC_CHEMOTAXIS");
+			if (checkBox->isChecked()) {
+				v = 1;
+				if (use_DC_chemotaxis)
+					enableUseDCChemotaxis();
+			} else {
+				v = 0;
+				if (use_DC_chemotaxis)
+					disableUseDCChemotaxis();
+			}
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {
@@ -1791,6 +1853,19 @@ void MainWindow::changeParam()
 			if (wname.contains("savepos")) {
 				if (checkBox->isChecked()) {
 					setSavePosStart();
+				}
+			}
+		} else if (wname.contains("comb_")) {
+			QComboBox *comboBox = (QComboBox *)w;
+            int v = comboBox->currentIndex();
+			QString wtag = wname.mid(5);
+//			sprintf(msg,"combo: %s  currentIndex: %d",wtag,v);
+//			LOG_MSG(msg);
+			for (int k=0; k<parm->nParams; k++) {
+				PARAM_SET p = parm->get_param(k);
+				if (wtag.compare(p.tag) == 0) {
+					parm->set_value(k,v+1);
+                    break;
 				}
 			}
 		} else if (wname.contains("rbut_")) {
@@ -1902,6 +1977,59 @@ void MainWindow::disableUseTraffic()
 		}
 	}
 }
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseExitChemotaxis()
+{
+	for (int i=0; i<lineEdit_list.length(); i++) {
+		QLineEdit *w = lineEdit_list[i];
+		QString wname = w->objectName();
+		if (wname.contains("line_CHEMO_K_EXIT")) {	
+			w->setEnabled(true);
+		}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseExitChemotaxis()
+{
+	for (int i=0; i<lineEdit_list.length(); i++) {
+		QLineEdit *w = lineEdit_list[i];
+		QString wname = w->objectName();
+		if (wname.contains("line_CHEMO_K_EXIT")) {	
+			w->setEnabled(false);
+		}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDCChemotaxis()
+{
+	for (int i=0; i<lineEdit_list.length(); i++) {
+		QLineEdit *w = lineEdit_list[i];
+		QString wname = w->objectName();
+		if (wname.contains("line_CHEMO_K_DC")) {	
+			w->setEnabled(true);
+		}
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDCChemotaxis()
+{
+	for (int i=0; i<lineEdit_list.length(); i++) {
+		QLineEdit *w = lineEdit_list[i];
+		QString wname = w->objectName();
+		if (wname.contains("line_CHEMO_K_DC")) {	
+			w->setEnabled(false);
+		}
+	}
+}
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::redrawDistPlot()

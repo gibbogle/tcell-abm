@@ -168,6 +168,19 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell trafficking?",
 "T cell trafficking is simulated (ingress and egress)"},
 
+{"USE_EXIT_CHEMOTAXIS", 1, 0, 1,
+"T cell exit chemotaxis?",
+"S1P-modulated T cell chemotaxis towards exit portals is simulated"},
+
+{"USE_DC_CHEMOTAXIS", 0, 0, 1,
+"T cell DC chemotaxis?",
+"T cell chemotaxis towards DCs is simulated"},
+
+{"COMPUTE_OUTFLOW", 0, 0, 1,
+"Compute T cell outflow limit?",
+"The upper bound on T cell outflow is computed together with inflow.  The alternative is to permit (probabilistic) egress of any cell at a portal."},
+
+
 {"RESIDENCE_TIME", 24.0, 12.0, 36.0,
 "T cell residence time",
 "T cell residence time (based on no DCs).\n\
@@ -187,13 +200,13 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Inflammation level",
 "The plateau inflammation signal level."},
 
-{"EXIT_RULE", 3, 1, 3,
-"Exit rule",
-"T cell exit rule.  1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = no restriction."},
+//{"EXIT_RULE", 3, 1, 3,
+//"Exit rule",
+//"T cell exit rule.  1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = no restriction."},
 
-{"EXIT_REGION", 1, 1, 3,
+{"EXIT_REGION", 4, 1, 4,
 "Exit region",
-"Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = by chemotaxis, via discrete exits."},
+"Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = blob portals, 4 = surface portals."},
 
 {"CHEMO_RADIUS", 30.0, 10.0, 200.0,
 "Radius of chemotactic influence",
