@@ -2454,7 +2454,7 @@ nb = k
 do i = 1,nb
     t(i) = i
 enddo
-call qsort(r2list,nb,t)     ! sort in increasing order
+call qsort(r2list,nb,t)     ! sort in increasing order 
 nr = min(nb,n)
 count = 0
 do i = nb,1,-1
@@ -2480,7 +2480,7 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
-				write(*,*) 'removeSites:  need to move exit'
+!				write(*,*) 'removeSites:  need to move exit'
                 call removeExit(site0)
                 ! Let the balancer add a site back again (if needed)
             endif

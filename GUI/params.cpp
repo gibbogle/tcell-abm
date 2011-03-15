@@ -176,10 +176,9 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell DC chemotaxis?",
 "T cell chemotaxis towards DCs is simulated"},
 
-{"COMPUTE_OUTFLOW", 0, 0, 1,
+{"COMPUTED_OUTFLOW", 1, 0, 1,
 "Compute T cell outflow limit?",
 "The upper bound on T cell outflow is computed together with inflow.  The alternative is to permit (probabilistic) egress of any cell at a portal."},
-
 
 {"RESIDENCE_TIME", 24.0, 12.0, 36.0,
 "T cell residence time",

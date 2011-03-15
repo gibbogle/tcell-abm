@@ -2229,7 +2229,6 @@ do x = -chemo_N,chemo_N
             chemo_p(x,y,z,:) = w
             if (x >= 0 .and. y >= 0 .and. z >= 0) then
                 chemo_r(x,y,z) = sqrt(r2)
-                write(*,*) x,y,z,chemo_r(x,y,z)
             endif
         enddo
     enddo
