@@ -911,7 +911,8 @@ integer :: kcell
 integer :: k, idc, site(3), indx(2), ctype, stype, region
 logical :: cognate
 
-!write(*,*) 'Tcell_death: ',kcell
+write(logmsg,*) 'Tcell_death: ',kcell
+call logger(logmsg)
 cognate = (associated(cellist(kcell)%cptr))
 if (cognate) then
 	call get_region(cellist(kcell)%cptr,region)

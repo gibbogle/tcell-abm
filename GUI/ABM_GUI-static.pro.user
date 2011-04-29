@@ -97,7 +97,7 @@
     <valuelist key="Qt4ProjectManager.Qt4RunConfiguration.UserEnvironmentChanges" type="QVariantList"/>
     <value key="Qt4ProjectManager.Qt4RunConfiguration.UserSetName" type="bool">false</value>
     <value key="Qt4ProjectManager.Qt4RunConfiguration.UserSetWorkingDirectory" type="bool">true</value>
-    <value key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory" type="QString">C:\Users\Gib\tcell-abm\Build32msvs\Execution</value>
+    <value key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory" type="QString">C:\Users\Gib\tcell-abm\Build32msvs\Execution\expt</value>
    </valuemap>
    <value key="ProjectExplorer.Target.RunConfigurationCount" type="int">1</value>
   </valuemap>

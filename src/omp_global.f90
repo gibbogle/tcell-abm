@@ -249,7 +249,7 @@ integer, parameter :: n_multiple_runs = 1
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.  ! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: suppress_exit = .false.        ! to test effect of S1P1 agonist, e.g. SEW8721 (Rosen hypothesis)
-logical, parameter :: L_selectin = .false.              ! T cell inflow is suppressed
+logical, parameter :: L_selectin = .true.              ! T cell inflow is suppressed
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.

@@ -2482,7 +2482,7 @@ do i = nb,1,-1
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
 !				write(*,*) 'removeSites:  need to move exit'
                 call removeExit(site0)
-                ! Let the balancer add a site back again (if needed)
+                ! Let the balancer add a site back again (if needed) 
             endif
             globalvar%Nsites = globalvar%Nsites - 1
             count = count + 1
