@@ -10,10 +10,12 @@ INCLUDEPATH  += c:/qt/qwt-5.2.1/src
 FORMS         = ABM_GUI.ui
 HEADERS       = mainwindow.h qmylabel.h params.h plot.h log.h myvtk.h misc.h \
     			libpara32.h \
-    result_set.h
+    result_set.h \
+    graphs.h
 RESOURCES     += icons.qrc
 SOURCES       = main.cpp mainwindow.cpp params.cpp plot.cpp \
-                myvtk.cpp misc.cpp lognormal.cpp
+                myvtk.cpp misc.cpp lognormal.cpp \
+    graphs.cpp
 
 # See cmake_link_command.txt for the full list of libraries that CMake links
 LIBS += -L"c:\VTK-build-4.4.0-static\bin" -lQVTK -lvtkRendering -lvtkGraphics -lvtkImaging -lvtkIO -lvtkFiltering -lvtkCommon \

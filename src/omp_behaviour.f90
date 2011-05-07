@@ -366,36 +366,36 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine old_unread_cell_params
 
-NX = 100
+!NX = 100
 
 ! T cell parameters
-use_traffic = .false.
-TCR_splitting = .false.  ! enable sharing of integrated TCR signal between progeny cells
-transient_stagetime = 1.0
-clusters_stagetime = 13.0
-transient_bindtime = 10.0
-clusters_bindtime = 180.0
-swarms_bindtime = 20.0
-TC_life_median1 = 196				! median lifetime of naive T cells
-TC_life_median2 = 196				! median lifetime of activated T cells
-TC_life_shape= 1.4					! shape parameter for lifetime of T cells
+!use_traffic = .false.
+!TCR_splitting = .false.  ! enable sharing of integrated TCR signal between progeny cells
+!transient_stagetime = 1.0
+!clusters_stagetime = 13.0
+!transient_bindtime = 10.0
+!clusters_bindtime = 180.0
+!swarms_bindtime = 20.0
+!TC_life_median1 = 196				! median lifetime of naive T cells
+!TC_life_median2 = 196				! median lifetime of activated T cells
+!TC_life_shape= 1.4					! shape parameter for lifetime of T cells
 
 ! DC parameters
-use_DCflux = .false.
-DC_pMHC_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
-DC_STIM_THRESHOLD = 300
-CONTACT_RULE = CT_HENRICKSON
-ABIND1 = 0.4    ! binding to a DC
-ABIND2 = 0.8
+!use_DCflux = .false.
+!DC_pMHC_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
+!DC_STIM_THRESHOLD = 300
+!CONTACT_RULE = CT_HENRICKSON
+!ABIND1 = 0.4    ! binding to a DC
+!ABIND2 = 0.8
 
 ! Vascularity parameters
-Inflammation_days1 = 4    ! Days of plateau level - parameters for VEGF_MODEL = 1
-Inflammation_days2 = 5    ! End of inflammation
-Inflammation_level = 1.0 ! This is the level of inflammation
+!Inflammation_days1  ! Days of plateau level - parameters for VEGF_MODEL = 1
+!Inflammation_days2  ! End of inflammation
+!Inflammation_level	! This is the level of inflammation
 
 ! Egress parameters
-chemo_radius = 5  ! radius of chemotactic influence (sites)
-exit_fraction = 1.0/1000.    ! number of exits as a fraction of T cell population
+!chemo_radius = 5  ! radius of chemotactic influence (sites)
+!exit_fraction = 1.0/1000.    ! number of exits as a fraction of T cell population
 
 end subroutine
 
@@ -575,10 +575,10 @@ read(nfcell,*) RESIDENCE_TIME               ! T cell residence time in hours -> 
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
 read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
-read(nfcell,*) exit_region                  ! blob region for cell exits (1 = all z, 2 = lower half, 3 = chemotaxis)
+read(nfcell,*) exit_region                  ! blob region for cell exits (1 = all z, 2 = lower half, 3 = blob portals, 4 = surface portals)
 !read(nfcell,*) efactor                     ! If constant_efactor = true, this is the factor for the p correction
 !read(nfcell,*) VEGF_MODEL                  ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
-read(nfcell,*) chemo_radius			        ! radius of chemotactic influence (sites)
+read(nfcell,*) chemo_radius			        ! radius of chemotactic influence (um)
 read(nfcell,*) chemo_K_exit                 ! level of chemotactic influence towards exits
 read(nfcell,*) chemo_K_DC                   ! level of chemotactic influence towards DCs
 
@@ -642,9 +642,14 @@ if (computedoutflow == 1) then
 else
 	computed_outflow = .false.
 endif
-
-if (exit_region == EXIT_BLOB_PORTALS .or. exit_region == EXIT_SURFACE_PORTALS) then
+BLOB_PORTALS = .false.
+SURFACE_PORTALS = .false.
+if (exit_region == EXIT_BLOB_PORTALS) then 
 	use_portal_egress = .true.
+	BLOB_PORTALS = .true.
+elseif (exit_region == EXIT_SURFACE_PORTALS) then
+	use_portal_egress = .true.
+	SURFACE_PORTALS = .true.
 else
 	use_portal_egress = .false.
 endif
@@ -694,7 +699,7 @@ if (IN_VITRO) then
 endif
 
 DC_RADIUS = DC_RADIUS/DELTA_X				    ! convert from um to lattice grids
-chemo_radius = chemo_radius/DELTA_X
+chemo_radius = chemo_radius/DELTA_X				! convert from um to lattice grids
 !write(*,*) 'DC_RADIUS, chemo_radius: ',DC_RADIUS,chemo_radius
 if (chemo_radius < DC_RADIUS) then
 	call logger('Currently it is required that chemo_radius >= DC_RADIUS')
@@ -911,8 +916,8 @@ integer :: kcell
 integer :: k, idc, site(3), indx(2), ctype, stype, region
 logical :: cognate
 
-write(logmsg,*) 'Tcell_death: ',kcell
-call logger(logmsg)
+!write(logmsg,*) 'Tcell_death: ',kcell
+!call logger(logmsg)
 cognate = (associated(cellist(kcell)%cptr))
 if (cognate) then
 	call get_region(cellist(kcell)%cptr,region)
@@ -2222,36 +2227,29 @@ enddo
 ok = .true.
 end subroutine
 
-!---------------------------------------------------------------------
-! Returns the number of exits required for the current cell population.
-!---------------------------------------------------------------------
-integer function requiredExits(ncells)
+!-----------------------------------------------------------------------------
+! Number of exit portals required for the current cell population, ncells.
+! For SURFACE_PORTALS, linearly proportional to ncells, factor = exit_fraction
+!-----------------------------------------------------------------------------
+integer function requiredExitPortals(ncells)
 integer :: ncells
 integer :: Nex, Nex0
 real :: tnow, alfa
 
+Nex0 = exit_fraction*globalvar%NTcells0 + 0.5
+requiredExitPortals = exit_fraction*ncells + 0.5
+return
 tnow = istep*DELTA_T
-Nex0 = exit_fraction*4*PI*globalvar%Radius0**2 + 0.5
 if (SURFACE_PORTALS) then
 	if (FIXED_NEXITS) then
 		Nex = Nex0
 	else
-		Nex = exit_fraction*4*PI*globalvar%Radius**2 + 0.5
-		if (EGRESS_SUPPRESSION_TIME > 0) then
-			if (tnow/60 <= EGRESS_SUPPRESSION_TIME) then
-				alfa = 0
-			elseif (tnow/60 > EGRESS_SUPPRESSION_TIME .and. tnow/60 <= 1.5*EGRESS_SUPPRESSION_TIME) then
-				alfa = (tnow/60 - EGRESS_SUPPRESSION_TIME)/(0.5*EGRESS_SUPPRESSION_TIME)
-			else
-				alfa = 1
-			endif
-			Nex = (1-alfa)*Nex0 + alfa*Nex
-		endif
+		Nex = exit_fraction*ncells + 0.5
 	endif
 else
-	Nex = exit_fraction*ncells
+	Nex = exit_fraction*ncells + 0.5
 endif
-requiredExits = Nex
+requiredExitPortals = Nex
 end function
 
 !---------------------------------------------------------------------
@@ -2269,12 +2267,12 @@ end function
 ! exit, set to the ID of the nearest exit.
 ! This is analogous to the treatment of DCs
 !---------------------------------------------------------------------
-subroutine place_exits
+subroutine placeExits
 integer :: Nex, iexit, site(3)
 logical :: testing = .false.
 
 !if (exit_region /= EXIT_CHEMOTAXIS) then
-!    write(*,*) 'Error: place_exits: not EXIT_CHEMOTAXIS'
+!    write(*,*) 'Error: placeExits: not EXIT_CHEMOTAXIS'
 !    stop
 !endif
 if (testing) then
@@ -2288,7 +2286,7 @@ else
     globalvar%Nexits = 0
     if (use_traffic) then
 !        Nex = exit_fraction*globalvar%NTcells0
-		Nex = requiredExits(globalvar%NTcells0)
+		Nex = requiredExitPortals(globalvar%NTcells0)
         max_exits = 10*Nex
         allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
     else
@@ -2297,8 +2295,12 @@ else
         return
     endif
     do iexit = 1,Nex
-		call addExit
+		call addExitPortal
+!		write(logmsg,*) 'Placed exit portal: ',iexit,Nex
+!		call logger(logmsg)
     enddo
+    write(logmsg,*) 'Number of exit portals: ',Nex
+    call logger(logmsg)
 endif
 end subroutine
 
@@ -2324,21 +2326,21 @@ end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
-subroutine addExit
+subroutine addExitPortal
 integer :: site(3)
 integer :: iexit
 
-call chooseExitSite(site)
-!write(logmsg,*) 'addExit: ',site
+call choosePortalSite(site)
+!write(logmsg,*) 'addExitPortal: ',site
 !call logger(logmsg)
 call getExitNum(iexit)
 globalvar%Nexits = globalvar%Nexits + 1
 if (globalvar%lastexit > max_exits) then
-	write(*,*) 'Error: addExit: too many exits: need to increase max_exits: ',max_exits
+	write(*,*) 'Error: addExitPortal: too many exits: need to increase max_exits: ',max_exits
 	stop
 endif
-call placeExit(iexit,site)
-!write(logmsg,*) 'addExit: did placeExit: ',iexit,site
+call placeExitPortal(iexit,site)
+!write(logmsg,'(a,6i6)') 'addExitPortal: ',istep,iexit,globalvar%Nexits,site
 !call logger(logmsg)
 end subroutine
 
@@ -2391,10 +2393,10 @@ enddo
 site = (/x,y,z/)
 end subroutine
 
-!---------------------------------------------------------------------
+!-----------------------------------------------------------------------------
 ! Exit sites (portals) are either on the blob surface, or within the blob
-!---------------------------------------------------------------------
-subroutine chooseExitSite(site)
+!-----------------------------------------------------------------------------
+subroutine choosePortalSite(site)
 integer :: site(3)
 integer :: xex, yex, zex
 real(DP) :: R
@@ -2402,7 +2404,7 @@ real :: prox, u(3), theta, rx
 integer :: kpar = 0
 logical :: ok
 
-!write(*,*) 'chooseExitSite'
+!call logger('choosePortalSite')
 if (SURFACE_PORTALS) then
 	! randomly choose direction in 3D, then locate sites near this vector on the blob boundary
 	! Need to restrict the sinus interface by removing the follicle interface.
@@ -2422,13 +2424,19 @@ if (SURFACE_PORTALS) then
 		yex = site(2)
 		zex = site(3)
 		if (use_DC) then
-			if (toonearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
+			if (toonearDC(site,globalvar%NDC,exit_DCprox)) then		! exit_DCprox is min distance in sites
+				call logger('toonearDC')
+				cycle
+			endif
 		endif
 		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
 !		if (USE_PORTAL_EGRESS) then
-			prox = 0.5*prox
+			prox = 0.3*prox
 !		endif
-		if (toonearexit(site,prox)) cycle       ! too near another exit		
+		if (toonearexit(site,prox)) then	! too near another exit
+!			call logger('toonearexit')
+			cycle
+		endif	
 		exit
 	enddo
 else	! blob portals
@@ -2457,7 +2465,7 @@ end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
-subroutine placeExit(iexit,site)
+subroutine placeExitPortal(iexit,site)
 integer :: iexit, site(3)
 integer :: kexit, x, y, z, x2, y2, z2, ek(3), vk(3), ns
 integer :: xex, yex, zex, xmin, xmax, ymin, ymax, zmin, zmax
@@ -2475,7 +2483,7 @@ xex = site(1)
 yex = site(2)
 zex = site(3)
 occupancy(xex,yex,zex)%exitnum = -iexit     ! This site holds an exit 
-!write(logmsg,*) 'placeExit: site,exitnum: ',xex,yex,zex,-iexit
+!write(logmsg,*) 'placeExitPortal: site,exitnum: ',xex,yex,zex,-iexit
 !call logger(logmsg)
 
 xmin = xex - chemo_N
@@ -2543,15 +2551,17 @@ do iexit = Nex,1,-1
     if (exitlist(iexit)%ID == 0) cycle
     k = k+1
     site = exitlist(iexit)%site
-    call removeExit(site)
+    call removeExitPortal(site)
+    write(logmsg,'(a,4i6)') 'removeExitPortal: ',iexit,site
+    call logger(logmsg)
     if (k == nremex) exit
 enddo
 end subroutine
 
 !---------------------------------------------------------------------
-! Remove the exit at site.
+! Remove the exit portal at site.
 !---------------------------------------------------------------------
-subroutine removeExit(site)
+subroutine removeExitPortal(site)
 integer :: site(3)
 integer :: iexit,xex,yex,zex,xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,ek(3),vk(3),k,kmin,i
 real :: d2k, d2min
@@ -2561,7 +2571,7 @@ yex = site(2)
 zex = site(3)
 iexit = -occupancy(xex,yex,zex)%exitnum
 if (iexit <= 0) then
-	write(logmsg,*) 'Error: removeExit: no exit at: ',site,iexit
+	write(logmsg,*) 'Error: removeExitPortal: no exit at: ',site,iexit
 	call logger(logmsg)
 	do i = 1,globalvar%lastexit
 		site = exitlist(i)%site
@@ -2571,7 +2581,7 @@ if (iexit <= 0) then
 endif
 exitlist(iexit)%ID = 0
 occupancy(xex,yex,zex)%exitnum = iexit      ! to ensure that the site is processed in the next section
-!write(*,*) 'removeExit: site,exitnum: ',site,iexit
+!write(*,*) 'removeExitPortal: site,exitnum: ',site,iexit
 
 xmin = xex - chemo_N
 xmax = xex + chemo_N
@@ -2607,7 +2617,7 @@ do x = xmin,xmax
 		        enddo
 		        if (kmin > 0) then
 		            occupancy(x,y,z)%exitnum = kmin
-!					write(*,*) '  removeExit: site,exitnum: ',x,y,z,kmin
+!					write(*,*) '  removeExitPortal: site,exitnum: ',x,y,z,kmin
 		        endif
             endif
         enddo
@@ -2617,7 +2627,7 @@ if (iexit == globalvar%lastexit) then
 	globalvar%lastexit = globalvar%lastexit - 1
 endif
 globalvar%Nexits = globalvar%Nexits - 1
-!write(*,*) 'removeExit: Nexits: ',globalvar%Nexits
+!write(*,*) 'removeExitPortal: Nexits: ',globalvar%Nexits
 end subroutine
 
 !---------------------------------------------------------------------

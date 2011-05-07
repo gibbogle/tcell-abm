@@ -226,6 +226,8 @@ private:
 	double hours;
 	double hour;
 	int progress;
+	int nGraphs;		// act, ntot_LN, ncog_PER, ...
+	int nGraphCases;
 
 	RESULT_SET *newR;
 
@@ -240,7 +242,8 @@ private:
 	Plot *graph_nbnd;
 	Plot *graph_dummy;	// placeholder
 
-	int nGraphCases;
+	Plot *pGraph[16];
+
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];
 	static const bool show_outputdata = false;

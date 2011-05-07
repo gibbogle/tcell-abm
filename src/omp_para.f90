@@ -560,7 +560,7 @@ end function
 !--------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------- 
 subroutine initialise_vascularity
-if (VEGF_MODEL == 2) then
+if (VEGF_MODEL == 2) then	! Not used
 	VEGF_beta = 0
 	VEGF_baserate = 0
     VEGF_decayrate = 0.0012
@@ -1525,6 +1525,27 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! EGRESS_SUPPRESSION_TIME1 is the start of the ramp down to 0
+! EGRESS_SUPPRESSION_TIME2 is the start of the ramp up to 1
+!-----------------------------------------------------------------------------------------
+real function egressFraction(tnow)
+real :: tnow
+
+if (tnow/60 < EGRESS_SUPPRESSION_TIME1) then
+	egressFraction = 1
+elseif (tnow/60 < EGRESS_SUPPRESSION_TIME1 + EGRESS_SUPPRESSION_RAMP) then
+	egressFraction = 1 - (tnow/60 - EGRESS_SUPPRESSION_TIME1)/EGRESS_SUPPRESSION_RAMP
+elseif (tnow/60 < EGRESS_SUPPRESSION_TIME2) then
+	egressFraction = 0
+elseif (tnow/60 < EGRESS_SUPPRESSION_TIME2 + EGRESS_SUPPRESSION_RAMP) then
+	egressFraction = (tnow/60 - EGRESS_SUPPRESSION_TIME2)/EGRESS_SUPPRESSION_RAMP
+else
+	egressFraction = 1
+endif
+end function
+
+
+!-----------------------------------------------------------------------------------------
 ! The number of cells that leave exactly matches the number that enter.
 ! ZIN_FRACTION = fraction of radius over which inflow traffic occurs
 !-----------------------------------------------------------------------------------------
@@ -1533,7 +1554,7 @@ logical :: ok
 integer :: x, y, z, k, kcell, indx(2), ctype, gen, stage, region, site(3), n, slot
 integer :: zin_min, zin_max, node_inflow, node_outflow, add(3), net_inflow, ihr
 real(DP) :: R, df, prob
-real :: tnow
+real :: tnow, exfract
 logical :: left
 integer :: kpar=0
 
@@ -1553,6 +1574,12 @@ if (dbug) write(nfres,'(a,2f10.6)') 'traffic: in: ',df,R
 if (R < df) then
     node_inflow = node_inflow + 1
 endif
+
+exfract = 1
+if (suppress_egress) then
+	exfract = egressFraction(tnow)
+endif
+node_outflow = exfract*node_outflow
 
 if (steadystate) then
     node_outflow = node_inflow
@@ -1735,11 +1762,15 @@ end function
 ! calibration parameter chemo_K_exit and possibly another.
 ! The number of exits is greater than 1/2 the desired outflow, and the calibration
 ! parameter exit_prob is used to adjust the mean outflow.
+! PROBLEM:
+! It seems that CHEMO_K_EXIT has no effect on the exit rate
+! For some reason, CHEMO_K_EXIT = 0 is NOT the same as USE_EXIT_CHEMOTAXIS = false,
+! but it SHOULD be.
 !-----------------------------------------------------------------------------------------
 subroutine portal_traffic(ok)
 logical :: ok
 integer :: iexit, esite(3), site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv
-integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow
+integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, npossible, iloop, nloops
 real(DP) :: R, df
 logical :: left
 integer, allocatable :: permex(:)
@@ -1749,7 +1780,11 @@ real :: exit_prob   ! 12 hr => 0.2, 24 hr => 0.1
 
 ok = .true.
 region = LYMPHNODE
-exit_prob = ep_factor/residence_time
+!exit_prob = ep_factor/residence_time
+!exit_prob = 0.1	! for Tres = 24
+!exit_prob = 0.2	! for Tres = 12
+exit_prob = 0.1*24/RESIDENCE_TIME	! This is OK for CHEMO_K_EXIT = 1.0
+
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
 df = globalvar%InflowTotal - node_inflow
@@ -1773,11 +1808,16 @@ else
         node_outflow = node_outflow + 1
     endif
 endif
+if (computed_outflow) then
+	nloops = 5
+else
+	nloops = 1
+endif
 
 tnow = istep*DELTA_T
 exfract = 1
-if (tnow/60 > EGRESS_SUPPRESSION_TIME .and. tnow/60 < 1.5*EGRESS_SUPPRESSION_TIME) then
-	exfract = (tnow/60 - EGRESS_SUPPRESSION_TIME)/(0.5*EGRESS_SUPPRESSION_TIME)
+if (suppress_egress) then
+	exfract = egressFraction(tnow)
 endif
 
 ! Inflow
@@ -1830,54 +1870,63 @@ do while (k < node_inflow)
 enddo
 
 ! Outflow
+npossible = 0
 ne = 0
-if (.not.suppress_exit .and. tnow/60 > EGRESS_SUPPRESSION_TIME) then
-	if (globalvar%lastexit > max_exits) then
-		write(logmsg,'(a,2i4)') 'Error: portal_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
-		call logger(logmsg)
-		ok = .false.
-		return
-	endif
-	allocate(permex(globalvar%lastexit))
-	do k = 1,globalvar%lastexit
-		permex(k) = k
-	enddo
-	call permute(permex,globalvar%lastexit,kpar)
-	do ipermex = 1,globalvar%lastexit
-		iexit = permex(ipermex)
-		if (exitlist(iexit)%ID == 0) cycle
+if (globalvar%lastexit > max_exits) then
+	write(logmsg,'(a,2i4)') 'Error: portal_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
+	call logger(logmsg)
+	ok = .false.
+	return
+endif
+allocate(permex(globalvar%lastexit))
+do k = 1,globalvar%lastexit
+	permex(k) = k
+enddo
+call permute(permex,globalvar%lastexit,kpar)
+do iloop = 1,nloops
+do ipermex = 1,globalvar%lastexit
+	iexit = permex(ipermex)
+	if (exitlist(iexit)%ID == 0) cycle
+	if (exfract /= 1) then
 	    R = par_uni(kpar)
 	    if (R > exfract) cycle
-		esite = exitlist(iexit)%site
-		indx = occupancy(esite(1),esite(2),esite(3))%indx
-		do slot = 2,1,-1
-			kcell = indx(slot)
-			if (kcell > 0 .and. par_uni(kpar) < exit_prob) then
-				call cell_exit(kcell,slot,esite,left)
-				if (left) then
-					ne = ne + 1
-					if (evaluate_residence_time) then
-						if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
-							noutflow_tag = noutflow_tag + 1
-							restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
-							ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
-							Tres_dist(ihr) = Tres_dist(ihr) + 1
-	!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
-						endif
+	endif
+	esite = exitlist(iexit)%site
+	indx = occupancy(esite(1),esite(2),esite(3))%indx
+	do slot = 2,1,-1
+		kcell = indx(slot)
+		if (kcell > 0) npossible = npossible + 1
+		if (kcell > 0 .and. par_uni(kpar) < exit_prob) then
+			call cell_exit(kcell,slot,esite,left)
+			if (left) then
+				ne = ne + 1
+				if (evaluate_residence_time) then
+					if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
+						noutflow_tag = noutflow_tag + 1
+						restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
+						ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
+						Tres_dist(ihr) = Tres_dist(ihr) + 1
+!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
 					endif
-					if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-						nv = cellist(kcell)%visits
-						DCvisits(nv) = DCvisits(nv) + 1
-						DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
-					endif
-					if (ne == node_outflow .and. computed_outflow) exit
 				endif
+				if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
+					nv = cellist(kcell)%visits
+					DCvisits(nv) = DCvisits(nv) + 1
+					DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+				endif
+				if (ne == node_outflow .and. computed_outflow) exit
 			endif
-		enddo
-		if (ne == node_outflow .and. computed_outflow) exit
+		endif
 	enddo
-	deallocate(permex)
-endif
+	if (ne == node_outflow .and. computed_outflow) exit
+enddo
+if (ne == node_outflow .and. computed_outflow) exit
+enddo
+deallocate(permex)
+
+!if (npossible /= 2*globalvar%lastexit) then
+!	write(*,*) 'npossible: ',npossible,2*globalvar%lastexit
+!endif
 
 !if (ne > node_outflow) then
 !	write(*,*) 'Excess egress: ',ne - node_outflow
@@ -2050,7 +2099,7 @@ end function
 
 !-----------------------------------------------------------------------------------------
 ! The total number of T cells added to the blob since the last balancing is nadd_sites.
-! (Note that this can be negative, indicating a net loss of T cells).
+! (Note that this can be negative, indicating a net loss of T cells). 
 ! A balancing is triggered either when this count exceeds a limit nadd_limit, which is a
 ! specified fraction of the original T cell population NTcells0, or when the time since
 ! the last balancing exceeds BALANCER_INTERVAL, and an adjustment to site count is needed.
@@ -2067,6 +2116,7 @@ integer :: kpar = 0
 logical :: blob_changed
 
 ok = .true.
+!write(*,*) 'balancer: ',istep
 if (IN_VITRO) then
 	if (ndeadDC > 0) then
 		do k = 1,ndeadDC
@@ -2171,10 +2221,10 @@ if (use_portal_egress .and. use_traffic) then
 	if (globalvar%NTcells < globalvar%NTcells0 .and. .not.SURFACE_PORTALS) then
 		! Set Nexits = Nexits0 for steady-state maintenance.  To wrap up the end of the response.
 !        Nexits0 = exit_fraction*globalvar%NTcells0
-		Nexits0 = requiredExits(globalvar%NTcells0)
+		Nexits0 = requiredExitPortals(globalvar%NTcells0)
 		if (globalvar%Nexits < Nexits0) then
 			do k = 1,Nexits0 - globalvar%Nexits
-				call addExit()
+				call addExitPortal()
 			enddo
 !			write(*,*) '-------------------------------------'
 !			write(*,*) 'Set Nexits to base steady-state level'
@@ -2192,26 +2242,26 @@ if (use_portal_egress .and. use_traffic) then
 		return
 	endif
 !    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits 
-    dexit = requiredExits(globalvar%NTcells) - globalvar%Nexits
-    if (dexit > 1) then
-        naddex = dexit-1
+    dexit = requiredExitPortals(globalvar%NTcells) - globalvar%Nexits
+    if (dexit > 0) then
+        naddex = dexit
 !       write(*,*) '--------------------------'
 !       write(*,*) 'Nexits: ',globalvar%Nexits
 !       write(*,*) '--------------------------'
 !       write(nflog,*) 'added: Nexits: ',naddex, globalvar%Nexits
-!        write(logmsg,*) 'add: Nexits: ',naddex, requiredExits(globalvar%NTcells), globalvar%Nexits,globalvar%NTcells
-!        call logger(logmsg) 
+        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
+        call logger(logmsg) 
         do k = 1,naddex
-            call addExit()
+            call addExitPortal()
         enddo
     elseif (dexit < -1) then
         nremex = -dexit-1
-!        write(nflog,*) 'balancer: dexit < 0: ',requiredExits(globalvar%NTcells)
+!        write(nflog,*) 'balancer: dexit < 0: ',requiredExitPortals(globalvar%NTcells) 
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
 !            write(*,*) '--------------------------'
 !	        write(nflog,*) 'removed: Nexits: ',nremex,globalvar%Nexits
-!        write(logmsg,*) 'remove: Nexits: ',nremex,requiredExits(globalvar%NTcells),globalvar%Nexits,globalvar%NTcells
+!        write(logmsg,*) 'remove: Nexits: ',nremex,requiredExitPortals(globalvar%NTcells),globalvar%Nexits,globalvar%NTcells
 !        call logger(logmsg)
         call removeExits(nremex)
     endif
@@ -2331,7 +2381,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !   removeExit(site)
-!   placeExit(iexit,site) 
+!   placeExitPortal(iexit,site) 
 !-----------------------------------------------------------------------------------------
 subroutine adjustExits
 integer :: x, y, z, dx, dy, dz, iexit, dir, site1(3), site2(3)
@@ -2357,7 +2407,7 @@ do iexit = 1,globalvar%lastexit
 		endif
 	enddo
 	if (ok) cycle
-	! The exit portal has been enclosed, need to move it to site2 on the boundary if possible
+	! The exit portal has been enclosed, need to move it to site2 on the boundary if possible 
 	u = site1 - Centre
 	u = u/sqrt(dot_product(u,u))
 	call getBoundarySite(u,site2,ok)
@@ -2365,8 +2415,8 @@ do iexit = 1,globalvar%lastexit
 	if (use_DC) then
 		if (toonearDC(site2,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
 	endif
-	call removeExit(site1)
-!	write(logmsg,*) 'adjustExits: did removeExit: ',iexit,site1
+	call removeExitPortal(site1)
+!	write(logmsg,*) 'adjustExits: did removeExitPortal: ',iexit,site1
 !	call logger(logmsg)
 !	call checkExits
 	
@@ -2376,8 +2426,8 @@ do iexit = 1,globalvar%lastexit
 		write(*,*) 'Error: adjustExit: too many exits: need to increase max_exits: ',max_exits
 		stop
 	endif
-	call placeExit(iexit,site2)
-!	write(logmsg,*) 'adjustExits: did placeExit: ',iexit,site2
+	call placeExitPortal(iexit,site2)
+!	write(logmsg,*) 'adjustExits: did placeExitPortal: ',iexit,site2
 !	call logger(logmsg)
 !	call checkExits
 enddo
@@ -2481,7 +2531,7 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
 !				write(*,*) 'removeSites:  need to move exit'
-                call removeExit(site0)
+                call removeExitPortal(site0)
                 ! Let the balancer add a site back again (if needed) 
             endif
             globalvar%Nsites = globalvar%Nsites - 1
@@ -2901,25 +2951,31 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine vascular_test
 integer :: nsteps = 10*24*60/DELTA_T
-real :: inflow0, act
+real :: inflow0, act, tnow, exfract
 
 globalvar%VEGF = 0
 globalvar%vascularity = 1.00
 globalvar%NTcells0 = 100000
+use_exit_chemotaxis = .false.
 
 globalvar%NDC = DC_FACTOR*globalvar%NTcells0/TC_TO_DC
 globalvar%NTcells = globalvar%NTcells0
 inflow0 = globalvar%NTcells0*DELTA_T/(residence_time*60)
-write(*,*) TC_TO_DC,globalvar%NDC
+write(*,*) TC_TO_DC,globalvar%NDC,nsteps,globalvar%NTcells
 
 do istep = 1,nsteps
+	tnow = istep*DELTA_T
     call vascular
     call generate_traffic(inflow0)
+    if (suppress_egress) then
+		exfract = egressFraction(tnow)
+		globalvar%OutflowTotal = exfract*globalvar%OutflowTotal
+	endif
     globalvar%NTcells = globalvar%NTcells + globalvar%InflowTotal - globalvar%OutflowTotal
     if (mod(istep,60) == 0) then
         act = get_DCactivity()
-        write(nfout,'(2f8.3,e12.3,f8.3,i8)') istep*DELTA_T/60,act,globalvar%VEGF/globalvar%NTcells, &
-            globalvar%vascularity,globalvar%NTcells
+        write(nfout,'(2f8.3,e12.3,f8.3,i8,2f6.1)') istep*DELTA_T/60,act,globalvar%VEGF/globalvar%NTcells, &
+            globalvar%vascularity,globalvar%NTcells,globalvar%InflowTotal,globalvar%OutflowTotal
     endif
 enddo
 
@@ -3627,9 +3683,9 @@ if (dbug) then
 	write(logmsg,*) 'simulate_step: ',istep
 	call logger(logmsg)
 endif
-call checkExits
 
 if (mod(istep,240) == 0) then
+	call checkExits
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, globalvar%NTcells, globalvar%Nexits, total_in, total_out, &
@@ -4099,7 +4155,7 @@ call place_cells(ok)
 if (.not.ok) return
 
 if (use_portal_egress) then
-    call place_exits
+    call placeExits
 else
     globalvar%Nexits = 0
     globalvar%lastexit = 0
@@ -4113,7 +4169,11 @@ if (vary_vascularity) then
 	call initialise_vascularity
 endif
 if (inflammation_level == 0) then
-	EGRESS_SUPPRESSION_TIME = 0
+	suppress_egress = .false.
+elseif (EGRESS_SUPPRESSION_TIME2 - EGRESS_SUPPRESSION_TIME1 <  EGRESS_SUPPRESSION_RAMP) then
+	write(logmsg,*) 'ERROR: EGRESS_SUPPRESSION_RAMP too big'
+	call logger(logmsg)
+	stop
 endif
 !write(*,*) 'NTcells, NDCalive, NTsites: ',globalvar%NTcells, globalvar%NDCalive, globalvar%Nsites
 !write(*,*) 'nlist: ',nlist
@@ -4330,6 +4390,10 @@ if (ok) then
 	res = 0
 else
 	res = 1
+endif
+if (test_vascular) then
+	call vascular_test
+	stop
 endif
 return
 !call terminate_run(res)

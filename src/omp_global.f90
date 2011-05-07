@@ -156,10 +156,6 @@ integer, parameter :: SCANNER_INTERVAL = 100
 real, parameter :: DELTA_T = 0.25       ! minutes
 logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals 
 logical, parameter :: save_input = .true.
-logical, parameter :: SIMULATE_PERIPHERY = .true.
-
-integer, parameter :: PERI_GENERATION = 2
-real, parameter :: PERI_PROBFACTOR = 10
 
 !logical, parameter :: IN_VITRO = .true.
 integer, parameter :: NZ_IN_VITRO = 3
@@ -210,7 +206,7 @@ character*(13), parameter :: pausefile = 'pause_dll'
 
 ! Run parameters
 
-! These parameters are used only if exit_region /= EXIT_EVERYWHERE
+! These parameters are used only if exit_region = EXIT_LOWERHALF
 logical, parameter :: constant_efactor = .true.
 real, parameter :: etheta = 1./25000.
 real, parameter :: ZIN_FRACTION = 1.0   ! fraction of blob radius for traffic inflow in upper hemisphere
@@ -247,9 +243,8 @@ integer, parameter :: n_multiple_runs = 1
 
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
-logical, parameter :: turn_off_chemotaxis = .false.  ! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: suppress_exit = .false.        ! to test effect of S1P1 agonist, e.g. SEW8721 (Rosen hypothesis)
-logical, parameter :: L_selectin = .true.              ! T cell inflow is suppressed
+logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
+logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -543,6 +538,8 @@ real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 
 ! Egress parameters
 real :: exit_fraction = 1.0/1000.       ! number of exits as a fraction of T cell population
+real :: Ksurfaceportal = 40			! calibration factor for number of surface portals
+logical :: suppress_egress = .true.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
 
 !---------------------------------------------------
 ! end of more parameters to be read from input file
@@ -646,14 +643,15 @@ real :: max_TCR = 0
 real :: avidity_level(MAX_AVID_LEVELS)  ! discrete avidity levels for use with fix_avidity
 logical :: vary_vascularity = .true.     ! to allow inflammation to change vascularity (false if VEGF_MODEL = 0)
 
+! Vascularity parameters
 real :: VEGF_alpha = 5.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m)
 real :: VEGF_beta = 4.0e-8			! rate constant for basal VEGF production (beta_G in hev.m)
 real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)
 real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
-real :: vasc_decayrate				! vascularity decay rate (/min) (deduced)
 real :: vasc_beta = 1.5				! Hill function parameter
 integer :: vasc_n = 2               ! Hill function exponent
 
+real :: vasc_decayrate				! vascularity decay rate (/min) (deduced)
 real :: VEGF_baserate				! base rate of production of VEGF (> 0 for VEGF-vascularity model VEGF_MODEL = 1)
 real :: c_vegf_0					! steady-state VEGF concentration (VEGF_MODEL = 1)
 real :: Kflow1                          ! Inflow dependence on expansion
@@ -675,15 +673,23 @@ logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
 logical :: dbug = .false.
-logical :: USE_PORTAL_EGRESS = .true.
-logical :: SURFACE_PORTALS = .true.		! egress to the sinus at portals on the blob surface
-logical :: FIXED_NEXITS = .false.
-real :: XFOLLICLE = 0.6				! normalized x boundary of follicular interface "cap"
-real :: EGRESS_SUPPRESSION_TIME = 18	! hours
+logical :: USE_PORTAL_EGRESS			! use fixed exit portals rather than random exit points
+logical :: BLOB_PORTALS					! egress to the sinus at portals throughout the blob
+logical :: SURFACE_PORTALS				! egress to the sinus at portals on the blob surface
+logical :: FIXED_NEXITS = .false.		! the number of exit portals is held fixed
+real :: XFOLLICLE = 0.6					! normalized x boundary of follicular interface "cap"
+real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
+real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
+real :: EGRESS_SUPPRESSION_RAMP = 6		! hours
+
+! PERIPHERY parameters
+logical, parameter :: SIMULATE_PERIPHERY = .true.
+integer, parameter :: PERI_GENERATION = 2
+real, parameter :: PERI_PROBFACTOR = 10
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
-!DEC$ ATTRIBUTES DLLEXPORT :: istep, nsteps
+!DEC$ ATTRIBUTES DLLEXPORT :: nsteps	!istep
 contains
 
 !---------------------------------------------------------------------
@@ -1245,7 +1251,7 @@ subroutine generate_traffic(inflow0)
 real :: inflow0
 real :: act, expansion, actfactor, tnow
 real :: inflow, outflow
-real, parameter :: T1 = 8*60, T2 = 16*60, T3 = 24*60
+!real, parameter :: T1 = 8*60, T2 = 16*60, T3 = 24*60
 
 !if (.not.use_vascularity) then
 !    act = get_DCactivity()
@@ -1271,15 +1277,15 @@ else        !traffic_mode == TRAFFIC_MODE_2 or TRAFFIC_MODE_3
 	! Note: if inflammation signal = 0 the vascularity (and inflow) should be constant
     tnow = istep*DELTA_T
     inflow = inflow0*globalvar%Vascularity   ! level of vascularity (1 = steady-state)
-    if (tnow <= T1) then
-        outflow = ((T1-tnow)/T1)*inflow0
-    elseif (tnow <= T2) then
-        outflow = 0
-    elseif (tnow <= T3) then
-        outflow = ((tnow-T2)/(T3-T2))*globalvar%NTcells*DELTA_T/(RESIDENCE_TIME*60)
-    else
+!    if (tnow <= T1) then
+!        outflow = ((T1-tnow)/T1)*inflow0
+!    elseif (tnow <= T2) then
+!        outflow = 0
+!    elseif (tnow <= T3) then
+!        outflow = ((tnow-T2)/(T3-T2))*globalvar%NTcells*DELTA_T/(RESIDENCE_TIME*60)
+!    else
         outflow = globalvar%NTcells*DELTA_T/(RESIDENCE_TIME*60)
-    endif
+!    endif
 endif
 
 if (L_selectin) then
@@ -1295,7 +1301,7 @@ endif
 globalvar%InflowTotal = inflow
 ! This is a kludge to induce a return to steady-state maintenance when NTcells drops
 ! back to "close enough" to the steady-state value.
-if (use_exit_chemotaxis .and. globalvar%NTcells < globalvar%NTcells0) then
+if (use_exit_chemotaxis .and. globalvar%NTcells < 0.99*globalvar%NTcells0) then
     globalvar%OutflowTotal = globalvar%InflowTotal      ! => steady-state with chemotaxis
     steadystate = .true.
 else
@@ -2565,6 +2571,8 @@ subroutine checkExits
 integer :: iexit,site(3)
 logical :: ok = .true.
 
+write(logmsg,*) 'checkExits: ',istep
+call logger(logmsg)
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
 	site = exitlist(iexit)%site

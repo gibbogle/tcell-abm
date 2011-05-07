@@ -23,6 +23,9 @@ struct result_set {
 	double max_ndead;     // number of cognate T cells that have died
     double max_teffgen;   // number of activated cognate T cells that have left the LN
 	double max_nbnd;     // number of cognate T cells that are bound to a DC
+
+	double *pData[16];
+	double maxValue[16];
 };
 typedef result_set RESULT_SET;
 #endif

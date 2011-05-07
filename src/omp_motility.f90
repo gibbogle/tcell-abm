@@ -20,7 +20,8 @@ type (cell_type), pointer :: cell
 integer :: fullslots1,fullslots2,site1(3),site2(3),kslot2,stype
 integer :: irel,dir1,lastdir1,indx2(2),k,z
 integer :: savesite2(3,MAXRELDIR), saveslots2(MAXRELDIR)
-real(DP) :: psum, p(MAXRELDIR), R 
+integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
+real(DP) :: psum, p(MAXRELDIR), R, pR, psumm 
 
 cell => cellist(kcell)
 site1 = cell%site
@@ -49,6 +50,8 @@ z = site1(3)
 lastdir1 = cell%lastdir
 psum = 0
 p = 0
+savesite2a = 0
+saveslots2a = 0
 do irel = 1,nreldir
 	dir1 = reldir(lastdir1,irel)
 	site2 = site1 + jumpvec(:,dir1)
@@ -64,25 +67,31 @@ do irel = 1,nreldir
             if (fullslots2 == BOTH) then
                 cycle
             elseif (fullslots2 /= 0) then
-                p(irel) = dirprob(irel)*GAMMA
+!                p(irel) = dirprob(irel)*GAMMA
+                p(dir1) = dirprob(irel)*GAMMA
             else
-                p(irel) = dirprob(irel)
+!                p(irel) = dirprob(irel)
+                p(dir1) = dirprob(irel)
             endif
-            if (exit_region /= EXIT_EVERYWHERE) then
+            if (exit_region == EXIT_LOWERHALF) then
                 if (evaluate_residence_time .or. stype == NONCOG_TYPE_TAG) then
                     if (site2(3) < z) then
                         if (nz_excess(z) > 0) then
-                            p(irel) = p(irel)*(1 + excess_factor*nz_excess(z)/real(nz_sites(z)))
+!                            p(irel) = p(irel)*(1 + excess_factor*nz_excess(z)/real(nz_sites(z)))
+                            p(dir1) = p(dir1)*(1 + excess_factor*nz_excess(z)/real(nz_sites(z)))
                         endif
                     endif
                 endif
             endif
-            psum = psum + p(irel)
-            saveslots2(irel) = fullslots2
+!            psum = psum + p(irel)
+!            saveslots2(irel) = fullslots2
+            saveslots2a(dir1) = fullslots2
 		endif
 	endif
-	savesite2(:,irel) = site2
+!	savesite2(:,irel) = site2
+	savesite2a(:,dir1) = site2
 enddo
+psum = sum(p)
 if (psum == 0) then
 	go = .false.
 	return
@@ -93,17 +102,36 @@ endif
 ! Now choose a direction on the basis of these probs p()
 R = 0
 R = par_uni(kpar)
-R = psum*R
-psum = 0
-do irel = 1,nreldir
-   	psum = psum + p(irel)
-   	if (R <= psum) then
+pR = psum*R
+psumm = 0
+!do irel = 1,nreldir
+do dir1 = 1,njumpdirs
+   	psumm = psumm + p(dir1)
+   	if (pR <= psumm) then
    		exit
    	endif
 enddo
-if (irel > nreldir) irel = nreldir
-dir1 = reldir(lastdir1,irel)
-site2 = savesite2(:,irel)
+!if (irel > nreldir) irel = nreldir
+!dir1 = reldir(lastdir1,irel)
+if (dir1 > njumpdirs) then
+    dir1 = 0
+    do k = 1,njumpdirs
+        if (p(k) > 0) then
+            dir1 = k
+            exit
+        endif
+    enddo
+    if (dir1 == 0) then
+        write(*,*) 'jumper: bad dir1: ',dir1
+        write(*,*) 'R, psum, psumm: ',R,psum,psumm
+        write(*,*) p
+        stop
+    endif
+endif
+!site2 = savesite2(:,irel)
+site2 = savesite2a(:,dir1)
+!fullslots2 = saveslots2(irel)
+fullslots2 = saveslots2a(dir1)
 ! new code
 if (diagonal_jumps) then
 	dir1 = fix_lastdir(dir1,kpar)
@@ -111,7 +139,6 @@ elseif (dir1 == 0) then
 	dir1 = random_int(1,6,kpar)
 endif
 
-fullslots2 = saveslots2(irel)
 if (fullslots2 == 0) then       ! randomly select a slot
     R = par_uni(kpar)
     if (R < 0.5) then
@@ -146,7 +173,6 @@ integer :: irel,dir1,lastdir1,indx2(2),k,z,e(3),v(3)
 integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
 real(DP) :: psum, R, pR, psumm, p(MAXRELDIR+1), stay_prob, f, c
 real :: rad, chemo_exit
-!real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 logical :: in_exit_SOI	!, in_DC_SOI
 
 cell => cellist(kcell)
@@ -155,7 +181,6 @@ if (site1(1) < 1) then
     write(*,*) 'jumper: bad site1: ',site1
     stop
 endif
-!if (CHECKING > 0) call checkslots('jumper1',site1)
 fullslots1 = 0
 do k = 1,2
     if (indx1(k) > 0) then
@@ -244,7 +269,6 @@ if (in_exit_SOI) then
         return
     endif
     call chemo_probs(p,v,f,c)
-!    write(*,*) 'in_exit_SOI: ',v,sum(p)
 endif
 psum = sum(p)
 
@@ -285,23 +309,8 @@ if (dir1 > njumpdirs) then
 endif
 !site2 = savesite2(:,irel)
 site2 = savesite2a(:,dir1)
-!write(*,*) 'dir1,site2: ',dir1,site2
-
 !fullslots2 = saveslots2(irel)
 fullslots2 = saveslots2a(dir1)
-if (istep == -730 .and. kpar == 0 .and. kcell == 25257) then
-    write(*,*) 'p:'
-    write(*,'(10f7.4)') p(1:njumpdirs)
-    write(*,*) 'saveslots2a: '
-    write(*,'(10i7)') saveslots2a
-    write(*,*) 'dir1, fullslots2: ',dir1, fullslots2
-    do k = 1,njumpdirs+1
-        write(*,'(4i6)') k,savesite2a(:,k)
-    enddo
-endif
-!if (in_exit_SOI) then
-!    write(*,'(a,5i4)') 'dir1,site2,fullslots2: ',dir1,site2,fullslots2
-!endif
 ! new code
 if (diagonal_jumps) then
 	dir1 = fix_lastdir(dir1,kpar)
@@ -326,9 +335,6 @@ else
 endif
 cell%site = site2
 cell%lastdir = dir1
-!if (dbug) then
-!    write(*,*) 'chemo_jumper: ',kcell,site2,fullslots2,kslot2,occupancy(site2(1),site2(2),site2(3))%indx
-!endif
 occupancy(site2(1),site2(2),site2(3))%indx(kslot2) = kcell
 occupancy(site1(1),site1(2),site1(3))%indx(kslot1) = 0
 
@@ -336,6 +342,8 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! The cell chemotactic susceptibility is conveyed by 'chemo', which may be the S1P1 level.
+! In the limit of CHEMO_K_EXIT = 0, this should be the same as jumper(), i.e. the same
+! as setting USE_EXIT_CHEMOTAXIS = false.
 !-----------------------------------------------------------------------------------------
 subroutine chemo_jumper(kcell,indx1,kslot1,go,kpar)
 integer :: kpar,kcell,indx1(2),kslot1
@@ -358,23 +366,24 @@ real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 cell => cellist(kcell)
 site1 = cell%site
 if (site1(1) < 1) then
-    write(*,*) 'jumper: bad site1: ',site1
+    write(*,*) 'chemo_jumper: bad site1: ',site1
     stop
 endif
-!if (CHECKING > 0) call checkslots('jumper1',site1)
 fullslots1 = 0
 do k = 1,2
     if (indx1(k) > 0) then
         fullslots1 = fullslots1 + k
     endif
 enddo
+stay_prob = dirprob(0)
+ned = 0
+
 ! Need first to determine if the cell is subject to chemotaxis
 ne = 0
 if (globalvar%Nexits > 0) then
     chemo_exit = chemo_active_exit(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_exit > 0) then
         ! Then need to determine if the cell is within the SOI of any exits.
-!        call nearest_exit(site1,in_exit_SOI,e)
         call near_exits(site1,ne,ee) ! new
         if (dbug) then
 			write(*,*) 'Near exits: ',ne
@@ -389,11 +398,12 @@ if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
     chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_DC > 0) then
         ! Then need to determine if the cell is within the SOI of any DCs.
-!        call nearest_exit(site1,in_exit_SOI,e)
         call near_DCs(site1,nd,neardc) ! new
     endif
 endif
+
 vsum = 0 ! new
+ff = 0
 if (ne > 0) then
 	do k = 1,ne ! new
 		e = ee(:,k) ! new
@@ -402,15 +412,15 @@ if (ne > 0) then
 		if (dbug) write(*,*) 'site1,v: ',site1,v
 		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
 		if (rad == 0) then
-			go = .false.
-			return
-		endif
-		ff(k) = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to
+			ff(k) = 0
+		else
+			ff(k) = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to
 												  ! change ep_factor in portal_traffic()
-		vsum = vsum + (ff(k)/norm(vv(:,k)))*vv(:,k) ! new
-		if (dbug) write(*,*) k,ne,rad,ff(k),norm(vv(:,k))
+			vsum = vsum + (ff(k)/norm(vv(:,k)))*vv(:,k) ! new
+		endif
 	enddo ! new
 endif
+
 if (nd > 0) then
 	! augment vsum with DC chemotaxis
 	do k = 1,nd ! new
@@ -429,6 +439,7 @@ if (nd > 0) then
 	enddo ! new
 endif
 ned = ne + nd
+
 if (ned > 0) then
 	f = min(1.0,norm(vsum)) ! new
     stay_prob = dirprob(0)
@@ -436,9 +447,6 @@ if (ned > 0) then
 !    c = CCR7_ligand(rad)	! no unique rad now - this needs to be changed
 !    stay_prob = (1-f)*(1 - c + c*stay_prob)
     stay_prob = (1-f)*stay_prob
-!    if (cell%ID == IDTEST) then
-!		write(*,'(a,2i2,5f8.3)') 'ned,f,vsum,stay_prob: ',ne,nd,f,vsum,stay_prob
-!	endif
 else
     stay_prob = dirprob(0)
 endif
@@ -455,6 +463,7 @@ endif
 stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
 
 ! Compute jump probabilities in the absence of chemotaxis
+site1 = cell%site
 z = site1(3)
 lastdir1 = cell%lastdir
 p = 0
@@ -494,13 +503,14 @@ if (sum(p) == 0) then
 endif
 
 if (ned > 0) then
-    if (v(1) == 0 .and. v(2) == 0 .and. v(3) == 0) then
-        write(*,*) 'cell at exit: ',kcell
-        go = .false.
-        return
-    endif
-    call chemo_probs(p,v,f,c)
-!    write(*,*) 'in_exit_SOI: ',v,sum(p)
+!    if (v(1) == 0 .and. v(2) == 0 .and. v(3) == 0) then
+!        write(*,*) 'cell at exit: ',kcell
+!        go = .false.
+!        return
+!    endif
+	if (CHEMO_K_EXIT > 0) then
+		call chemo_probs(p,v,f,c)
+	endif
 endif
 psum = sum(p)
 
@@ -515,15 +525,12 @@ endif
 R = par_uni(kpar)
 pR = psum*R
 psumm = 0
-!do irel = 1,nreldir
 do dir1 = 1,njumpdirs
    	psumm = psumm + p(dir1)
    	if (pR <= psumm) then
    		exit
    	endif
 enddo
-!if (irel > nreldir) irel = nreldir
-!dir1 = reldir(lastdir1,irel)
 if (dir1 > njumpdirs) then
     dir1 = 0
     do k = 1,njumpdirs
@@ -569,40 +576,10 @@ else
 endif
 cell%site = site2
 cell%lastdir = dir1
-!if (dbug) then
-!    write(*,*) 'chemo_jumper: ',kcell,site2,fullslots2,kslot2,occupancy(site2(1),site2(2),site2(3))%indx
-!endif
 occupancy(site2(1),site2(2),site2(3))%indx(kslot2) = kcell
 occupancy(site1(1),site1(2),site1(3))%indx(kslot1) = 0
 
 end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-!subroutine oldmover
-!integer :: ierr
-
-!write(*,*) 'mover'
-!call MPI_BARRIER ( MPI_COMM_WORLD, ierr )
-!write(*,*) 'stage1: ',me,nlist,ngaps
-!call stage1
-!call MPI_BARRIER ( MPI_COMM_WORLD, ierr )
-!write(*,*) 'after stage1: cell_count: ',me,cell_count()
-!if (CHECKING > 0) call checker
-!if (Mnodes > 1) then
-!    write(*,*) 'stage2: ',me,nlist,ngaps
- !   call stage2
-!    call MPI_BARRIER ( MPI_COMM_WORLD, ierr )
-!    write(*,*) 'after stage2: cell_count: ',me,cell_count()    ! removing this write -> bad cell count
-!    if (CHECKING > 0) call checker
-!    write(*,*) 'stage3: ',me,nlist,ngaps
- !   call stage3
-!    call MPI_BARRIER ( MPI_COMM_WORLD, ierr )
-!    write(*,*) 'after stage3: ',me,nlist,ngaps
-!    if (CHECKING > 0) call checker
-!    call MPI_BARRIER ( MPI_COMM_WORLD, ierr )
-!endif
-!end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! In this version the parallel section has been made into a subroutine.
