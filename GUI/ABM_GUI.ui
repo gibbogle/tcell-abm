@@ -2380,7 +2380,7 @@ padding: 8px
              </rect>
             </property>
             <property name="text">
-             <string>Display non-cognate T cells</string>
+             <string>Display non-cognate T cells </string>
             </property>
            </widget>
            <widget class="QCheckBox" name="cbox_DC_INJECTION">
@@ -2481,6 +2481,29 @@ padding: 8px
             </property>
             <property name="text">
              <string>Compute T cell outflow?</string>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_INPUT_FILE">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>680</y>
+              <width>121</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Auxiliary input data file</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="text_INPUT_FILE">
+            <property name="geometry">
+             <rect>
+              <x>130</x>
+              <y>680</y>
+              <width>151</width>
+              <height>20</height>
+             </rect>
             </property>
            </widget>
           </widget>

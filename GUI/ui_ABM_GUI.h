@@ -1,8 +1,8 @@
 /********************************************************************************
 ** Form generated from reading UI file 'ABM_GUI.ui'
 **
-** Created: Mon 14. Mar 15:13:55 2011
-**      by: Qt User Interface Compiler version 4.6.2
+** Created: Mon May 30 11:40:28 2011
+**      by: Qt User Interface Compiler version 4.6.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -261,6 +261,8 @@ public:
     QCheckBox *cbox_USE_EXIT_CHEMOTAXIS;
     QCheckBox *cbox_USE_DC_CHEMOTAXIS;
     QCheckBox *cbox_COMPUTED_OUTFLOW;
+    QMyLabel *label_INPUT_FILE;
+    QLineEdit *text_INPUT_FILE;
     QLabel *label_input;
     QTextEdit *text_more;
     QWidget *page_output;
@@ -1437,6 +1439,12 @@ public:
         cbox_COMPUTED_OUTFLOW = new QCheckBox(tab_run);
         cbox_COMPUTED_OUTFLOW->setObjectName(QString::fromUtf8("cbox_COMPUTED_OUTFLOW"));
         cbox_COMPUTED_OUTFLOW->setGeometry(QRect(450, 400, 141, 18));
+        label_INPUT_FILE = new QMyLabel(tab_run);
+        label_INPUT_FILE->setObjectName(QString::fromUtf8("label_INPUT_FILE"));
+        label_INPUT_FILE->setGeometry(QRect(10, 680, 121, 16));
+        text_INPUT_FILE = new QLineEdit(tab_run);
+        text_INPUT_FILE->setObjectName(QString::fromUtf8("text_INPUT_FILE"));
+        text_INPUT_FILE->setGeometry(QRect(130, 680, 151, 20));
         tabs->addTab(tab_run, QString());
 
         verticalLayout->addWidget(tabs);
@@ -1766,7 +1774,7 @@ public:
         units_IV_WELL_DIAMETER->setText(QApplication::translate("MainWindow", "mm", 0, QApplication::UnicodeUTF8));
         label_IV_NTCELLS->setText(QApplication::translate("MainWindow", "label_IV_NTCELLS", 0, QApplication::UnicodeUTF8));
         label_IV_COGNATE_FRACTION->setText(QApplication::translate("MainWindow", "label_IV_COGNATE_FRACTION", 0, QApplication::UnicodeUTF8));
-        cbox_IV_SHOW_NONCOGNATE->setText(QApplication::translate("MainWindow", "Display non-cognate T cells", 0, QApplication::UnicodeUTF8));
+        cbox_IV_SHOW_NONCOGNATE->setText(QApplication::translate("MainWindow", "Display non-cognate T cells ", 0, QApplication::UnicodeUTF8));
         cbox_DC_INJECTION->setText(QApplication::translate("MainWindow", "DCs injected?", 0, QApplication::UnicodeUTF8));
         cbox_USE_TRAFFIC->setText(QApplication::translate("MainWindow", "T cell trafficking? ", 0, QApplication::UnicodeUTF8));
         rbut_SPECIES_1->setText(QApplication::translate("MainWindow", "Human", 0, QApplication::UnicodeUTF8));
@@ -1774,6 +1782,7 @@ public:
         cbox_USE_EXIT_CHEMOTAXIS->setText(QApplication::translate("MainWindow", "Use exit chemotaxis?", 0, QApplication::UnicodeUTF8));
         cbox_USE_DC_CHEMOTAXIS->setText(QApplication::translate("MainWindow", "Use DC chemotaxis?", 0, QApplication::UnicodeUTF8));
         cbox_COMPUTED_OUTFLOW->setText(QApplication::translate("MainWindow", "Compute T cell outflow?", 0, QApplication::UnicodeUTF8));
+        label_INPUT_FILE->setText(QApplication::translate("MainWindow", "Auxiliary input data file", 0, QApplication::UnicodeUTF8));
         tabs->setTabText(tabs->indexOf(tab_run), QApplication::translate("MainWindow", "Run", 0, QApplication::UnicodeUTF8));
         label_input->setText(QApplication::translate("MainWindow", "Inputs", 0, QApplication::UnicodeUTF8));
         text_more->setDocumentTitle(QString());

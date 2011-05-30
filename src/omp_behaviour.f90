@@ -599,6 +599,7 @@ read(nfcell,*) IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 read(nfcell,*) IV_NTCELLS					! initial T cell population in vitro
 read(nfcell,*) IV_COGNATE_FRACTION			! fraction of in vitro cells that are cognate for DC antigen
 read(nfcell,*) shownoncog			        ! display non-cognate T cells
+read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
 !call logger('Finished reading cell parameter file')
 

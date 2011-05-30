@@ -580,6 +580,10 @@ end subroutine
 ! the high CD69 level keeps S1P1 expression low, making the cell
 ! insensitive to the chemotactic influence of S1P, and thus reducing
 ! the probability of cell exit.
+! NEEDED:
+! Need a model for the decrease in CD69 with time, or (more likely) 
+! number of divisions.  How does continuing TCR signalling combine
+! with that?
 !---------------------------------------------------------------------
 subroutine S1P1_update(CD69,S1P1,stimrate,dt)
 real :: CD69, S1P1, stimrate, dt

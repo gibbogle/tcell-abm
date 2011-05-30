@@ -263,7 +263,11 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 
 {"IV_SHOW_NONCOGNATE", 0, 0, 1,
 "Display non-cognate cells",
-"Display both non-cognate and cognate T cells"}
+"Display both non-cognate and cognate T cells"},
+
+{"INPUT_FILE", 0, 0, 0,
+"fixed.inputdata",
+"The auxiliary input file contains data that (almost!) never changes"}
 
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);

@@ -195,7 +195,7 @@ integer :: exit_rule = 3                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESH
 logical :: USE_S1P = .true.				! this is the default
 logical :: COMPUTE_OUTFLOW = .false.
 
-character*(64), parameter :: fixedfile = 'fixed.inpdata'
+!character*(64), parameter :: fixedfile = 'fixed.inpdata'
 
 ! GUI parameters
 character*(12), parameter :: stopfile = 'stop_dll'
@@ -244,7 +244,7 @@ integer, parameter :: n_multiple_runs = 1
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
+logical, parameter :: L_selectin = .true.				! T cell inflow is suppressed - to simulate Franca's experiment
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -318,7 +318,7 @@ end type
 
 type cog_type
     sequence
-	real :: avidity	    ! level of TCR avidity with DC
+	real :: avidity			! level of TCR avidity with DC
 	real :: stimulation		! TCR stimulation level
 !    real :: entrytime       ! time that the cell entered the paracortex (by HEV or cell division)
 	real :: dietime			! time that the cell dies
@@ -327,6 +327,7 @@ type cog_type
 	real :: stimrate        ! rate of TCR stimulation
 	real :: CD69            ! level of CD69 expression
 	real :: S1P1            ! level of S1P1 expression
+	real :: CCR7            ! level of CCR7 expression
 	real :: DCchemo			! level of chemotactic sensitivity to DC
     real :: IL_state(CYT_NP)    ! receptor model state variable values
     real :: IL_statep(CYT_NP)   ! receptor model state variable time derivative values
@@ -459,7 +460,7 @@ integer :: TC_TO_DC                     ! number of T cells for every DC
 real :: DC_FACTOR                       ! multiplying factor for DC number (initial and influx)
 !integer :: NTC_DC                      ! number of T cells that can bind to a DC
 integer :: MAX_TC_BIND                  ! number of T cells that can bind to a DC
-integer :: MAX_DC_BIND                     ! number of DC that a cell can bind to simultaneously
+integer :: MAX_DC_BIND                  ! number of DC that a cell can bind to simultaneously
 integer :: MAX_COG_BIND                 ! number of cognate T cells that can bind to a DC simultaneously
 real :: DCrate_100k                     ! DC influx rate corresponding to NTcells0 = 100k
 real :: T_DC1                           ! Duration of constant DC influx (hours)
@@ -498,6 +499,7 @@ real :: IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 integer :: IV_NTCELLS					! initial T cell population in vitro
 real :: IV_COGNATE_FRACTION				! fraction of in vitro cells that are cognate for DC antigen
 logical :: IV_SHOW_NONCOGNATE = .false.	! display non-cognate T cells
+character*(64) :: fixedfile
 
 !---------------------------------------------------
 ! end of parameters to read from input file

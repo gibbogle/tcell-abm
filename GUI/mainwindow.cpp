@@ -12,6 +12,7 @@
 #include "plot.h"
 #include "myvtk.h"
 #include "transfer.h"
+
 #ifdef _WIN32
 #include "windows.h"
 #define sleep(n) Sleep(1000 * n)
@@ -151,8 +152,10 @@ void MainWindow::createActions()
 	for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
+		LOG_QMSG(label_str);
 		if (label_str.startsWith("label_")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
+			LOG_QMSG(label_str);
 		}
 	}
 	// Graph menu
@@ -200,6 +203,9 @@ void MainWindow::createLists()
 		if (wname.startsWith("line_")) {
 			connect(w, SIGNAL(textChanged(QString)), this, SLOT(changeParam()));
 			connect(w, SIGNAL(textChanged(QString)), this, SLOT(redrawDistPlot()));
+		}
+		if (wname.startsWith("text_")) {
+			connect(w, SIGNAL(textChanged(QString)), this, SLOT(changeParam()));
 		}
 		if (wname.startsWith("spin_")) {
 			connect(w, SIGNAL(valueChanged(int)), this, SLOT(changeParam()));
@@ -311,9 +317,9 @@ void MainWindow::loadParams()
 	for (int i=0; i<nWidgets; i++) {
 		QWidget *w = widget_list[i];							// w = widget_list[i] is the ith widget in the UI
         QString qsname = w->objectName();
-		if (qsname.startsWith("line_") || qsname.startsWith("spin_") 
+		if (qsname.startsWith("line_") || qsname.startsWith("spin_")
 			|| qsname.startsWith("comb_") || qsname.startsWith("cbox_")
-			|| qsname.startsWith("rbut_")) {
+			|| qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
 //			LOG_QMSG(qsname);
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
@@ -342,9 +348,9 @@ void MainWindow::loadParams()
 								QValidator *aValidator = new MyDoubleValidator(vmin, vmax, 8, w_l);
 								w_l->setValidator(aValidator);
 							}
-						}
+						}						
 					} else if (qsname.startsWith("spin_")) {
-                        double val = p.value;
+						double val = p.value;
 						QSpinBox *w_s = (QSpinBox *)w;
                         w_s->setValue(val);
 						if (!(vmin == 0 && vmax == 0)) {
@@ -417,16 +423,19 @@ void MainWindow::loadParams()
 						} else {
 							w_rb->setChecked(false);
 						}
+					} else if (qsname.startsWith("text_")) {
+						QLineEdit *w_l = (QLineEdit *)w;
+						w_l->setText(p.label);
 					}
 					
-                    // Update Label text
+					// Update Label text (except for "text_" variables)
                     // Get the corresponding label from the label list
                     QString labelString = "label_" + wtag;
-                                        QLabel *label = NULL;
+					QLabel *label = NULL;
 					bool foundLabel = false;
 					for (int j=0; j<nLabels; j++) {
 						label = label_list[j];
-						if (labelString.compare(label->objectName()) == 0) {
+						if (!qsname.startsWith("text_") && labelString.compare(label->objectName()) == 0) {
 							foundLabel = true;
 							break;
 						}
@@ -454,6 +463,7 @@ void MainWindow::loadParams()
                         labelText = "Median";
 					else if (wtag.compare("DC_LIFETIME_SHAPE") == 0)
                         labelText = "Shape";
+
 
 					bool is_slider = false;
 					int j;
@@ -532,7 +542,7 @@ void MainWindow::reloadParams()
         QString qsname = w->objectName();
 		if (qsname.startsWith("line_") || qsname.startsWith("spin_") 
 			|| qsname.startsWith("comb_") || qsname.startsWith("cbox_")
-			|| qsname.startsWith("rbut_")) {
+			|| qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
@@ -551,8 +561,11 @@ void MainWindow::reloadParams()
 						QString val_str = QString::number(val);
 						QLineEdit *w_l = (QLineEdit *)w;
                         w_l->setText(val_str);
+					} else if (qsname.startsWith("text_")) {
+						QLineEdit *w_l = (QLineEdit *)w;
+						w_l->setText(p.label);
 					} else if (qsname.startsWith("spin_")) {
-                        double val = p.value;
+						double val = p.value;
 						QSpinBox *w_s = (QSpinBox *)w;
                         w_s->setValue(val);
 						if (qsname.contains("NCPU")) {
