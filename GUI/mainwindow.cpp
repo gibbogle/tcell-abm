@@ -682,7 +682,9 @@ void MainWindow::writeout()
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET p = parm->get_param(k);
 		double val = p.value;
-		if (val == int(val)) 	// whole number, write as integer
+		if (p.tag.compare("INPUT_FILE") == 0)
+			line = p.label;
+		else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
 		else
 			line = QString::number(val);
@@ -719,7 +721,13 @@ void MainWindow::readInputFile()
 	for (int k=0; k<parm->nParams; k++) {
 		line = in.readLine();
 		QStringList data = line.split(" ",QString::SkipEmptyParts);
-		parm->set_value(k,data[0].toDouble());
+		PARAM_SET p = parm->get_param(k);
+		QString ptag = p.tag;
+		if (ptag.compare("INPUT_FILE") == 0) {
+			parm->set_label(k,data[0]);
+		} else {
+			parm->set_value(k,data[0].toDouble());
+		}
 	}
 
     reloadParams();
@@ -1901,6 +1909,17 @@ void MainWindow::changeParam()
 						}
 					}
 					parm->set_value(k,text.toDouble());
+					break;
+				}
+			}
+		} else if (wname.contains("text_")) {
+			QString wtag = wname.mid(5);
+			QLineEdit *lineEdit = (QLineEdit *)w;
+			QString text = lineEdit->displayText();
+			for (int k=0; k<parm->nParams; k++) {
+				PARAM_SET p = parm->get_param(k);
+				if (wtag.compare(p.tag) == 0) {
+					parm->set_label(k,text);
 					break;
 				}
 			}

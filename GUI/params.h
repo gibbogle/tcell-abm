@@ -23,6 +23,7 @@ public:
 	PARAM_SET get_param(int);
 	int nParams;
 	void set_value(int, double);
+	void set_label(int, QString);
 };
 
 #endif

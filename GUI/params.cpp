@@ -266,7 +266,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Display both non-cognate and cognate T cells"},
 
 {"INPUT_FILE", 0, 0, 0,
-"fixed.inputdata",
+"fixed.inpdata",
 "The auxiliary input file contains data that (almost!) never changes"}
 
 };
@@ -286,4 +286,9 @@ PARAM_SET Params::get_param(int k)
 void Params::set_value(int k, double v)
 {
 	workingParameterList[k].value = v;
+}
+
+void Params::set_label(int k, QString str)
+{
+	workingParameterList[k].label = str;
 }

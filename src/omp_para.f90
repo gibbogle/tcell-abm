@@ -1038,7 +1038,7 @@ do kcell = 1,nlist
 	endif
 enddo
 !write(*,*) 'me, nadd, nsub: ',me,nadd,nsub,nadd-nsub
-write(*,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
+!write(*,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
 write(nflog,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
 ok = .true.
 end subroutine
@@ -1496,7 +1496,9 @@ region = LYMPHNODE
 !exit_prob = ep_factor/residence_time
 !exit_prob = 0.1	! for Tres = 24
 !exit_prob = 0.2	! for Tres = 12
-exit_prob = 0.1*24/RESIDENCE_TIME	! This is OK for CHEMO_K_EXIT = 1.0
+
+!exit_prob = 0.1*24/RESIDENCE_TIME	! factor of 0.1 is OK for CHEMO_K_EXIT = 1.0
+exit_prob = 1.0
 
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
@@ -1524,7 +1526,7 @@ endif
 if (computed_outflow) then
 	nloops = 5
 else
-	nloops = 1
+	nloops = 2		! 1
 endif
 
 tnow = istep*DELTA_T
@@ -3398,7 +3400,7 @@ if (dbug) then
 endif
 
 if (mod(istep,240) == 0) then
-	call checkExits
+!	call checkExits
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, globalvar%NTcells, globalvar%Nexits, total_in, total_out, &
@@ -3721,7 +3723,7 @@ subroutine wrapup
 integer :: ierr
 logical :: isopen
 
-!call logger('doing wrapup ...')
+call logger('doing wrapup ...')
 ierr = 0
 if (allocated(xoffset)) deallocate(xoffset)
 if (allocated(zoffset)) deallocate(zoffset)
@@ -3757,7 +3759,10 @@ if (allocated(neighbours)) deallocate(neighbours)
 
 ! Close all open files
 inquire(unit=nfout,OPENED=isopen)
-if (isopen) close(nfout)
+if (isopen) then
+	close(nfout)
+	call logger('closed nfout')
+endif
 inquire(nfres,OPENED=isopen)
 if (isopen) close(nfres)
 inquire(nftraffic,OPENED=isopen)
@@ -3783,7 +3788,7 @@ integer :: error, i
 call wrapup
 
 if (res == 0) then
-	call logger(' Execution successful')
+	call logger(' Execution successful!')
 else
 	call logger('  === Execution failed ===')
 	call sleeper(1)

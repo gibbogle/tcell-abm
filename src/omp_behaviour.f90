@@ -804,6 +804,8 @@ Vc = FLUID_FRACTION*Ve
 Nsteps = days*60*24/DELTA_T
 !write(*,'(a,f6.2,a,i4)') 'DELTA_X: ',DELTA_X,'  DC_RADIUS: ',DC_RADIUS
 open(nfout,file=outputfile,status='replace')
+write(logmsg,*) 'Opened nfout: ',outputfile
+call logger(logmsg)
 !if (save_input) then
 !    call save_inputfile(inputfile)
 !    call save_parameters
@@ -2229,26 +2231,28 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------
-! Number of exit portals required for the current cell population, ncells.
+! Number of exit portals required for the current cell population, ncells. 
 ! For SURFACE_PORTALS, linearly proportional to ncells, factor = exit_fraction
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
 integer :: Nex, Nex0
 real :: tnow, alfa
+real, parameter :: pow = 2./3.
 
-Nex0 = exit_fraction*globalvar%NTcells0 + 0.5
-requiredExitPortals = exit_fraction*ncells + 0.5
+Nex0 = exit_fraction*globalvar%NTcells0**pow + 0.5
+requiredExitPortals = exit_fraction*ncells**pow + 0.5
+!write(*,*) ncells,ncells**pow,requiredExitPortals
 return
 tnow = istep*DELTA_T
 if (SURFACE_PORTALS) then
 	if (FIXED_NEXITS) then
 		Nex = Nex0
 	else
-		Nex = exit_fraction*ncells + 0.5
+		Nex = exit_fraction*ncells**pow + 0.5
 	endif
 else
-	Nex = exit_fraction*ncells + 0.5
+	Nex = exit_fraction*ncells**pow + 0.5
 endif
 requiredExitPortals = Nex
 end function

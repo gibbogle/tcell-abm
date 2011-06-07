@@ -11,7 +11,7 @@ Graphs::Graphs()
 1, false, 0, 1},
 
 {"teffgen",
-"Efferent Activated Cognate Cells",
+"Efferent Activated Cells",
 "No. of cells",
 8, true, 0, 1},
 
@@ -26,7 +26,7 @@ Graphs::Graphs()
 9, true, 0, 1},
 
 {"act",
-"Total DC antigen activity",
+"Total DC Antigen Activity",
 "",
 2, true, 0, .01},
 
@@ -36,7 +36,7 @@ Graphs::Graphs()
 1, true, 0, 1},
 
 {"ncog_PER",
-"Cognate T Cells in periphery",
+"Activated T Cells in Periphery",
 "No. of cells",
 6, true, 0, 1},
 

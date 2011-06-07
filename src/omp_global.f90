@@ -244,7 +244,7 @@ integer, parameter :: n_multiple_runs = 1
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: L_selectin = .true.				! T cell inflow is suppressed - to simulate Franca's experiment
+logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -2296,6 +2296,7 @@ end function
 ! If use_exit_chemotaxis is true, i.e. chemotaxis is used to control cell exit, any cell
 ! that gets close enough to the exit will leave the paracortex.  Is this
 ! acceptable?
+! For a noncognate cell, should rise from 0 to 1 in an hour or so.
 !--------------------------------------------------------------------------------
 real function chemo_active_exit(cell)
 type(cell_type), pointer :: cell
