@@ -2232,15 +2232,28 @@ end subroutine
 
 !-----------------------------------------------------------------------------
 ! Number of exit portals required for the current cell population, ncells. 
-! For SURFACE_PORTALS, linearly proportional to ncells, factor = exit_fraction
+! For SURFACE_PORTALS, linearly proportional to surface area, i.e. to
+! ncells^(2/3), factor = exit_fraction
+! Modified to use an adjustment that was computed with:
+!	Tres = 12
+!	chemotaxis factor = 1
+!	chemotaxis radius = 100 um
+! exit_fraction = mN + c
+! where
+!	N = ncells
+!	m = 1.607E-5
+!	c = 0.00602
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
 integer :: Nex, Nex0
-real :: tnow, alfa
+real :: tnow, alfa, exit_fraction0
 real, parameter :: pow = 2./3.
+real, parameter :: m = 1.607E-8, c = 0.00602
 
-Nex0 = exit_fraction*globalvar%NTcells0**pow + 0.5
+exit_fraction0 = m*globalvar%NTcells0 + c
+exit_fraction = m*ncells + c
+Nex0 = exit_fraction0*globalvar%NTcells0**pow + 0.5
 requiredExitPortals = exit_fraction*ncells**pow + 0.5
 !write(*,*) ncells,ncells**pow,requiredExitPortals
 return

@@ -1583,6 +1583,7 @@ do while (k < node_inflow)
         cycle
     endif
 enddo
+check_inflow = check_inflow + node_inflow
 
 ! Outflow
 npossible = 0
@@ -1615,6 +1616,7 @@ do ipermex = 1,globalvar%lastexit
 			call cell_exit(kcell,slot,esite,left)
 			if (left) then
 				ne = ne + 1
+				check_egress(iexit) = check_egress(iexit) + 1
 				if (evaluate_residence_time) then
 					if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
 						noutflow_tag = noutflow_tag + 1
@@ -2097,17 +2099,21 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !   removeExit(site)
 !   placeExitPortal(iexit,site) 
+! Currently this only moves exits out towards the blob boundary - when the blob is growing.
+! We also need to move exits back towards the centre when the blob is shrinking.
 !-----------------------------------------------------------------------------------------
 subroutine adjustExits
 integer :: x, y, z, dx, dy, dz, iexit, dir, site1(3), site2(3)
 real :: u(3)
+integer :: nout
 logical :: ok
 
 !write(*,*) 'adjustExits'
+nout = 0
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
 	site1 = exitlist(iexit)%site
-	ok = .false.
+!	ok = .false.
 	do dir = 1,27
 		if (dir == 14) cycle
 		x = site1(1) + jumpvec(1,dir)
@@ -2117,12 +2123,15 @@ do iexit = 1,globalvar%lastexit
 		z = site1(3) + jumpvec(3,dir)
 		if (z < 1 .or. z > NZ) cycle
 		if (occupancy(x,y,z)%indx(1) < 0) then
-			ok = .true.		! site1 is on the blob boundary 
-			exit
+			nout = nout + 1
+!			ok = .true.		! site1 is on the blob boundary  
+!			exit
 		endif
 	enddo
-	if (ok) cycle
-	! The exit portal has been enclosed, need to move it to site2 on the boundary if possible 
+!	if (ok) cycle
+	! if nout == 0, the exit portal has been enclosed, need to move it to site2 on the boundary if possible 
+	! if nout >= 20, the exit portal has been left behind, need to move it to site2 on the boundary if possible 
+	if (nout > 0 .and. nout < 20) cycle
 	u = site1 - Centre
 	u = u/sqrt(dot_product(u,u))
 	call getBoundarySite(u,site2,ok)
@@ -3143,6 +3152,11 @@ endif
 nact = 100*act
 summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
 write(nflog,*) 'ndivisions = ',ndivisions
+
+write(logmsg,'(a,i5,a,2i4,i6,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),(check_egress(i),i=1,globalvar%lastexit)
+call logger(logmsg)
+check_inflow = 0
+check_egress = 0
 end subroutine
 !-------------------------------------------------------------------------------- 
 !--------------------------------------------------------------------------------
@@ -3667,6 +3681,8 @@ else
     globalvar%Nexits = 0
     globalvar%lastexit = 0
 endif
+check_inflow = 0
+check_egress = 0
 
 if (use_exit_chemotaxis) then
 	call chemo_setup

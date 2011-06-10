@@ -645,6 +645,9 @@ real :: max_TCR = 0
 real :: avidity_level(MAX_AVID_LEVELS)  ! discrete avidity levels for use with fix_avidity
 logical :: vary_vascularity = .true.     ! to allow inflammation to change vascularity (false if VEGF_MODEL = 0)
 
+integer :: check_egress(1000)		! for checking traffic
+integer :: check_inflow
+
 ! Vascularity parameters
 real :: VEGF_alpha = 5.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m)
 real :: VEGF_beta = 4.0e-8			! rate constant for basal VEGF production (beta_G in hev.m)
@@ -669,7 +672,7 @@ real :: DC_LIFETIME_MEDIAN				! days
 character*(128) :: inputfile
 character*(128) :: outputfile
 !character*(128) :: resultfile
-character*(256) :: logmsg
+character*(2048) :: logmsg
 TYPE(winsockport) :: awp_0, awp_1, awp_2, awp_3
 logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
