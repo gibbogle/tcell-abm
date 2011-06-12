@@ -682,6 +682,7 @@ logical :: USE_PORTAL_EGRESS			! use fixed exit portals rather than random exit 
 logical :: BLOB_PORTALS					! egress to the sinus at portals throughout the blob
 logical :: SURFACE_PORTALS				! egress to the sinus at portals on the blob surface
 logical :: FIXED_NEXITS = .false.		! the number of exit portals is held fixed
+real :: base_exit_prob					! for no-chemotaxis case, prob of exit of cell at a portal
 real :: XFOLLICLE = 0.6					! normalized x boundary of follicular interface "cap"
 real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
 real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours

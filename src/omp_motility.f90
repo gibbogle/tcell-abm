@@ -203,7 +203,8 @@ if (in_exit_SOI) then
 		go = .false.
 		return
 	endif
-	f = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to												  ! change ep_factor in portal_traffic()
+	f = chemo_K_exit*chemo_exit*chemo_g(rad)	! Note: inserting chemo_K_exit here (was missing) will mean need to
+												! change ep_factor in portal_traffic()
     stay_prob = dirprob(0)
     c = 1
 !    c = CCR7_ligand(rad)

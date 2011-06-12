@@ -1479,13 +1479,21 @@ end function
 ! It seems that CHEMO_K_EXIT has no effect on the exit rate
 ! For some reason, CHEMO_K_EXIT = 0 is NOT the same as USE_EXIT_CHEMOTAXIS = false,
 ! but it SHOULD be.
+!
+! Enhanced egress
+! ---------------
+! To cover the possibility of activated cells having an enhanced probability of egress,
+! the exit region can be expanded to some neighbourhood of the portal site, e.g.
+! the Moore27 neighbourhood.  Any cell within the expanded region that meets a
+! specified criterion (e.g. generation > 4) has the possibility of egress.
 !-----------------------------------------------------------------------------------------
 subroutine portal_traffic(ok)
 logical :: ok
-integer :: iexit, esite(3), site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv
-integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, npossible, iloop, nloops
+integer :: iexit, esite(3), esite0(3),site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv, j
+integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops
 real(DP) :: R, df
 logical :: left
+logical :: central, egress_possible
 integer, allocatable :: permex(:)
 integer :: kpar = 0
 real :: tnow, ssfract, exfract
@@ -1498,7 +1506,7 @@ region = LYMPHNODE
 !exit_prob = 0.2	! for Tres = 12
 
 !exit_prob = 0.1*24/RESIDENCE_TIME	! factor of 0.1 is OK for CHEMO_K_EXIT = 1.0
-exit_prob = 1.0
+exit_prob = base_exit_prob
 
 node_inflow = globalvar%InflowTotal
 node_outflow = globalvar%OutflowTotal
@@ -1526,7 +1534,11 @@ endif
 if (computed_outflow) then
 	nloops = 5
 else
-	nloops = 2		! 1
+	if (use_exit_chemotaxis) then
+		nloops = 2		! 1
+	else
+		nloops = 1
+	endif
 endif
 
 tnow = istep*DELTA_T
@@ -1586,7 +1598,6 @@ enddo
 check_inflow = check_inflow + node_inflow
 
 ! Outflow
-npossible = 0
 ne = 0
 if (globalvar%lastexit > max_exits) then
 	write(logmsg,'(a,2i4)') 'Error: portal_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
@@ -1607,34 +1618,58 @@ do ipermex = 1,globalvar%lastexit
 	    R = par_uni(kpar)
 	    if (R > exfract) cycle
 	endif
-	esite = exitlist(iexit)%site
+	esite0 = exitlist(iexit)%site
+	
+!	do j = 0,6
+	do j = 1,27
+		if (j == 14) then
+			esite = esite0
+			central = .true.
+		else
+!			esite = esite0 + neumann(:,j)
+			esite = esite0 + jumpvec(:,j)
+			central = .false.
+		endif
+	
 	indx = occupancy(esite(1),esite(2),esite(3))%indx
 	do slot = 2,1,-1
 		kcell = indx(slot)
-		if (kcell > 0) npossible = npossible + 1
-		if (kcell > 0 .and. par_uni(kpar) < exit_prob) then
-			call cell_exit(kcell,slot,esite,left)
-			if (left) then
-				ne = ne + 1
-				check_egress(iexit) = check_egress(iexit) + 1
-				if (evaluate_residence_time) then
-					if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
-						noutflow_tag = noutflow_tag + 1
-						restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
-						ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
-						Tres_dist(ihr) = Tres_dist(ihr) + 1
-!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
+		if (kcell > 0) then
+!			if (par_uni(kpar) < exit_prob) then
+			if (central) then
+				egress_possible = .true.
+			else
+				! Determine egress_possible from kcell, will depend on kcell - activated cognate cell is allowed
+				! The idea is that this is used if use_exit_chemotaxis = .false.
+				egress_possible = .false.	! for now
+			endif
+			if (egress_possible) then	
+				call cell_exit(kcell,slot,esite,left)
+				if (left) then
+					ne = ne + 1
+					check_egress(iexit) = check_egress(iexit) + 1
+					if (evaluate_residence_time) then
+						if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
+							noutflow_tag = noutflow_tag + 1
+							restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
+							ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
+							Tres_dist(ihr) = Tres_dist(ihr) + 1
+	!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
+						endif
 					endif
+					if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
+						nv = cellist(kcell)%visits
+						DCvisits(nv) = DCvisits(nv) + 1
+						DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+					endif
+					if (ne == node_outflow .and. computed_outflow) exit
 				endif
-				if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-					nv = cellist(kcell)%visits
-					DCvisits(nv) = DCvisits(nv) + 1
-					DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
-				endif
-				if (ne == node_outflow .and. computed_outflow) exit
 			endif
 		endif
 	enddo
+	
+	enddo
+	
 	if (ne == node_outflow .and. computed_outflow) exit
 enddo
 if (ne == node_outflow .and. computed_outflow) exit
@@ -3153,7 +3188,8 @@ nact = 100*act
 summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
 write(nflog,*) 'ndivisions = ',ndivisions
 
-write(logmsg,'(a,i5,a,2i4,i6,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),(check_egress(i),i=1,globalvar%lastexit)
+write(logmsg,'(a,i5,a,2i4,i6,i8,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),globalvar%NTcells
+	!,(check_egress(i),i=1,globalvar%lastexit)
 call logger(logmsg)
 check_inflow = 0
 check_egress = 0

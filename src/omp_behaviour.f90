@@ -2243,31 +2243,54 @@ end subroutine
 !	N = ncells
 !	m = 1.607E-5
 !	c = 0.00602
+! 
+! Better is a quadratic fit (from Excel, steady_chemo_0_1.xls):
+! exit_fraction = a.x^2 + b.x + c
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
-integer :: Nex, Nex0
-real :: tnow, alfa, exit_fraction0
+real :: a, b, c, x
 real, parameter :: pow = 2./3.
-real, parameter :: m = 1.607E-8, c = 0.00602
+!real, parameter :: m = 1.607E-8, c = 0.00602
+! parameters for chemotaxis
+real, parameter :: a_chemo_12h = -2.228E-08
+real, parameter :: b_chemo_12h = 2.624E-05
+real, parameter :: c_chemo_12h = 5.510E-03
 
-exit_fraction0 = m*globalvar%NTcells0 + c
-exit_fraction = m*ncells + c
-Nex0 = exit_fraction0*globalvar%NTcells0**pow + 0.5
-requiredExitPortals = exit_fraction*ncells**pow + 0.5
-!write(*,*) ncells,ncells**pow,requiredExitPortals
-return
-tnow = istep*DELTA_T
-if (SURFACE_PORTALS) then
-	if (FIXED_NEXITS) then
-		Nex = Nex0
-	else
-		Nex = exit_fraction*ncells**pow + 0.5
-	endif
+! parameters for no chemotaxis
+real, parameter :: a_nochemo_12h = -6.924E-08
+real, parameter :: b_nochemo_12h = 8.384E-05
+real, parameter :: c_nochemo_12h = 1.191E-02
+
+!base_exit_prob = 1.0
+!requiredExitPortals = exit_fraction*ncells**pow + 0.5
+!return
+
+if (use_exit_chemotaxis) then
+!	exit_fraction0 = m*globalvar%NTcells0 + c
+!	exit_fraction = m*ncells + c
+	a = a_chemo_12h
+	b = b_chemo_12h
+	c = c_chemo_12h
+	base_exit_prob = 1.0
 else
-	Nex = exit_fraction*ncells**pow + 0.5
+	a = a_nochemo_12h
+	b = b_nochemo_12h
+	c = c_nochemo_12h
+	base_exit_prob = 1.0
 endif
-requiredExitPortals = Nex
+if (FIXED_NEXITS) then
+	x = globalvar%NTcells0/1000
+	exit_fraction = a*x**2 + b*x + c
+	requiredExitPortals = exit_fraction*globalvar%NTcells0**pow + 0.5
+else
+	x = ncells/1000
+	exit_fraction = a*x**2 + b*x + c
+	requiredExitPortals = exit_fraction*ncells**pow + 0.5
+!	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction
+!	call logger(logmsg)
+endif
+requiredExitPortals = requiredExitPortals/base_exit_prob
 end function
 
 !---------------------------------------------------------------------
