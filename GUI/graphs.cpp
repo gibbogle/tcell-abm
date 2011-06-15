@@ -8,17 +8,17 @@ Graphs::Graphs()
 {"dummy",
 "",
 "",
-1, false, 0, 1},
+0, false, 0, 1},
 
 {"teffgen",
 "Efferent Activated Cells",
 "No. of cells",
-8, true, 0, 1},
+12, true, 0, 1},
 
 {"ncogseed",
 "Seed Cognate Cells",
 "No. of cells",
-4, true, 0, 1},
+5, true, 0, 1},
 
 {"nbnd",
 "Bound Cognate Cells",
@@ -28,27 +28,27 @@ Graphs::Graphs()
 {"act",
 "Total DC Antigen Activity",
 "",
-2, true, 0, .01},
+3, true, 0, .01},
 
 {"nDC",
 "Antigen Presenting Cells",
 "No. of cells",
-1, true, 0, 1},
+2, true, 0, 1},
 
 {"ncog_PER",
 "Activated T Cells in Periphery",
 "No. of cells",
-6, true, 0, 1},
+7, true, 0, 1},
 
 {"ncog_LN",
 "Cognate T Cells in LN",
 "No. of cells",
-5, true, 0, 1},
+6, true, 0, 1},
 
 {"ntot_LN",
 "Total T Cell Population in LN",
 "No. of cells",
-3, true, 0, 1}
+4, true, 0, 1}
 
 };
 	nGraphs = sizeof(graphs)/sizeof(GRAPH_SET);

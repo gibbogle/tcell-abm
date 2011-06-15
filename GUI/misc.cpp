@@ -143,7 +143,7 @@ void ExecThread::run()
 	len_infile = infile_path.length();
 	std::string std_infile = infile_path.toStdString();
 	infile = std_infile.c_str();
-	outfile_path = casename.append(".out");
+	outfile_path = casename.append(".res");
 	len_outfile = outfile_path.length();
 	std::string std_outfile = outfile_path.toStdString();
 	outfile = std_outfile.c_str();

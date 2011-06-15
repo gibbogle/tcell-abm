@@ -773,29 +773,29 @@ void MainWindow::loadResultFile()
 			if (indata) {
 				R->nsteps++;
 			}
-			if (datalist[0].contains("nlist")) {
+			if (datalist[0].contains("========")) {
 				indata = true;
 			}
 		}
 	} while (!line.isNull());
 	in.seek(0);
 
-if (NO_USE_PGRAPH) {
 	R->tnow = new double[R->nsteps];
-	R->nDC = new double[R->nsteps];
-	R->act = new double[R->nsteps];
-	R->ntot_LN = new double[R->nsteps];
-	R->ncog_PER = new double[R->nsteps];
-	R->ncogseed = new double[R->nsteps];
-	R->ncog_LN = new double[R->nsteps];
-	R->ndead = new double[R->nsteps];
-	R->teffgen = new double[R->nsteps];
-} else {
-	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
-		R->pData[i] = new double[R->nsteps];
+	if (NO_USE_PGRAPH) {
+		R->nDC = new double[R->nsteps];
+		R->act = new double[R->nsteps];
+		R->ntot_LN = new double[R->nsteps];
+		R->ncog_PER = new double[R->nsteps];
+		R->ncogseed = new double[R->nsteps];
+		R->ncog_LN = new double[R->nsteps];
+		R->ndead = new double[R->nsteps];
+		R->teffgen = new double[R->nsteps];
+	} else {
+		for (int i=0; i<nGraphs; i++) {
+			if (!grph->isActive(i)) continue;
+			R->pData[i] = new double[R->nsteps];
+		}
 	}
-}
 	step = -1;
 	indata = false;
 	do {
@@ -803,15 +803,16 @@ if (NO_USE_PGRAPH) {
 		if (line.length() > 0) {
 			QStringList dataList = line.split(" ",QString::SkipEmptyParts);
 			if (indata) {
-				double data[10];
-				for (int k=0; k<10; k++) 
+				int ndata = dataList.length();
+				double *data = new double[ndata];
+				for (int k=0; k<ndata; k++)
 					data[k] = dataList[k].toDouble();
 				step++;
 				if (step >= R->nsteps) {
 					LOG_MSG("ERROR: loadResultFile: step >= nsteps_p");
 					return;
 				}
-				R->tnow[step] = step;		//data[1];
+				R->tnow[step] = step;		//data[1];step
 
 			if (NO_USE_PGRAPH) {
 
@@ -835,29 +836,28 @@ if (NO_USE_PGRAPH) {
 			}
 
 			}
-			if (dataList[0].contains("nlist")) {
+			if (dataList[0].contains("========")) {
 				indata = true;
 			}
 		}
 	} while (!line.isNull());
 
 	// Compute the maxima
-if (NO_USE_PGRAPH) {
-	R->max_act = getMaximum(R,R->act);
-	R->max_ncog_LN = getMaximum(R,R->ncog_LN);
-	R->max_ncogseed = getMaximum(R,R->ncogseed);
-	R->max_nDC = getMaximum(R,R->nDC);
-	R->max_teffgen = getMaximum(R,R->teffgen);
-	R->max_ntot = getMaximum(R,R->ntot_LN);
-} else {
-	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
-		double maxval = getMaximum(R,R->pData[i]);
-		grph->set_maxValue(i,maxval);
-		R->maxValue[i] = maxval;
+	if (NO_USE_PGRAPH) {
+		R->max_act = getMaximum(R,R->act);
+		R->max_ncog_LN = getMaximum(R,R->ncog_LN);
+		R->max_ncogseed = getMaximum(R,R->ncogseed);
+		R->max_nDC = getMaximum(R,R->nDC);
+		R->max_teffgen = getMaximum(R,R->teffgen);
+		R->max_ntot = getMaximum(R,R->ntot_LN);
+	} else {
+		for (int i=0; i<nGraphs; i++) {
+			if (!grph->isActive(i)) continue;
+			double maxval = getMaximum(R,R->pData[i]);
+			grph->set_maxValue(i,maxval);
+			R->maxValue[i] = maxval;
+		}
 	}
-}
-
 	// Now add the result set to the list
 	result_list.append(R);
 	if (nGraphCases == 0) {
@@ -866,8 +866,6 @@ if (NO_USE_PGRAPH) {
 		initializeGraphs(R);
 		drawGraphs();
 		goToOutputs();
-		sprintf(msg,"nGraphCases: %d %p",nGraphCases,graphResultSet[0]);
-		LOG_MSG(msg);
 	}
 }
 
@@ -1361,6 +1359,8 @@ void MainWindow::drawGraphs()
 			nbnd_max = max(nbnd_max,R->max_nbnd);
 		} else {
 			for (int i=0; i<nGraphs; i++) {
+				if (!grph->isActive(i)) continue;
+				int k = grph->get_dataIndex(i);
 				pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename);
 				if (!grph->isActive(i)) continue;
 				if (k == 0) {

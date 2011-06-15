@@ -189,7 +189,7 @@ integer, parameter :: traffic_mode = TRAFFIC_MODE_2
 logical, parameter :: use_blob = .true.
 logical, parameter :: random_cognate = .false.          ! number of cognate seed cells is random or determined
 integer, parameter :: MMAX_GEN = 25     ! max number of generations (for array dimension only)
-integer, parameter :: NGEN_EXIT = 5     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
+integer, parameter :: NGEN_EXIT = 6     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of chemotactic influence (at r = chemo_radius)
 integer :: exit_rule = 3                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
 logical :: USE_S1P = .true.				! this is the default
@@ -244,7 +244,7 @@ integer, parameter :: n_multiple_runs = 1
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
+logical, parameter :: L_selectin = .true.				! T cell inflow is suppressed - to simulate Franca's experiment
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -416,7 +416,7 @@ real :: TC_CONVERSION_TIME = 48			! time (in hours) over which T cells become co
 real :: TC_STIM_RATE_CONSTANT = 0.83	! rate const for TCR stimulation (-> molecules/min)
 real :: TC_STIM_WEIGHT = 0.1			! contribution of stimulation to act level
 real :: TC_STIM_HALFLIFE = 24			! hours
-integer :: TC_MAX_GEN = 15              ! maximum number of TC generations
+integer :: TC_MAX_GEN = 20              ! maximum number of TC generations
 
 real :: DC_ANTIGEN_MEAN = 10			! mean DC antigen density
 real :: DC_ANTIGEN_SHAPE = 1.2			! DC antigen density shape param

@@ -31,6 +31,7 @@ public:
 	double get_scaling(int);
 	bool isActive(int);
 	void set_maxValue(int, double);
+
 };
 
 #endif

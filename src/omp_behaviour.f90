@@ -862,12 +862,13 @@ close(nfcell)
 end subroutine
 
 !----------------------------------------------------------------------------------------
-! Save parameters (values hard-coded, not yet in input file)
+! Save parameters (values hard-coded, not yet in input file) 
 !----------------------------------------------------------------------------------------
 subroutine save_parameters
 
 write(nfout,*) 'PARAMETER data'
 write(nfout,*) '--------------'
+write(nfout,*) 'DELTA_X: ',DELTA_X
 write(nfout,*) 'BALANCER_INTERVAL: ',BALANCER_INTERVAL
 write(nfout,*) 'use_add_count: ',use_add_count
 write(nfout,*) 'use_blob: ',use_blob

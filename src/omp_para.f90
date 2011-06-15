@@ -1516,6 +1516,12 @@ if (R < df) then
     node_inflow = node_inflow + 1
 endif
 
+if (L_selectin) then
+	node_inflow = 0
+	exit_rule = 1	! using NGEN_EXIT
+	use_S1P = .false.
+endif
+
 if (steadystate) then
     ssfract = real(globalvar%NTcells)/globalvar%NTcells0
     if (ssfract > 1.01) then
@@ -1620,14 +1626,14 @@ do ipermex = 1,globalvar%lastexit
 	endif
 	esite0 = exitlist(iexit)%site
 	
-!	do j = 0,6
-	do j = 1,27
+	do j = 0,1
+!	do j = 1,27
 		if (j == 14) then
 			esite = esite0
 			central = .true.
 		else
-!			esite = esite0 + neumann(:,j)
-			esite = esite0 + jumpvec(:,j)
+			esite = esite0 + neumann(:,j)
+!			esite = esite0 + jumpvec(:,j)
 			central = .false.
 		endif
 	
@@ -1643,6 +1649,16 @@ do ipermex = 1,globalvar%lastexit
 				! The idea is that this is used if use_exit_chemotaxis = .false.
 				egress_possible = .false.	! for now
 			endif
+			if (L_selectin) then	! overrides preceding code, no egress for non-cognate cells
+				if (associated(cellist(kcell)%cptr)) then	! cognate cell, exit is possible
+					egress_possible = .true.
+					if (.not.central .and. par_uni(kpar) < 0.5) then
+						egress_possible = .false.
+					endif
+				else
+					egress_possible = .false.
+				endif
+			endif		
 			if (egress_possible) then	
 				call cell_exit(kcell,slot,esite,left)
 				if (left) then
@@ -1732,7 +1748,7 @@ elseif (associated(cellist(kcell)%cptr)) then
 !    if (stage == ACTIVATED) then   ! this allows cells to exit with gen < NGEN_EXIT (unlike DCU paper runs)
         ctype = cellist(kcell)%ctype
         if (.not.exitOK(p,ctype)) then
-            write(*,*) 'cell_exit: cognate exit suppressed: ',kcell
+!            write(*,*) 'cell_exit: cognate exit suppressed: ',kcell
             return
         endif
 !    endif
@@ -3008,6 +3024,30 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
+subroutine SaveGenDist
+integer :: gendist(TC_MAX_GEN)
+integer :: k, kcell, stage, region, gen, maxg
+real :: fac
+
+gendist = 0
+maxg = 0
+do k = 1,lastcogID
+	kcell = cognate_list(k)
+	if (kcell > 0) then
+		call get_stage(cellist(kcell)%cptr,stage,region)
+!		if (region /= LYMPHNODE) cycle 
+		gen = get_generation(cellist(kcell)%cptr)
+		maxg = max(maxg,gen)
+		gendist(gen) = gendist(gen) + 1
+	endif
+enddo
+fac = 1.0/sum(gendist)
+write(nflog,*) 'gendist:'
+write(nflog,'(20f7.4)') fac*gendist(1:maxg)
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 subroutine get_dimensions(NX_dim,NY_dim,NZ_dim) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
@@ -3029,6 +3069,7 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
+logical, save :: first = .true.
 integer :: kcell, ctype, stype, ncog(2), noncog, ntot, nbnd, stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
@@ -3039,6 +3080,10 @@ integer, allocatable :: div_gendist(:)  ! cells that are capable of dividing
 character*(6) :: numstr
 character*(256) :: msg
 
+if (first) then
+	write(nfout,'(a)') "==========================================================================="
+	first = .false.
+endif
 ok = .true.
 allocate(gendist(TC_MAX_GEN))
 allocate(div_gendist(TC_MAX_GEN))
@@ -3155,9 +3200,6 @@ write(*,*) '========= Average time to IL2 threshold: ',nIL2thresh,tIL2thresh/max
 write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
-write(nfout,'(2(i8,f8.0),7i8,25f7.4)') istep,tnow/60,globalvar%NDCalive,act,ntot,ncogseed,ncog,dNdead,Ndead,teffgen, &
-    fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
-
 if (use_tcp) then
     msg = ''
     do i = 1,ngens
@@ -3176,16 +3218,19 @@ totalres%dN_EffCogTC = 0
 totalres%dN_EffCogTCGen = 0
 totalres%dN_Dead = 0
 
-if (save_DCbinding) then
-    ncog = sum(dcbind(0:MAX_COG_BIND))
-    write(*,'(21i6)') dcbind(0:MAX_COG_BIND)
-    write(*,*) 'ncog: ',ncog
-    write(nfdcbind,'(f8.2,i6,30f7.4)') tnow,ncog,dcbind(0:MAX_COG_BIND)/real(ncog)
-    dcbind = 0
-endif
+!if (save_DCbinding) then
+!    ncog = sum(dcbind(0:MAX_COG_BIND))
+!    write(*,'(21i6)') dcbind(0:MAX_COG_BIND)
+!    write(*,*) 'ncog: ',ncog
+!    write(nfdcbind,'(f8.2,i6,30f7.4)') tnow,ncog,dcbind(0:MAX_COG_BIND)/real(ncog) 
+!    dcbind = 0
+!endif
 
+write(nfout,'(i4,i8,i4,f8.0,4i8,4i6,i8,25f7.4)') int(tnow/60),istep,globalvar%NDCalive,act,ntot,ncogseed,ncog,Ndead, &
+	nbnd,int(globalvar%InflowTotal),globalvar%Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 nact = 100*act
-summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
+summaryData(1:13) = (/int(tnow/60),istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead, &
+	nbnd,int(globalvar%InflowTotal),globalvar%Nexits, teffgen/)
 write(nflog,*) 'ndivisions = ',ndivisions
 
 write(logmsg,'(a,i5,a,2i4,i6,i8,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),globalvar%NTcells
@@ -3837,6 +3882,7 @@ integer(c_int) :: res
 character*(8), parameter :: quit = '__EXIT__'
 integer :: error, i
 
+call SaveGenDist
 call wrapup
 
 if (res == 0) then
