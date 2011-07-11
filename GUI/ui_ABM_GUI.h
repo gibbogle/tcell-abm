@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'ABM_GUI.ui'
 **
-** Created: Mon May 30 11:40:28 2011
+** Created: Mon Jul 11 15:45:59 2011
 **      by: Qt User Interface Compiler version 4.6.3
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
