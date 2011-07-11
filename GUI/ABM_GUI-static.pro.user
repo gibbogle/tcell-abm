@@ -97,7 +97,7 @@
     <valuelist key="Qt4ProjectManager.Qt4RunConfiguration.UserEnvironmentChanges" type="QVariantList"/>
     <value key="Qt4ProjectManager.Qt4RunConfiguration.UserSetName" type="bool">false</value>
     <value key="Qt4ProjectManager.Qt4RunConfiguration.UserSetWorkingDirectory" type="bool">true</value>
-    <value key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory" type="QString">E:\tcell-abm\Execution\expt\portal_egress</value>
+    <value key="Qt4ProjectManager.Qt4RunConfiguration.UserWorkingDirectory" type="QString">E:\tcell-abm\Execution\</value>
    </valuemap>
    <value key="ProjectExplorer.Target.RunConfigurationCount" type="int">1</value>
   </valuemap>
