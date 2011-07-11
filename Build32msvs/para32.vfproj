@@ -14,7 +14,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|Win32" ConfigurationType="typeDynamicLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Qopenmp /Oy" SuppressStartupBanner="true" Optimization="optimizeCustom" Preprocess="preprocessYes" Traceback="true" RuntimeChecks="rtChecksNone" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Qopenmp /Oy" SuppressStartupBanner="true" Optimization="optimizeCustom" Preprocess="preprocessYes" Traceback="true" RuntimeChecks="rtChecksAll" RuntimeLibrary="rtMultiThreadedDLL"/>
 				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\libpara32_ms.dll" SuppressStartupBanner="true" IgnoreDefaultLibraryNames="libcmt" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="ws2_32.lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>

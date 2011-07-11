@@ -1626,7 +1626,7 @@ do ipermex = 1,globalvar%lastexit
 	endif
 	esite0 = exitlist(iexit)%site
 	
-	do j = 0,1
+	do j = 1,1	! was 0,1 ERROR
 !	do j = 1,27
 		if (j == 14) then
 			esite = esite0
@@ -1642,13 +1642,13 @@ do ipermex = 1,globalvar%lastexit
 		kcell = indx(slot)
 		if (kcell > 0) then
 !			if (par_uni(kpar) < exit_prob) then
-			if (central) then
+!			if (central) then
 				egress_possible = .true.
-			else
+!			else
 				! Determine egress_possible from kcell, will depend on kcell - activated cognate cell is allowed
 				! The idea is that this is used if use_exit_chemotaxis = .false.
-				egress_possible = .false.	! for now
-			endif
+!				egress_possible = .false.	! for now
+!			endif
 			if (L_selectin) then	! overrides preceding code, no egress for non-cognate cells
 				if (associated(cellist(kcell)%cptr)) then	! cognate cell, exit is possible
 					egress_possible = .true.
@@ -1849,11 +1849,11 @@ else	! VEGF_MODEL = 1
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
 endif
 globalvar%Vascularity = globalvar%Vascularity + dVdt*DELTA_T
-!if (mod(istep,10) == 0) then
-!	write(logmsg,'(a,i6,2e10.3,3f8.3)') 'vasc: ',istep/240,VEGFsignal,c_vegf,globalvar%VEGF, &
-!		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
-!	call logger(logmsg)
-!endif
+if (mod(istep,240) == 0) then
+	write(logmsg,'(a,i6,2e10.3,3f8.3)') 'vasc: ',istep/240,VEGFsignal,c_vegf,globalvar%VEGF, &
+		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
+	call logger(logmsg)
+endif
 !write(*,*) 'dVEGFdt, c_vegf, dVdt: ',dVEGFdt, c_vegf, dVdt, globalvar%Vascularity
 end subroutine
 
@@ -2728,10 +2728,11 @@ subroutine vascular_test
 integer :: nsteps = 10*24*60/DELTA_T
 real :: inflow0, act, tnow, exfract
 
-globalvar%VEGF = 0
-globalvar%vascularity = 1.00
+!globalvar%VEGF = 0
+!globalvar%vascularity = 1.00
 globalvar%NTcells0 = 100000
 use_exit_chemotaxis = .false.
+call initialise_vascularity
 
 globalvar%NDC = DC_FACTOR*globalvar%NTcells0/TC_TO_DC
 globalvar%NTcells = globalvar%NTcells0
@@ -4000,6 +4001,7 @@ else
 	res = 1
 endif
 if (test_vascular) then
+	write(*,*) 'vascular_test'
 	call vascular_test
 	stop
 endif
