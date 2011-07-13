@@ -2584,7 +2584,8 @@ do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
 	site = exitlist(iexit)%site
 	if (occupancy(site(1),site(2),site(3))%exitnum /= -exitlist(iexit)%ID) then
-		write(*,*) 'checkExits: ',iexit,site,occupancy(site(1),site(2),site(3))%exitnum
+		write(logmsg,*) 'checkExits: ',iexit,site,occupancy(site(1),site(2),site(3))%exitnum
+		call logger(logmsg)
 		ok = .false.
 	endif
 enddo

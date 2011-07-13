@@ -1039,7 +1039,7 @@ do kcell = 1,nlist
 enddo
 !write(*,*) 'me, nadd, nsub: ',me,nadd,nsub,nadd-nsub
 !write(*,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
-write(nflog,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
+write(nflog,'(f8.2,i8,2f8.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
 ok = .true.
 end subroutine
 
@@ -1626,9 +1626,10 @@ do ipermex = 1,globalvar%lastexit
 	endif
 	esite0 = exitlist(iexit)%site
 	
-	do j = 1,1	! was 0,1 ERROR
+	do j = 0,1	! was 0,1 ERROR
 !	do j = 1,27
-		if (j == 14) then
+!		if (j == 14) then
+		if (j == 0) then
 			esite = esite0
 			central = .true.
 		else
@@ -1641,14 +1642,13 @@ do ipermex = 1,globalvar%lastexit
 	do slot = 2,1,-1
 		kcell = indx(slot)
 		if (kcell > 0) then
-!			if (par_uni(kpar) < exit_prob) then
-!			if (central) then
+			if (central) then
 				egress_possible = .true.
-!			else
+			else
 				! Determine egress_possible from kcell, will depend on kcell - activated cognate cell is allowed
 				! The idea is that this is used if use_exit_chemotaxis = .false.
-!				egress_possible = .false.	! for now
-!			endif
+				egress_possible = .false.	! for now
+			endif
 			if (L_selectin) then	! overrides preceding code, no egress for non-cognate cells
 				if (associated(cellist(kcell)%cptr)) then	! cognate cell, exit is possible
 					egress_possible = .true.
@@ -2160,11 +2160,11 @@ integer :: nout
 logical :: ok
 
 !write(*,*) 'adjustExits'
-nout = 0
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
 	site1 = exitlist(iexit)%site
 !	ok = .false.
+	nout = 0
 	do dir = 1,27
 		if (dir == 14) cycle
 		x = site1(1) + jumpvec(1,dir)
@@ -2187,13 +2187,22 @@ do iexit = 1,globalvar%lastexit
 	u = u/sqrt(dot_product(u,u))
 	call getBoundarySite(u,site2,ok)
 	if (.not.ok) cycle
+	
+	if (site1(1) == site2(1) .and. site1(2) == site2(2) .and. site1(3) == site2(3)) then
+		write(logmsg,'(a,4i6)') 'adjustExits: site1 and site2 are the same: ',iexit,site1
+		call logger(logmsg)
+		call checkExits
+		cycle
+	endif
 	if (use_DC) then
 		if (toonearDC(site2,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
 	endif
+	write(logmsg,'(a,6i6)') 'adjustExits: removeExitPortal: ',istep,iexit,site1
+	call logger(logmsg)
 	call removeExitPortal(site1)
-!	write(logmsg,*) 'adjustExits: did removeExitPortal: ',iexit,site1
-!	call logger(logmsg)
-!	call checkExits
+	write(logmsg,'(a,6i6)') 'adjustExits: did removeExitPortal: ',istep,iexit,site1
+	call logger(logmsg)
+	call checkExits
 	
 	! Note: since we are reusing an existing exit index, no need to increment %lastexit
 	globalvar%Nexits = globalvar%Nexits + 1
@@ -2202,9 +2211,9 @@ do iexit = 1,globalvar%lastexit
 		stop
 	endif
 	call placeExitPortal(iexit,site2)
-!	write(logmsg,*) 'adjustExits: did placeExitPortal: ',iexit,site2
-!	call logger(logmsg)
-!	call checkExits
+	write(logmsg,'(a,6i6)') 'adjustExits: did placeExitPortal: ',iexit,site2
+	call logger(logmsg)
+	call checkExits
 enddo
 end subroutine
 
@@ -2222,7 +2231,8 @@ logical :: moved
 integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
-!write(*,'(a,i6)') 'removeSites: ',n
+write(logmsg,'(a,i6)') 'removeSites: ',n
+call logger(logmsg)
 ok = .true.
 r2 = globalvar%Radius*globalvar%Radius
 maxblist = 4*PI*r2*0.1*globalvar%Radius
@@ -2305,8 +2315,12 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
-!				write(*,*) 'removeSites:  need to move exit'
+				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
+				call logger(logmsg)
                 call removeExitPortal(site0)
+                write(logmsg,'(a,4i6)') 'removeSites: did removeExitPortal: ',site0
+                call logger(logmsg)
+                call checkExits
                 ! Let the balancer add a site back again (if needed) 
             endif
             globalvar%Nsites = globalvar%Nsites - 1

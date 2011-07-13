@@ -2382,8 +2382,8 @@ if (globalvar%lastexit > max_exits) then
 	stop
 endif
 call placeExitPortal(iexit,site)
-!write(logmsg,'(a,6i6)') 'addExitPortal: ',istep,iexit,globalvar%Nexits,site
-!call logger(logmsg)
+write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
+call logger(logmsg)
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2593,11 +2593,14 @@ do iexit = Nex,1,-1
     if (exitlist(iexit)%ID == 0) cycle
     k = k+1
     site = exitlist(iexit)%site
+    write(logmsg,'(a,4i6)') 'removeExits: removeExitPortal: ',iexit,site
+    call logger(logmsg)
     call removeExitPortal(site)
-    write(logmsg,'(a,4i6)') 'removeExitPortal: ',iexit,site
+    write(logmsg,'(a,4i6)') 'did removeExitPortal'
     call logger(logmsg)
     if (k == nremex) exit
 enddo
+call checkExits
 end subroutine
 
 !---------------------------------------------------------------------
