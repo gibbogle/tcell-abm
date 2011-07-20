@@ -1335,10 +1335,11 @@ if (NO_USE_PGRAPH) {
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::drawGraphs()
 {
+	char msg[128];
 	RESULT_SET *R;
 	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_LN_max = 0, ncog_PER_max = 0, nbnd_max = 0, ncogseed_max = 0;
-	for (int k=0; k<Plot::ncmax; k++) {
-		R = graphResultSet[k];
+	for (int kres=0; kres<Plot::ncmax; kres++) {
+		R = graphResultSet[kres];
 		if (R != 0) {
 		if (NO_USE_PGRAPH) {
 			graph_act->redraw(R->tnow, R->act, R->nsteps, R->casename);
@@ -1362,15 +1363,19 @@ void MainWindow::drawGraphs()
 				if (!grph->isActive(i)) continue;
 				int k = grph->get_dataIndex(i);
 				pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename);
-				if (!grph->isActive(i)) continue;
+//				if (!grph->isActive(i)) continue;
 				if (k == 0) {
 					grph->set_maxValue(i,R->maxValue[i]);
 				} else {
 					double maxval = grph->get_maxValue(i);
-					if (R->maxValue[i] > maxval) {
-						grph->set_maxValue(i,maxval);
+					double newmax = R->maxValue[i];
+					if (newmax > maxval) {
+//						grph->set_maxValue(i,maxval);
+						grph->set_maxValue(i,newmax);
 					}
 				}
+//				sprintf(msg,"drawGraphs: Result set: %d graph: %d  max: %f",kres,i,grph->get_maxValue(i));
+//				LOG_MSG(msg);
 			}
 		}
 

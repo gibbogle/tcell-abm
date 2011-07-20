@@ -407,6 +407,7 @@ logical :: ext
 
 inquire(file=fixedfile,exist=ext)
 if (.not.ext) then
+	call logger("Fixed parameter input file not found")
 	ok = .false.
 	return
 endif
