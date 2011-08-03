@@ -557,34 +557,6 @@ else
 endif
 end function
 
-!--------------------------------------------------------------------------------
-!-------------------------------------------------------------------------------- 
-subroutine initialise_vascularity
-if (VEGF_MODEL == 2) then	! Not used
-	VEGF_beta = 0
-	VEGF_baserate = 0
-    VEGF_decayrate = 0.0012
-    vasc_maxrate = 0.001
-    globalvar%VEGF = 0
-    vasc_beta = 0.00001
-    vasc_decayrate = 0.001
-else	! VEGF_MODEL = 1
-!	VEGF_beta = 4.0e-8
-	VEGF_baserate = VEGF_beta*globalvar%NTcells0
-!    VEGF_decayrate = 0.002		! delta_G
-!    vasc_maxrate = 0.0006		! alpha_V
-    globalvar%VEGF = VEGF_baserate/VEGF_decayrate    ! steady-state VEGF level M_G0
-    c_vegf_0 = globalvar%VEGF/globalvar%NTcells0	! taking K_V = 1.0
-!    vasc_beta = 1.5				! beta_V
-    vasc_decayrate = vasc_maxrate*hill(c_vegf_0,vasc_beta*c_vegf_0,vasc_n)	! delta_V
-!    write(*,*) 'Vascularity parameters:'
-!    write(*,*) 'alpha_G,beta_G,delta_G: ',VEGF_alpha, VEGF_beta, VEGF_decayrate
-!    write(*,*) 'alpha_V,beta_V,delta_V: ',vasc_maxrate,vasc_beta,vasc_decayrate
-!    write(*,*) 'c_vegf_0,VEGF0,VEGF_baserate: ',c_vegf_0,globalvar%VEGF,VEGF_baserate
-endif
-globalvar%vascularity = 1.00
-!write(*,*) 'VEGF_MODEL, VEGF_baserate: ',VEGF_MODEL, VEGF_baserate
-end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
@@ -1479,6 +1451,8 @@ end function
 ! It seems that CHEMO_K_EXIT has no effect on the exit rate
 ! For some reason, CHEMO_K_EXIT = 0 is NOT the same as USE_EXIT_CHEMOTAXIS = false,
 ! but it SHOULD be.
+! SOLVED.  The reason was that different coefficients were being used to compute
+! requiredExitPortals.
 !
 ! Enhanced egress
 ! ---------------
@@ -1490,10 +1464,10 @@ end function
 subroutine portal_traffic(ok)
 logical :: ok
 integer :: iexit, esite(3), esite0(3),site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv, j
-integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops
+integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs
 real(DP) :: R, df
 logical :: left
-logical :: central, egress_possible
+logical :: central, egress_possible, use_full_neighbourhood
 integer, allocatable :: permex(:)
 integer :: kpar = 0
 real :: tnow, ssfract, exfract
@@ -1540,11 +1514,12 @@ endif
 if (computed_outflow) then
 	nloops = 5
 else
-	if (use_exit_chemotaxis) then
-		nloops = 2		! 1
-	else
-		nloops = 1
-	endif
+	nloops = 1
+!	if (use_exit_chemotaxis) then
+!		nloops = 2	! 1
+!	else
+!		nloops = 1
+!	endif
 endif
 
 tnow = istep*DELTA_T
@@ -1554,6 +1529,10 @@ if (suppress_egress) then
 endif
 
 ! Inflow
+if (exit_region == EXIT_LOWERHALF) then    
+    write(*,*) 'EXIT_LOWERHALF not simulated with chemotaxis'
+    stop
+endif
 gen = 1
 k = 0
 do while (k < node_inflow)
@@ -1561,14 +1540,8 @@ do while (k < node_inflow)
     x = 1 + R*NX
     R = par_uni(kpar)
     y = 1 + R*NY
-    if (exit_region /= EXIT_LOWERHALF) then    ! => entry everywhere
-        R = par_uni(kpar)
-        z = 1 + R*NZ
-    else
-!        z = random_int(zin_min,zin_max,kpar)
-        write(*,*) 'EXIT_LOWERHALF not simulated with chemotaxis'
-        stop
-    endif
+    R = par_uni(kpar)
+    z = 1 + R*NZ
     indx = occupancy(x,y,z)%indx
     if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
     if (indx(1) == 0 .or. indx(2) == 0) then
@@ -1604,6 +1577,23 @@ enddo
 check_inflow = check_inflow + node_inflow
 
 ! Outflow
+! Need to preserve (for now) the code that was used to simulate the adoptive transfer expt,
+! i.e. using L_selectin.  In this case:
+!    exit_prob = 1
+!    use_exit_chemotaxis = false
+!    computed_outflow = false
+!    egress possible for central site only
+
+if (L_selectin) then
+	exit_prob = 1
+	use_full_neighbourhood = .false.
+	nbrs = 1
+else
+	use_full_neighbourhood = .true.
+	exit_prob = 0.05		! TESTING------------------
+	nbrs = 26
+endif
+ 
 ne = 0
 if (globalvar%lastexit > max_exits) then
 	write(logmsg,'(a,2i4)') 'Error: portal_traffic: globalvar%lastexit > max_exits: ',globalvar%lastexit, max_exits
@@ -1626,64 +1616,76 @@ do ipermex = 1,globalvar%lastexit
 	endif
 	esite0 = exitlist(iexit)%site
 	
-	do j = 0,1	! was 0,1 ERROR
+!	do j = 0,1	! was 0,1 ERROR
+!		if (j == 0) then
 !	do j = 1,27
 !		if (j == 14) then
-		if (j == 0) then
-			esite = esite0
-			central = .true.
+		
+	do j = 1,nbrs+1
+		if (use_full_neighbourhood) then
+			if (j == 14) then
+				esite = esite0
+				central = .true.
+			else
+				esite = esite0 + jumpvec(:,j)
+				central = .false.
+			endif
 		else
-			esite = esite0 + neumann(:,j)
-!			esite = esite0 + jumpvec(:,j)
-			central = .false.
+			if (j == 1) then
+				esite = esite0
+				central = .true.
+			else
+				esite = esite0 + neumann(:,1)
+!				esite = esite0 + jumpvec(:,1)
+				central = .false.
+			endif
 		endif
 	
-	indx = occupancy(esite(1),esite(2),esite(3))%indx
-	do slot = 2,1,-1
-		kcell = indx(slot)
-		if (kcell > 0) then
-			if (central) then
-				egress_possible = .true.
-			else
+		indx = occupancy(esite(1),esite(2),esite(3))%indx
+		do slot = 2,1,-1
+			kcell = indx(slot)
+			if (kcell > 0) then
 				! Determine egress_possible from kcell, will depend on kcell - activated cognate cell is allowed
 				! The idea is that this is used if use_exit_chemotaxis = .false.
-				egress_possible = .false.	! for now
-			endif
-			if (L_selectin) then	! overrides preceding code, no egress for non-cognate cells
-				if (associated(cellist(kcell)%cptr)) then	! cognate cell, exit is possible
+				if (par_uni(kpar) < exit_prob) then
 					egress_possible = .true.
-					if (.not.central .and. par_uni(kpar) < 0.5) then
-						egress_possible = .false.
-					endif
 				else
 					egress_possible = .false.
-				endif
-			endif		
-			if (egress_possible) then	
-				call cell_exit(kcell,slot,esite,left)
-				if (left) then
-					ne = ne + 1
-					check_egress(iexit) = check_egress(iexit) + 1
-					if (evaluate_residence_time) then
-						if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
-							noutflow_tag = noutflow_tag + 1
-							restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
-							ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
-							Tres_dist(ihr) = Tres_dist(ihr) + 1
-	!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
+				endif				
+				if (L_selectin) then	! overrides preceding code, no egress for non-cognate cells
+					if (associated(cellist(kcell)%cptr)) then	! cognate cell, exit is possible
+						egress_possible = .true.
+						if (nloops == 2 .and. .not.central .and. par_uni(kpar) < 0.5) then
+							egress_possible = .false.
 						endif
+					else
+						egress_possible = .false.
 					endif
-					if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-						nv = cellist(kcell)%visits
-						DCvisits(nv) = DCvisits(nv) + 1
-						DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+				endif		
+				if (egress_possible) then	
+					call cell_exit(kcell,slot,esite,left)
+					if (left) then
+						ne = ne + 1
+						check_egress(iexit) = check_egress(iexit) + 1
+						if (evaluate_residence_time) then
+							if (cellist(kcell)%ctype == RES_TAGGED_CELL) then
+								noutflow_tag = noutflow_tag + 1
+								restime_tot = restime_tot + tnow - cellist(kcell)%entrytime
+								ihr = (tnow - cellist(kcell)%entrytime)/60. + 1
+								Tres_dist(ihr) = Tres_dist(ihr) + 1
+		!                        write(*,*) 'entry: ',cellist(kcell)%entrytime
+							endif
+						endif
+						if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
+							nv = cellist(kcell)%visits
+							DCvisits(nv) = DCvisits(nv) + 1
+							DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+						endif
+						if (ne == node_outflow .and. computed_outflow) exit
 					endif
-					if (ne == node_outflow .and. computed_outflow) exit
 				endif
 			endif
-		endif
-	enddo
-	
+		enddo
 	enddo
 	
 	if (ne == node_outflow .and. computed_outflow) exit
@@ -1802,6 +1804,35 @@ endif
 left = .true.
 end subroutine
 
+!--------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------- 
+subroutine initialise_vascularity
+if (VEGF_MODEL == 2) then	! Not used
+	VEGF_beta = 0
+	VEGF_baserate = 0
+    VEGF_decayrate = 0.0012
+    vasc_maxrate = 0.001
+    globalvar%VEGF = 0
+    vasc_beta = 0.00001
+    vasc_decayrate = 0.001
+else	! VEGF_MODEL = 1
+!	VEGF_beta = 4.0e-8
+	VEGF_baserate = VEGF_beta*globalvar%NTcells0
+!    VEGF_decayrate = 0.002		! delta_G
+!    vasc_maxrate = 0.0006		! alpha_V
+    globalvar%VEGF = VEGF_baserate/VEGF_decayrate    ! steady-state VEGF level M_G0
+    c_vegf_0 = globalvar%VEGF/globalvar%NTcells0	! taking K_V = 1.0
+!    vasc_beta = 1.5				! beta_V
+    vasc_decayrate = vasc_maxrate*hill(c_vegf_0,vasc_beta*c_vegf_0,vasc_n)	! delta_V
+!    write(*,*) 'Vascularity parameters:'
+!    write(*,*) 'alpha_G,beta_G,delta_G: ',VEGF_alpha, VEGF_beta, VEGF_decayrate
+!    write(*,*) 'alpha_V,beta_V,delta_V: ',vasc_maxrate,vasc_beta,vasc_decayrate
+!    write(*,*) 'c_vegf_0,VEGF0,VEGF_baserate: ',c_vegf_0,globalvar%VEGF,VEGF_baserate
+endif
+globalvar%vascularity = 1.00
+!write(*,*) 'VEGF_MODEL, VEGF_baserate: ',VEGF_MODEL, VEGF_baserate
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 ! Vascularity responds to the VEGF level.  The rate of production of VEGF is proportional to
 ! either:
@@ -1827,28 +1858,33 @@ end subroutine
 !   i.e. we should have dVdt = 0.
 !-----------------------------------------------------------------------------------------
 subroutine vascular
-real :: VEGFsignal=0, dVEGFdt, c_vegf, dVdt
+real :: VEGFsignal=0, dVEGFdt, c_vegf, dVdt, Nfactor
 
 !write(*,*) 'vascular'
 if (.not.vary_vascularity) then
     globalvar%Vascularity = 1.0
     return
 endif
+!Nfactor = max(globalvar%NTcells0,globalvar%NTcells)/globalvar%NTcells0
+Nfactor = 1
 if (VEGF_MODEL == 1) then
     VEGFsignal = get_inflammation() ! Rate of secretion of VEGF is proportional to inflammation 
 elseif (VEGF_MODEL == 2) then
     VEGFsignal = get_DCactivity()   ! Rate of secretion of VEGF is proportional to total DC antigen activity
 endif
-dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate - VEGF_decayrate*globalvar%VEGF
+dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate*Nfactor - VEGF_decayrate*globalvar%VEGF
 ! Mass of VEGF is augmented by rate, and is subject to decay
 globalvar%VEGF = globalvar%VEGF + dVEGFdt*DELTA_T
-c_vegf = globalvar%VEGF/globalvar%NTcells   ! concentration (proportional to, anyway)
-if (VEGF_MODEL == 2) then
+c_vegf = max(globalvar%VEGF/globalvar%NTcells,c_vegf_0)   ! concentration (proportional to, anyway) 
+if (VEGF_MODEL == 2) then ! not used
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta,vasc_n)*globalvar%Vascularity - vasc_decayrate*(globalvar%Vascularity - 1)
 else	! VEGF_MODEL = 1
-    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
+! WRONG
+!    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
+! Try this
+    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n) - vasc_decayrate*globalvar%Vascularity
 endif
-globalvar%Vascularity = globalvar%Vascularity + dVdt*DELTA_T
+globalvar%Vascularity = max(globalvar%Vascularity + dVdt*DELTA_T, 1.0)
 if (mod(istep,240) == 0) then
 	write(logmsg,'(a,i6,2e10.3,3f8.3)') 'vasc: ',istep/240,VEGFsignal,c_vegf,globalvar%VEGF, &
 		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
@@ -2017,8 +2053,8 @@ if (use_portal_egress .and. use_traffic) then
 !       write(*,*) 'Nexits: ',globalvar%Nexits
 !       write(*,*) '--------------------------'
 !       write(nflog,*) 'added: Nexits: ',naddex, globalvar%Nexits
-        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
-        call logger(logmsg) 
+!        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
+!        call logger(logmsg) 
         do k = 1,naddex
             call addExitPortal()
         enddo
@@ -2189,20 +2225,20 @@ do iexit = 1,globalvar%lastexit
 	if (.not.ok) cycle
 	
 	if (site1(1) == site2(1) .and. site1(2) == site2(2) .and. site1(3) == site2(3)) then
-		write(logmsg,'(a,4i6)') 'adjustExits: site1 and site2 are the same: ',iexit,site1
-		call logger(logmsg)
-		call checkExits
+!		write(logmsg,'(a,4i6)') 'adjustExits: site1 and site2 are the same: ',iexit,site1
+!		call logger(logmsg)
+!		call checkExits
 		cycle
 	endif
 	if (use_DC) then
 		if (toonearDC(site2,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
 	endif
-	write(logmsg,'(a,6i6)') 'adjustExits: removeExitPortal: ',istep,iexit,site1
-	call logger(logmsg)
+!	write(logmsg,'(a,6i6)') 'adjustExits: removeExitPortal: ',istep,iexit,site1
+!	call logger(logmsg)
 	call removeExitPortal(site1)
-	write(logmsg,'(a,6i6)') 'adjustExits: did removeExitPortal: ',istep,iexit,site1
-	call logger(logmsg)
-	call checkExits
+!	write(logmsg,'(a,6i6)') 'adjustExits: did removeExitPortal: ',istep,iexit,site1
+!	call logger(logmsg)
+!	call checkExits
 	
 	! Note: since we are reusing an existing exit index, no need to increment %lastexit
 	globalvar%Nexits = globalvar%Nexits + 1
@@ -2211,15 +2247,18 @@ do iexit = 1,globalvar%lastexit
 		stop
 	endif
 	call placeExitPortal(iexit,site2)
-	write(logmsg,'(a,6i6)') 'adjustExits: did placeExitPortal: ',iexit,site2
-	call logger(logmsg)
-	call checkExits
+!	write(logmsg,'(a,6i6)') 'adjustExits: did placeExitPortal: ',iexit,site2
+!	call logger(logmsg)
+!	call checkExits
 enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Try to remove n sites from the boundary of the blob (occupancy).
 ! A boundary site is one with at least 3 Neumann neighbours outside the blob.
+! NOTE: The code for moving an exit should be changed.  Rather than just removing the exit
+! and letting balancer() restore it wherever it wants, we should move the exit.  This
+! becomes significant when exit chemotaxis is operating.
 !-----------------------------------------------------------------------------------------
 subroutine removeSites(n,ok)
 integer :: n
@@ -2231,8 +2270,8 @@ logical :: moved
 integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
-write(logmsg,'(a,i6)') 'removeSites: ',n
-call logger(logmsg)
+!write(logmsg,'(a,i6)') 'removeSites: ',n
+!call logger(logmsg)
 ok = .true.
 r2 = globalvar%Radius*globalvar%Radius
 maxblist = 4*PI*r2*0.1*globalvar%Radius
@@ -2315,12 +2354,12 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
-				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
-				call logger(logmsg)
+!				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
+!				call logger(logmsg)
                 call removeExitPortal(site0)
-                write(logmsg,'(a,4i6)') 'removeSites: did removeExitPortal: ',site0
-                call logger(logmsg)
-                call checkExits
+!                write(logmsg,'(a,4i6)') 'removeSites: did removeExitPortal: ',site0
+!                call logger(logmsg)
+!                call checkExits
                 ! Let the balancer add a site back again (if needed) 
             endif
             globalvar%Nsites = globalvar%Nsites - 1
@@ -3812,7 +3851,6 @@ if (.not.IN_VITRO) then
 	call scanner
 endif
 call init_counters
-
 !    call arrayview(NX)
 !    read(*,*)
 !    stop

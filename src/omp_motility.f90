@@ -381,7 +381,7 @@ ned = 0
 
 ! Need first to determine if the cell is subject to chemotaxis
 ne = 0
-if (globalvar%Nexits > 0) then
+if (globalvar%Nexits > 0 .and. chemo_K_exit > 0) then
     chemo_exit = chemo_active_exit(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_exit > 0) then
         ! Then need to determine if the cell is within the SOI of any exits.
@@ -405,7 +405,7 @@ endif
 
 vsum = 0 ! new
 ff = 0
-if (ne > 0) then
+if (ne > 0 .and. chemo_K_exit > 0) then
 	do k = 1,ne ! new
 		e = ee(:,k) ! new
 		v = site1 - e
@@ -684,6 +684,8 @@ do kcell = 1,nlist
         write(*,'(a,6i8)') 'Error: par_mover: bad indx: ',kcell,site1,indx
         stop
     endif
+    ! TESTING ---------- to track down why case use_exit_chemotaxis + chemo_K_exit = 0
+    !                    is not the same as not use_exit_chemotaxis
 	if (use_exit_chemotaxis) then
 		call chemo_jumper(kcell,indx,slot,go,kpar)
 	else

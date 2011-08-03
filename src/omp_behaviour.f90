@@ -2248,6 +2248,7 @@ end subroutine
 ! 
 ! Better is a quadratic fit (from Excel, steady_chemo_0_1.xls):
 ! exit_fraction = a.x^2 + b.x + c
+! where x = Ncells/1000
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
@@ -2268,19 +2269,26 @@ real, parameter :: c_nochemo_12h = 1.191E-02
 !requiredExitPortals = exit_fraction*ncells**pow + 0.5
 !return
 
-if (use_exit_chemotaxis) then
-!	exit_fraction0 = m*globalvar%NTcells0 + c
-!	exit_fraction = m*ncells + c
+! TESTING
+!if (use_exit_chemotaxis) then 
 	a = a_chemo_12h
 	b = b_chemo_12h
 	c = c_chemo_12h
+! try making it constant
+	a = 0
+	b = 0
+!	c = 8.0E-03	! Tres = 24, chemo_K = 0.5
+!	c = 11.0E-03	! Tres = 24, chemo_K = 0
+!	c = 22.0E-03	! Tres = 12, chemo_K = 0
+!	c = 11.0E-03*24/residence_time	! good for R=29
+	c = 8.2E-03*24/residence_time	! for R=23
 	base_exit_prob = 1.0
-else
-	a = a_nochemo_12h
-	b = b_nochemo_12h
-	c = c_nochemo_12h
-	base_exit_prob = 1.0
-endif
+!else
+!	a = a_nochemo_12h
+!	b = b_nochemo_12h
+!	c = c_nochemo_12h
+!	base_exit_prob = 1.0
+!endif
 if (FIXED_NEXITS) then
 	x = globalvar%NTcells0/1000
 	exit_fraction = a*x**2 + b*x + c
@@ -2383,8 +2391,8 @@ if (globalvar%lastexit > max_exits) then
 	stop
 endif
 call placeExitPortal(iexit,site)
-write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
-call logger(logmsg)
+!write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
+!call logger(logmsg)
 end subroutine
 
 !---------------------------------------------------------------------

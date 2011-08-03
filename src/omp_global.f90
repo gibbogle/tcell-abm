@@ -652,8 +652,10 @@ integer :: check_inflow
 real :: VEGF_alpha = 5.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m)
 real :: VEGF_beta = 4.0e-8			! rate constant for basal VEGF production (beta_G in hev.m)
 real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)
-real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
-real :: vasc_beta = 1.5				! Hill function parameter
+!real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
+real :: vasc_maxrate = 0.003       ! max rate constant for vascularity growth (/min)
+!real :: vasc_beta = 1.5				! Hill function parameter
+real :: vasc_beta = 2.0				! Hill function parameter
 integer :: vasc_n = 2               ! Hill function exponent
 
 real :: vasc_decayrate				! vascularity decay rate (/min) (deduced)
@@ -1307,12 +1309,14 @@ endif
 globalvar%InflowTotal = inflow
 ! This is a kludge to induce a return to steady-state maintenance when NTcells drops
 ! back to "close enough" to the steady-state value.
-if (use_exit_chemotaxis .and. globalvar%NTcells < 0.99*globalvar%NTcells0) then
-    globalvar%OutflowTotal = globalvar%InflowTotal      ! => steady-state with chemotaxis
-    steadystate = .true.
-else
+! I think this is no longer needed.
+! Try removing it
+!if (use_exit_chemotaxis .and. globalvar%NTcells < 0.99*globalvar%NTcells0) then
+!    globalvar%OutflowTotal = globalvar%InflowTotal      ! => steady-state with chemotaxis
+!    steadystate = .true.
+!else
     globalvar%OutflowTotal = outflow
-endif
+!endif
 !if (mod(istep,240) == 0) then
 !	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
 !	call logger(logmsg)
