@@ -477,6 +477,12 @@ void MainWindow::loadParams()
 							break;
 						}
 					}
+
+					// Try this change to eliminate sliders except for distributions
+					if (labelText.compare("Shape") != 0 && labelText.compare("Median") != 0) {
+						is_slider = false;
+					}
+
 					if (is_slider) {
                         // If there is a slider corresponding to wtag, then just use the label.
 						if (foundLabel)
@@ -501,7 +507,7 @@ void MainWindow::loadParams()
                         int ival = splus->val_to_int(p.value);
                         s->setMinimum(0);
                         s->setMaximum(splus->nTicks());
-                        s->setSliderPosition(ival);					
+						s->setSliderPosition(ival);
 						sliderParam[j] = w;
                         connect(s, SIGNAL(valueChanged(int)), this, SLOT(updateSliderBox())); //sliderReleased               
                         param_to_sliderIndex[k] = j;

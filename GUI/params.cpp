@@ -18,7 +18,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "T cell cognate fraction",
 "The fraction of T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
-{"TC_STIM_RATE_CONSTANT", 1, 0.0, 0.0,
+{"TC_STIM_RATE_CONSTANT", 1, 0.0, 100.0,
 "TCR stimulation rate constant",
 "Rate constant Ks for TCR stimulation, where:\n\
 rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
@@ -29,7 +29,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Integrated TCR stimulation decays with a specified halflife. \n\
 [hours]"},
 
-{"DIVIDE1_MEDIAN", 6.0, 0.0, 0.0,
+{"DIVIDE1_MEDIAN", 6.0, 0.0, 100.0,
 "1st division time median parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -38,7 +38,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "1st division time shape parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters."},
 
-{"DIVIDE2_MEDIAN", 5.0, 0, .0,
+{"DIVIDE2_MEDIAN", 5.0, 0, 100.0,
 "Later division time median parameter",
 "The time taken for later T cell divisions has a lognormal distribution, described by the median and shape parameters.\n\
 [hours]"},
