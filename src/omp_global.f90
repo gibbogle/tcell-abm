@@ -174,7 +174,7 @@ integer, parameter :: NDCcore = 7      ! In fact DC vol = 1400 = 5.6*250
 real, parameter :: DC_DCprox = 1.3      ! closest placement of DCs, units DC_RADIUS (WAS 1.0 for ICB DCU paper)
 real, parameter :: bdry_DCprox = 0.5	! closest placement of DC to bdry, units DC_RADIUS
 real, parameter :: exit_DCprox = 4.0    ! closest placement of DC to exit, units sites
-real, parameter :: exit_prox = 1.2      ! closest placement of exit to exit, units chemo_radius
+real, parameter :: exit_prox = 1.0      ! closest placement of exit to exit, units chemo_radius
 ! closest placement of exit to bdry?
 logical, parameter :: incapable_DC_dies = .false.	! don't want to remove low-antigen DCs prematurely
 logical, parameter :: reuse_DC_index = .false.	! index reuse conflicts with the GUI animation code
@@ -191,7 +191,7 @@ logical, parameter :: random_cognate = .false.          ! number of cognate seed
 integer, parameter :: MMAX_GEN = 25     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 6     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of chemotactic influence (at r = chemo_radius)
-integer :: exit_rule = 3                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
+integer :: exit_rule = 1                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
 logical :: USE_S1P = .true.				! this is the default
 logical :: COMPUTE_OUTFLOW = .false.
 
@@ -627,8 +627,9 @@ type(exit_type), allocatable :: exitlist(:)
 type(global_type) :: globalvar
 integer :: max_exits        ! size of the exitlist(:) array
 integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T cell
-real :: min_transit_time = 60   ! minimum time a T cell spends in the DCU (min)
-real :: CD69_threshold          ! level of CD69 below which egress can occur
+real :: min_transit_time = 60		! minimum time a T cell spends in the DCU (min)
+real :: CD69_threshold				! level of CD69 below which egress can occur
+real :: last_portal_update_time		! time that the number of exit portals was last updated
 logical :: initialized, steadystate
 integer :: navid = 0
 integer ::  Nsteps, nsteps_per_min, istep
@@ -639,7 +640,7 @@ integer :: nIL2thresh = 0           ! to store times to IL2 threshold
 real :: tIL2thresh = 0
 integer :: ndivided(MMAX_GEN) = 0   ! to store times between divisions
 real :: tdivided(MMAX_GEN) = 0
-real :: DCdecayrate                 ! base rate of depletion of DC activity (/min)
+real :: DCdecayrate                 ! base rate of depletion of DC activity (/min) 
 real :: TCRdecayrate                ! rate of decay of integrated TCR stimulation (/min)
 real :: max_TCR = 0
 real :: avidity_level(MAX_AVID_LEVELS)  ! discrete avidity levels for use with fix_avidity
@@ -649,14 +650,16 @@ integer :: check_egress(1000)		! for checking traffic
 integer :: check_inflow
 
 ! Vascularity parameters
-real :: VEGF_alpha = 5.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m)
-real :: VEGF_beta = 4.0e-8			! rate constant for basal VEGF production (beta_G in hev.m)
-real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)
+real :: VEGF_alpha = 6.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
+real :: VEGF_beta = 5.0e-8			! rate constant for basal VEGF production (beta_G in hev.m) (was 4.0e-8)
+real :: VEGF_decayrate = 0.0015      ! VEGF decay rate (/min)	(was 0.002)
 !real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
-real :: vasc_maxrate = 0.003       ! max rate constant for vascularity growth (/min)
+real :: vasc_maxrate = 0.004       ! max rate constant for vascularity growth (/min)  (was 0.003)
 !real :: vasc_beta = 1.5				! Hill function parameter
 real :: vasc_beta = 2.0				! Hill function parameter
 integer :: vasc_n = 2               ! Hill function exponent
+! NOTE: all the parameter changes I've been trying do not get the peak N/N0 above 4, with 
+! inflam = 1, days 3,4.
 
 real :: vasc_decayrate				! vascularity decay rate (/min) (deduced)
 real :: VEGF_baserate				! base rate of production of VEGF (> 0 for VEGF-vascularity model VEGF_MODEL = 1)
@@ -1044,14 +1047,14 @@ end subroutine
 ! The criterion for a DC site might be different from an exit site.
 ! prox = DC_DCprox*DC_RADIUS for DC - DC
 !-----------------------------------------------------------------------------------------
-logical function toonearDC(site,kdc,prox)
+logical function tooNearDC(site,kdc,prox)
 integer :: site(3), kdc
 real :: prox
 integer :: idc
 real :: r(3), d
 
 if (kdc == 0) then
-    toonearDC = .false.
+    tooNearDC = .false.
     return
 endif
 do idc = 1,kdc
@@ -1059,17 +1062,17 @@ do idc = 1,kdc
     r = site - DClist(idc)%site
     d = norm(r)     ! units sites
     if (d < prox) then
-        toonearDC = .true.
+        tooNearDC = .true.
         return
     endif
 enddo
-toonearDC = .false.
+tooNearDC = .false.
 end function
 
 !-----------------------------------------------------------------------------------------
 ! prox is the minimum distance from the boundary (sites)
 !-----------------------------------------------------------------------------------------
-logical function toonearbdry(site,prox)
+logical function tooNearBdry(site,prox)
 integer :: site(3)
 real :: prox
 real :: d, dmin
@@ -1078,38 +1081,38 @@ real :: d, dmin
 if (use_blob) then
     d = cdistance(site)
     if (globalvar%Radius - d < prox) then
-        toonearbdry = .true.
+        tooNearBdry = .true.
         return
     endif
-!    write(*,*) 'toonearbdry: ',globalvar%Radius,d,dmin
+!    write(*,*) 'tooNearBdry: ',globalvar%Radius,d,dmin
 else
     if (site(1) < dmin .or. (NX - site(1)) < dmin) then
-        toonearbdry = .true.
+        tooNearBdry = .true.
         return
     endif
     if (site(2) < dmin .or. (NY - site(2)) < dmin) then
-        toonearbdry = .true.
+        tooNearBdry = .true.
         return
     endif
     if (site(3) < dmin .or. (NZ - site(3)) < dmin) then
-        toonearbdry = .true.
+        tooNearBdry = .true.
         return
     endif
 endif
-toonearbdry = .false.
+tooNearBdry = .false.
 end function
 
 !-----------------------------------------------------------------------------------------
 ! Is site near an exit?  prox is the minimum separation (sites)
 !-----------------------------------------------------------------------------------------
-logical function toonearexit(site,prox)
+logical function tooNearExit(site,prox)
 integer :: site(3)
 real :: prox
 integer :: iexit
 real :: r(3), d
 
 if (globalvar%Nexits == 0) then
-    toonearexit = .false.
+    tooNearExit = .false.
     return
 endif
 do iexit = 1,globalvar%lastexit
@@ -1117,11 +1120,30 @@ do iexit = 1,globalvar%lastexit
     r = site - exitlist(iexit)%site
     d = norm(r)
     if (d < prox) then
-        toonearexit = .true.
+        tooNearExit = .true.
         return
     endif
 enddo
-toonearexit = .false.
+tooNearExit = .false.
+end function
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+integer function neighbourhoodCount(site)
+integer :: site(3)
+integer :: site2(3), k, count
+
+count = 0
+do k = 1,27
+	site2 = site + jumpvec(:,k)
+	if (site2(1) < 1 .or. site2(1) > NX) cycle
+	if (site2(2) < 1 .or. site2(2) > NY) cycle
+	if (site2(3) < 1 .or. site2(3) > NZ) cycle
+	if (occupancy(site2(1),site2(2),site2(3))%indx(1) >= 0) then
+		count = count + 1
+	endif
+enddo
+neighbourhoodCount = count
 end function
 
 !--------------------------------------------------------------------------------
@@ -2578,11 +2600,12 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine checkExits
+subroutine checkExits(msg)
+character*(*) :: msg
 integer :: iexit,site(3)
 logical :: ok = .true.
 
-write(logmsg,*) 'checkExits: ',istep
+write(logmsg,'(a,i8,a,a)') 'checkExits: ',istep,'  ',msg
 call logger(logmsg)
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle

@@ -1590,7 +1590,7 @@ if (L_selectin) then
 	nbrs = 1
 else
 	use_full_neighbourhood = .true.
-	exit_prob = 0.05		! TESTING------------------
+	exit_prob = 0.02		! TESTING------------------
 	nbrs = 26
 endif
  
@@ -1859,35 +1859,43 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine vascular
 real :: VEGFsignal=0, dVEGFdt, c_vegf, dVdt, Nfactor
+real :: Cck1 = 1.5, Cck2 = 0.1
 
 !write(*,*) 'vascular'
 if (.not.vary_vascularity) then
     globalvar%Vascularity = 1.0
     return
 endif
-!Nfactor = max(globalvar%NTcells0,globalvar%NTcells)/globalvar%NTcells0
-Nfactor = 1
-if (VEGF_MODEL == 1) then
-    VEGFsignal = get_inflammation() ! Rate of secretion of VEGF is proportional to inflammation 
-elseif (VEGF_MODEL == 2) then
-    VEGFsignal = get_DCactivity()   ! Rate of secretion of VEGF is proportional to total DC antigen activity
-endif
-dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate*Nfactor - VEGF_decayrate*globalvar%VEGF
+Nfactor = real(globalvar%NTcells)/globalvar%NTcells0
+!if (VEGF_MODEL == 1) then
+    VEGFsignal = get_inflammation() ! Rate of secretion of VEGF is proportional to inflammation  
+!elseif (VEGF_MODEL == 2) then
+!    VEGFsignal = get_DCactivity()   ! Rate of secretion of VEGF is proportional to total DC antigen activity
+!endif
+dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate - VEGF_decayrate*globalvar%VEGF
 ! Mass of VEGF is augmented by rate, and is subject to decay
 globalvar%VEGF = globalvar%VEGF + dVEGFdt*DELTA_T
-c_vegf = max(globalvar%VEGF/globalvar%NTcells,c_vegf_0)   ! concentration (proportional to, anyway) 
+c_vegf = globalvar%VEGF/globalvar%NTcells   ! concentration (proportional to, anyway) 
 if (VEGF_MODEL == 2) then ! not used
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta,vasc_n)*globalvar%Vascularity - vasc_decayrate*(globalvar%Vascularity - 1)
 else	! VEGF_MODEL = 1
 ! WRONG
 !    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
-! Try this
-    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n) - vasc_decayrate*globalvar%Vascularity
+! Use this
+    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n) - vasc_decayrate*globalvar%Vascularity	!  this works!
+! Try
+!	dVdt = vasc_maxrate*Ck*(globalvar%VEGF/(VEGF_baserate/VEGF_decayrate) - globalvar%Vascularity)	! no good
+!	dVdt = vasc_maxrate*Cck1*((c_vegf/c_vegf_0 - globalvar%Vascularity) + Cck2*(1-Nfactor))				!  this works!
 endif
 globalvar%Vascularity = max(globalvar%Vascularity + dVdt*DELTA_T, 1.0)
 if (mod(istep,240) == 0) then
-	write(logmsg,'(a,i6,2e10.3,3f8.3)') 'vasc: ',istep/240,VEGFsignal,c_vegf,globalvar%VEGF, &
-		globalvar%Vascularity,real(globalvar%NTcells)/globalvar%NTcells0
+	write(logmsg,'(a,i6,e12.3,5f10.3,i5)') 'vasc: ',istep/240,VEGFsignal, &
+		globalvar%VEGF/(VEGF_baserate/VEGF_decayrate), &	! M/M0
+		c_vegf/c_vegf_0, &									! C/C0
+		Nfactor, &											! N/N0
+		dVdt, &												! dV/dt
+		globalvar%Vascularity, &							! V
+		globalvar%Nexits									! Nexits
 	call logger(logmsg)
 endif
 !write(*,*) 'dVEGFdt, c_vegf, dVdt: ',dVEGFdt, c_vegf, dVdt, globalvar%Vascularity
@@ -1976,6 +1984,9 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
         call removeSites(n,ok)
         if (.not.ok) return
 	    if (dbug) write(nflog,*) 'did removeSites'
+!	    write(logmsg,*) 'did removeSites: exit #10: ',exitlist(10)%site,exitlist(5)%site
+!	    call logger(logmsg) 
+!	    call checkexits("after removeSites")
         blob_changed = .true.
     else
         n = 0
@@ -2017,16 +2028,23 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     endif
     if (USE_PORTAL_EGRESS) then
 		call adjustExits
+!		if (istep > 25900) then
+!		    write(logmsg,*) 'did adjustExits: exit #10: ',exitlist(10)%site,exitlist(5)%site
+!		    call logger(logmsg) 
+!			call checkexits("after adjustExits")
+!		endif
 	endif
 else
     call set_globalvar
 endif
-if (use_portal_egress .and. use_traffic) then
+! Do not add or remove portals more than once per hour.  To prevent repetitive adding and removing.
+if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 60) then		
 	if (globalvar%NTcells < globalvar%NTcells0 .and. .not.SURFACE_PORTALS) then
 		! Set Nexits = Nexits0 for steady-state maintenance.  To wrap up the end of the response.
 !        Nexits0 = exit_fraction*globalvar%NTcells0
 		Nexits0 = requiredExitPortals(globalvar%NTcells0)
 		if (globalvar%Nexits < Nexits0) then
+			last_portal_update_time = tnow
 			do k = 1,Nexits0 - globalvar%Nexits
 				call addExitPortal()
 			enddo
@@ -2036,6 +2054,7 @@ if (use_portal_egress .and. use_traffic) then
 !			write(*,*) 'Nexits: ',globalvar%Nexits
 !			write(*,*) '--------------------------'
 		elseif (globalvar%Nexits > Nexits0) then
+			last_portal_update_time = tnow
 			call removeExits(globalvar%Nexits - Nexits0)
 !			write(*,*) '-------------------------------------'
 !			write(*,*) 'Set Nexits to base steady-state level'
@@ -2049,17 +2068,23 @@ if (use_portal_egress .and. use_traffic) then
     dexit = requiredExitPortals(globalvar%NTcells) - globalvar%Nexits
     if (dexit > 0) then
         naddex = dexit
+		last_portal_update_time = tnow
 !       write(*,*) '--------------------------'
 !       write(*,*) 'Nexits: ',globalvar%Nexits
 !       write(*,*) '--------------------------'
 !       write(nflog,*) 'added: Nexits: ',naddex, globalvar%Nexits
-!        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
-!        call logger(logmsg) 
+        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
+        call logger(logmsg) 
         do k = 1,naddex
             call addExitPortal()
         enddo
-    elseif (dexit < -1) then
-        nremex = -dexit-1
+!		if (istep > 25900) then
+!		    write(logmsg,*) 'did addExitPortal: exit #10: ',exitlist(10)%site,exitlist(5)%site
+!		    call logger(logmsg) 
+!		endif
+    elseif (dexit < 0) then
+        nremex = -dexit
+		last_portal_update_time = tnow
 !        write(nflog,*) 'balancer: dexit < 0: ',requiredExitPortals(globalvar%NTcells) 
 !            write(*,*) '--------------------------'
 !            write(*,*) 'Nexits: ',globalvar%Nexits
@@ -2068,6 +2093,11 @@ if (use_portal_egress .and. use_traffic) then
 !        write(logmsg,*) 'remove: Nexits: ',nremex,requiredExitPortals(globalvar%NTcells),globalvar%Nexits,globalvar%NTcells
 !        call logger(logmsg)
         call removeExits(nremex)
+!		if (istep > 25900) then
+!		    write(logmsg,*) 'did removeExits: exit #10: ',exitlist(10)%site,exitlist(5)%site
+!		    call logger(logmsg) 
+!		    call checkexits("after removeExits")
+!		endif
     endif
 endif
 end subroutine
@@ -2132,7 +2162,7 @@ enddo
 nb = k
 !write(*,*) 'bdry sites: ',nb,maxblist
 if (nb < n) then
-    write(logmsg,'(a,2i4)') 'Error: add_sites: insufficient candidate sites: ',nb,n
+    write(logmsg,'(a,2i8)') 'Error: add_sites: insufficient candidate sites: ',nb,n
     call logger(logmsg)
     ok = .false.
     return
@@ -2189,7 +2219,7 @@ end subroutine
 ! Currently this only moves exits out towards the blob boundary - when the blob is growing.
 ! We also need to move exits back towards the centre when the blob is shrinking.
 !-----------------------------------------------------------------------------------------
-subroutine adjustExits
+subroutine adjustExits1
 integer :: x, y, z, dx, dy, dz, iexit, dir, site1(3), site2(3)
 real :: u(3)
 integer :: nout
@@ -2238,7 +2268,68 @@ do iexit = 1,globalvar%lastexit
 	call removeExitPortal(site1)
 !	write(logmsg,'(a,6i6)') 'adjustExits: did removeExitPortal: ',istep,iexit,site1
 !	call logger(logmsg)
-!	call checkExits
+!	call checkExits("in adjustExits after removeExitPortal")
+	
+	! Note: since we are reusing an existing exit index, no need to increment %lastexit
+	globalvar%Nexits = globalvar%Nexits + 1
+	if (globalvar%Nexits > max_exits) then
+		write(*,*) 'Error: adjustExit: too many exits: need to increase max_exits: ',max_exits
+		stop
+	endif
+!	write(logmsg,'(a,6i6)') 'adjustExits: placeExitPortal: ',iexit,site2
+!	call logger(logmsg)
+	call placeExitPortal(iexit,site2)
+!	call checkExits("in adjustExits after placeExitPortal")
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Moves exits both out towards the blob boundary - when the blob is growing -
+! and back towards the centre - when the blob is shrinking.
+!-----------------------------------------------------------------------------------------
+subroutine adjustExits
+integer :: iexit, site1(3), site2(3), k, kmin, kmax
+real :: u(3), jump(3), proj, pmin, pmax
+integer :: nin1, nin2
+logical :: ok
+
+!write(*,*) 'adjustExits'
+do iexit = 1,globalvar%lastexit
+    if (exitlist(iexit)%ID == 0) cycle
+	site1 = exitlist(iexit)%site
+	u = site1 - Centre
+	u = u/norm(u)	! outward-pointing unit vector
+	nin1 = neighbourhoodCount(site1)
+	if (nin1 < 27) then
+		! need to move the portal inwards, choose the site with jump closest to -u direction
+		pmin = 0
+		do k = 1,27
+			if (k == 14) cycle
+			jump = jumpvec(:,k)
+			proj = dot_product(u,jump)/norm(jump)
+			if (proj < pmin) then
+				pmin = proj
+				kmin = k
+			endif
+		enddo
+		site2 = site1 + jumpvec(:,kmin)
+	else
+		! may need to move portal outwards - try a new site
+		pmax = 0
+		do k = 1,27
+			if (k == 14) cycle
+			jump = jumpvec(:,k)
+			proj = dot_product(u,jump)/norm(jump)
+			if (proj > pmax) then
+				pmax = proj
+				kmax = k
+			endif
+		enddo
+		site2 = site1 + jumpvec(:,kmax)
+		nin2 = neighbourhoodCount(site2)
+		if (nin2 < 27) cycle	! don't move here
+	endif
+	call removeExitPortal(site1)
 	
 	! Note: since we are reusing an existing exit index, no need to increment %lastexit
 	globalvar%Nexits = globalvar%Nexits + 1
@@ -2247,9 +2338,6 @@ do iexit = 1,globalvar%lastexit
 		stop
 	endif
 	call placeExitPortal(iexit,site2)
-!	write(logmsg,'(a,6i6)') 'adjustExits: did placeExitPortal: ',iexit,site2
-!	call logger(logmsg)
-!	call checkExits
 enddo
 end subroutine
 
@@ -2354,13 +2442,14 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
+            ! This is an exit site that must be moved
 !				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
 !				call logger(logmsg)
-                call removeExitPortal(site0)
-!                write(logmsg,'(a,4i6)') 'removeSites: did removeExitPortal: ',site0
+!                call removeExitPortal(site0)	! Let the balancer add an exit portal back again (if needed) 
+                call moveExitPortalInwards(site0)
+!                write(logmsg,'(a,4i6)') 'removeSites: did moveExitPortalInwards: ',site0
 !                call logger(logmsg)
-!                call checkExits
-                ! Let the balancer add a site back again (if needed) 
+!                call checkExits("after moveExitPortalInwards")
             endif
             globalvar%Nsites = globalvar%Nsites - 1
             count = count + 1
@@ -3548,8 +3637,13 @@ if (dbug) then
 	call logger(logmsg)
 endif
 
+!if (istep > 25900) then
+!	write(logmsg,*) 'exit #10: ',istep,exitlist(10)%site,exitlist(5)%site
+!	call logger(logmsg)
+!endif
 if (mod(istep,240) == 0) then
-!	call checkExits
+	call checkExits("simulate_step")
+	call checkExitSpacing("simulate_step")
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, globalvar%NTcells, globalvar%Nexits, total_in, total_out, &
@@ -3557,6 +3651,9 @@ if (mod(istep,240) == 0) then
     endif
     total_in = 0
     total_out = 0
+endif
+if (mod(istep,240*12) == 1) then
+	call displayExits
 endif
 if (use_cytokines) then
     if (use_diffusion) then
@@ -3645,6 +3742,10 @@ if (.not.ok) then
 	res = 1
 	return
 endif
+!if (istep > 25900) then
+!	write(logmsg,*) 'did balancer: exit #10: ',exitlist(10)%site,exitlist(5)%site
+!	call logger(logmsg) 
+!endif
 !if (dbug) write(nflog,*) 'call set_globalvar'
 call set_globalvar
 !if (dbug) write(nflog,*) 'did set_globalvar'
@@ -3812,12 +3913,14 @@ if (.not.ok) return
 
 if (use_portal_egress) then
     call placeExits
+	call adjustExits
 else
     globalvar%Nexits = 0
     globalvar%lastexit = 0
 endif
 check_inflow = 0
 check_egress = 0
+last_portal_update_time = -999
 
 if (use_exit_chemotaxis) then
 	call chemo_setup
