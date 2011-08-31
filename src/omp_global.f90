@@ -253,12 +253,22 @@ logical, parameter :: avid_debug = .false.
 integer, parameter :: CHECKING = 0
 integer, parameter :: idbug = -123
 
+! To investigate the effect of chemotaxis on residence time.
+! The situation to be simulated is one in which most cells are not subject to exit chemotaxis,
+! but a small fraction of tagged cells are.  The question is: what is the effect on the residence time
+! of the tagged cells?
+logical, parameter :: TAGGED_CHEMOTAXIS = .true.	! ==> evaluate_residence_time = .true.
+real, parameter :: TAGGED_CHEMO_FRACTION = 0.1
+real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
+logical, parameter :: evaluate_residence_time = .true.
+integer, parameter :: istep_res1 = 5000
+integer, parameter :: istep_res2 = istep_res1 + 5000
+
 ! Parameters for controlling data capture for graphical purposes
 logical, parameter :: save_pos_cmgui = .false.          ! To make movies
 integer, parameter :: save_interval_hours = 48
 real, parameter :: save_length_hours = 0.5      ! 30 minutes
 logical, parameter :: generate_exnode = .false.
-logical, parameter :: evaluate_residence_time = .false.
 logical, parameter :: evaluate_stim_dist = .false.
 integer, parameter :: ntaglimit = 100000
 logical, parameter :: save_DCbinding = .false.
@@ -266,8 +276,6 @@ logical, parameter :: track_DCvisits = .false.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
 logical, parameter :: log_traffic = .true.
-integer, parameter :: istep_res1 = 10000
-integer, parameter :: istep_res2 = istep_res1 + 5000
 integer, parameter :: TCR_nlevels = 10
 real, parameter :: TCR_limit = 2000
 integer, parameter :: MAX_AVID_LEVELS = 30
@@ -523,7 +531,7 @@ real :: TC_life_shape					! shape parameter for lifetime of T cells
 integer :: NTC_LN = 3.0e07				! number of T cells in a LN
 integer :: NTC_BODY = 1.6e09			! number of circulating T cells in the whole body
 integer :: NLN_RESPONSE					! number of LNs in the response
-real :: K1_S1P1 = 0.01					! S1P1/CD69 system parameters
+real :: K1_S1P1 = 0.005					! S1P1/CD69 system parameters
 real :: K2_S1P1 = 0.05
 real :: K1_CD69 = 0.04
 real :: K2_CD69 = 0.01
@@ -2336,6 +2344,18 @@ if (turn_off_chemotaxis) then
     chemo_active_exit = 0
     return
 endif
+
+if (TAGGED_CHEMOTAXIS) then
+    tnow = istep*DELTA_T
+    t = tnow - cell%entrytime
+    if (cell%ctype == RES_TAGGED_CELL) then     ! testing effect of S1P1
+        chemo_active_exit = (1 - exp(-K1_S1P1*t))*TAGGED_CHEMO_ACTIVITY
+    else
+		chemo_active_exit = 0
+	endif
+	return
+endif
+
 if (associated(cell%cptr)) then     ! cognate cell
     chemo_active_exit = cell%cptr%S1P1
 !    if (CD69 < CD69_threshold) then

@@ -2386,18 +2386,31 @@ subroutine addExitPortal
 integer :: site(3)
 integer :: iexit
 
+if (istep >= 10320) then
+	write(logmsg,*) 'addExitPortal: choosePortalSite'
+	call logger(logmsg)
+endif
 call choosePortalSite(site)
-!write(logmsg,*) 'addExitPortal: ',site
-!call logger(logmsg)
+if (istep >= 10320) then
+	write(logmsg,*) 'did choosePortalSite: ',site
+	call logger(logmsg)
+endif
 call getExitNum(iexit)
+if (istep >= 10320) then
+	write(logmsg,*) 'did getExitNum: ',iexit
+	call logger(logmsg)
+endif
 globalvar%Nexits = globalvar%Nexits + 1
 if (globalvar%lastexit > max_exits) then
-	write(*,*) 'Error: addExitPortal: too many exits: need to increase max_exits: ',max_exits
+	write(logmsg,*) 'Error: addExitPortal: too many exits: need to increase max_exits: ',max_exits
+	call logger(logmsg)
 	stop
 endif
 call placeExitPortal(iexit,site)
-!write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
-!call logger(logmsg)
+if (istep >= 10320) then
+	write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
+	call logger(logmsg)
+endif
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2486,6 +2499,7 @@ if (SURFACE_PORTALS) then
 			endif
 		endif
 		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
+		prox = 0.5*prox
 !		if (USE_PORTAL_EGRESS) then
 !			prox = 0.3*prox
 !		endif

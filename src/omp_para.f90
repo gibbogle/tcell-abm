@@ -954,15 +954,14 @@ do kcell = 1,nlist
                 endif
                 if (cognate .and. DClist(idc)%ncogbound == MAX_COG_BIND) cycle
                 if (bindDC(idc,kpar)) then
-!					if (compute_travel_time .and. cognate .and. nbnd == 1) then
-					if (tnow > 2*60 .and. compute_travel_time .and. nbnd == 1) then
-						t_travel = tnow - cell%unbindtime(2)
-						ntravel = ntravel + 1
-						i = t_travel + 0.5
-						i = max(i,1)
-						i = min(i,N_TRAVEL_DIST)
-						travel_dist(k_travel_cog,k_travel_dc,i) = travel_dist(k_travel_cog,k_travel_dc,i) + 1
-					endif
+!					if (tnow > 2*60 .and. compute_travel_time .and. nbnd == 1) then
+!						t_travel = tnow - cell%unbindtime(2)
+!						ntravel = ntravel + 1
+!						i = t_travel + 0.5
+!						i = max(i,1)
+!						i = min(i,N_TRAVEL_DIST)
+!						travel_dist(k_travel_cog,k_travel_dc,i) = travel_dist(k_travel_cog,k_travel_dc,i) + 1
+!					endif
                     nbnd = nbnd + 1
                     if (cell%DCbound(nbnd) /= 0) then
                         write(logmsg,'(a,i6)') 'Error: binder: DCbound(nbnd) /= 0: ',cell%DCbound(nbnd)
@@ -1546,15 +1545,24 @@ do while (k < node_inflow)
     if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
     if (indx(1) == 0 .or. indx(2) == 0) then
         site = (/x,y,z/)
-        if (evaluate_residence_time) then     ! try cancelling this, use a different method
-            ! This is for measuring residence time
-            if (istep > istep_res1 .and. istep <= istep_res2) then
-                ctype = RES_TAGGED_CELL   ! Use ctype = 2 = COG_TYPE_TAG for residence time tagging, to have cptr%entrytime
-                                          ! This is no longer necessary, %entrytime has been shifted.
-                ninflow_tag = ninflow_tag + 1
-            else
-                ctype = NONCOG_TYPE_TAG
-            endif
+        if (evaluate_residence_time) then
+            ! This is for determining the transit time distribution
+            if (TAGGED_CHEMOTAXIS) then		! tag a fraction of incoming cells
+				R = par_uni(kpar)
+				if (istep*DELTA_T < 48*60 .and. R < TAGGED_CHEMO_FRACTION) then
+					ctype = RES_TAGGED_CELL
+					ninflow_tag = ninflow_tag + 1
+				else
+					ctype = NONCOG_TYPE_TAG
+				endif
+            else							! tag all cells entering over a specified interval
+				if (istep > istep_res1 .and. istep <= istep_res2) then
+					ctype = RES_TAGGED_CELL   
+					ninflow_tag = ninflow_tag + 1
+				else
+					ctype = NONCOG_TYPE_TAG
+				endif
+			endif
         elseif (track_DCvisits) then
             if (ntagged < ntaglimit) then
                 ctype = TAGGED_CELL
@@ -2073,7 +2081,7 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 !       write(*,*) 'Nexits: ',globalvar%Nexits
 !       write(*,*) '--------------------------'
 !       write(nflog,*) 'added: Nexits: ',naddex, globalvar%Nexits
-        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells)
+        write(logmsg,*) 'add: Nexits: ',naddex, globalvar%NTcells, globalvar%Nexits, requiredExitPortals(globalvar%NTcells),istep
         call logger(logmsg) 
         do k = 1,naddex
             call addExitPortal()
@@ -2979,7 +2987,7 @@ do i = 1, cnt
         write(*,*) 'Output file: ',outputfile
 !    elseif (i == 4) then
 !        resultfile = c(1:len)
-!        write(*,*) 'Result file: ',resultfile
+!        write(*,*) 'Result file: ',resultfile 
     endif
 end do
 write (*,*) 'command line processed'
@@ -2989,6 +2997,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine write_Tres_dist
 integer :: k, kmax
+real(8) :: Tres
 
 do k = int(days*24),1,-1
     if (Tres_dist(k) /= 0) then
@@ -2996,7 +3005,22 @@ do k = int(days*24),1,-1
         exit
     endif
 enddo
-write(nfout,'(a,i6)') 'Tres_dist ',kmax
+Tres = 0
+do k = 1,kmax
+    Tres = Tres + (k-0.5)*Tres_dist(k)/noutflow_tag
+enddo
+write(nfout,'(a)') 'Transit time distribution'
+write(nfout,'(a)') 'Parameters: '
+if (TAGGED_CHEMOTAXIS) then
+	write(nfout,'(a,L)') '  TAGGED_CHEMOTAXIS:     ',TAGGED_CHEMOTAXIS
+	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_FRACTION: ',TAGGED_CHEMO_FRACTION 
+	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_ACTIVITY: ',TAGGED_CHEMO_ACTIVITY
+endif
+write(nfout,'(a,f6.3)') 'chemo_K_exit:            ',chemo_K_exit
+write(nfout,'(a,f6.3)') '  K1_S1P1:               ',K1_S1P1
+write(nfout,'(a,3i8)') 'Results: noutflow_tag, ninflow_tag,kmax: ',noutflow_tag,ninflow_tag,kmax
+write(nfout,'(a,f6.1)') 'Residence time: ',Tres
+write(nfout,'(a)') ' Hour   Probability'
 do k = 1,kmax
     write(nfout,'(f6.1,e12.4)') k-0.5,Tres_dist(k)/noutflow_tag
 enddo
@@ -3759,6 +3783,7 @@ end subroutine
 ! The first takes N_TRAVEL_COG values, the second N_TRAVEL_DC values, while the distribution
 ! is evaluated at N_TRAVEL_TIME values (intervals of a minute).
 ! The case to be simulated corresponds to (k_travel_cog, k_travel_dc)
+! NOT USED
 !-----------------------------------------------------------------------------------------
 subroutine set_travel_params
 
@@ -3887,9 +3912,9 @@ call logger("read_cell_params")
 call read_cell_params(ok)
 if (.not.ok) return
 
-if (compute_travel_time .and. .not.IN_VITRO) then
-	call set_travel_params
-endif
+!if (compute_travel_time .and. .not.IN_VITRO) then
+!	call set_travel_params
+!endif
 Fcognate = TC_COGNATE_FRACTION
 
 ndivisions = 0
@@ -3925,7 +3950,16 @@ last_portal_update_time = -999
 if (use_exit_chemotaxis) then
 	call chemo_setup
 endif
-
+if (TAGGED_CHEMOTAXIS .and. .not.use_exit_chemotaxis) then
+	call logger('ERROR: TAGGED_CHEMOTAXIS requires USE_EXIT_CHEMOTAXIS')
+	ok = .false.
+	return
+endif
+if (TAGGED_CHEMOTAXIS .and. .not.evaluate_residence_time) then
+	call logger('ERROR: TAGGED_CHEMOTAXIS requires EVALUATE_RESIDENCE_TIME')
+	ok = .false.
+	return
+endif
 if (vary_vascularity) then
 	call initialise_vascularity
 endif
@@ -3984,6 +4018,7 @@ if (allocated(xdomain)) deallocate(xdomain)
 if (allocated(zdomain)) deallocate(zdomain)
 if (allocated(zrange2D)) deallocate(zrange2D)
 if (allocated(occupancy)) deallocate(occupancy)
+if (allocated(Tres_dist)) deallocate(Tres_dist)
 if (allocated(cellist)) deallocate(cellist,stat=ierr)
 if (ierr /= 0) then
     write(*,*) 'cellist deallocate error: ',ierr
@@ -4032,13 +4067,16 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine terminate_run(res) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: terminate_run
+!DEC$ ATTRIBUTES DLLEXPORT :: terminate_run 
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 character*(8), parameter :: quit = '__EXIT__'
 integer :: error, i
 
 call SaveGenDist
+if (evaluate_residence_time) then
+	call write_Tres_dist
+endif
 call wrapup
 
 if (res == 0) then
