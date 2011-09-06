@@ -1541,10 +1541,12 @@ do while (k < node_inflow)
     y = 1 + R*NY
     R = par_uni(kpar)
     z = 1 + R*NZ
+    site = (/x,y,z/)
+    if (cdistance(site) > INLET_R_FRACTION*globalvar%radius) cycle		! TEST with 0.7
     indx = occupancy(x,y,z)%indx
     if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
     if (indx(1) == 0 .or. indx(2) == 0) then
-        site = (/x,y,z/)
+!        site = (/x,y,z/)
         if (evaluate_residence_time) then
             ! This is for determining the transit time distribution
             if (TAGGED_CHEMOTAXIS) then		! tag a fraction of incoming cells
@@ -1598,7 +1600,7 @@ if (L_selectin) then
 	nbrs = 1
 else
 	use_full_neighbourhood = .true.
-	exit_prob = 0.02		! TESTING------------------
+	exit_prob = 0.02		! TESTING------------------ (0.02 works when chemo_K_exit = 0)
 	nbrs = 26
 endif
  
@@ -1832,10 +1834,11 @@ else	! VEGF_MODEL = 1
     c_vegf_0 = globalvar%VEGF/globalvar%NTcells0	! taking K_V = 1.0
 !    vasc_beta = 1.5				! beta_V
     vasc_decayrate = vasc_maxrate*hill(c_vegf_0,vasc_beta*c_vegf_0,vasc_n)	! delta_V
-!    write(*,*) 'Vascularity parameters:'
-!    write(*,*) 'alpha_G,beta_G,delta_G: ',VEGF_alpha, VEGF_beta, VEGF_decayrate
-!    write(*,*) 'alpha_V,beta_V,delta_V: ',vasc_maxrate,vasc_beta,vasc_decayrate
-!    write(*,*) 'c_vegf_0,VEGF0,VEGF_baserate: ',c_vegf_0,globalvar%VEGF,VEGF_baserate
+ !   write(*,*) 'Vascularity parameters:'
+ !   write(*,*) 'alpha_G,beta_G,delta_G: ',VEGF_alpha, VEGF_beta, VEGF_decayrate
+ !   write(*,*) 'alpha_V,beta_V,delta_V: ',vasc_maxrate,vasc_beta,vasc_decayrate
+ !   write(*,*) 'c_vegf_0,VEGF0,VEGF_baserate: ',c_vegf_0,globalvar%VEGF,VEGF_baserate
+ !   write(*,*) 'vasc_beta*c_vegf_0: ',vasc_beta*c_vegf_0
 endif
 globalvar%vascularity = 1.00
 !write(*,*) 'VEGF_MODEL, VEGF_baserate: ',VEGF_MODEL, VEGF_baserate
@@ -1884,28 +1887,32 @@ dVEGFdt = VEGFsignal*VEGF_alpha + VEGF_baserate - VEGF_decayrate*globalvar%VEGF
 ! Mass of VEGF is augmented by rate, and is subject to decay
 globalvar%VEGF = globalvar%VEGF + dVEGFdt*DELTA_T
 c_vegf = globalvar%VEGF/globalvar%NTcells   ! concentration (proportional to, anyway) 
+globalvar%c_vegf = c_vegf
 if (VEGF_MODEL == 2) then ! not used
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta,vasc_n)*globalvar%Vascularity - vasc_decayrate*(globalvar%Vascularity - 1)
 else	! VEGF_MODEL = 1
 ! WRONG
 !    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
 ! Use this
+	vasc_decayrate = 0
     dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n) - vasc_decayrate*globalvar%Vascularity	!  this works!
 ! Try
 !	dVdt = vasc_maxrate*Ck*(globalvar%VEGF/(VEGF_baserate/VEGF_decayrate) - globalvar%Vascularity)	! no good
 !	dVdt = vasc_maxrate*Cck1*((c_vegf/c_vegf_0 - globalvar%Vascularity) + Cck2*(1-Nfactor))				!  this works!
 endif
 globalvar%Vascularity = max(globalvar%Vascularity + dVdt*DELTA_T, 1.0)
-if (mod(istep,240) == 0) then
-	write(logmsg,'(a,i6,e12.3,5f10.3,i5)') 'vasc: ',istep/240,VEGFsignal, &
-		globalvar%VEGF/(VEGF_baserate/VEGF_decayrate), &	! M/M0
-		c_vegf/c_vegf_0, &									! C/C0
-		Nfactor, &											! N/N0
-		dVdt, &												! dV/dt
-		globalvar%Vascularity, &							! V
-		globalvar%Nexits									! Nexits
+globalvar%dVdt = dVdt
+!if (mod(istep,240) == 0) then
+!	write(logmsg,'(a,i6,e12.3,5f10.3,i5)') 'vasc: ',istep/240,VEGFsignal, &
+!		globalvar%VEGF/(VEGF_baserate/VEGF_decayrate), &	! M/M0
+!		c_vegf/c_vegf_0, &									! C/C0
+!		Nfactor, &											! N/N0
+!		dVdt, &												! dV/dt
+!		globalvar%Vascularity, &							! V
+!		globalvar%Nexits									! Nexits
+	write(logmsg,'(i6,4f12.6)') globalvar%NTcells,globalvar%VEGF,c_vegf,hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)
 	call logger(logmsg)
-endif
+!endif
 !write(*,*) 'dVEGFdt, c_vegf, dVdt: ',dVEGFdt, c_vegf, dVdt, globalvar%Vascularity
 end subroutine
 
@@ -2072,7 +2079,6 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 		endif
 		return
 	endif
-!    dexit = exit_fraction*globalvar%NTcells - globalvar%Nexits 
     dexit = requiredExitPortals(globalvar%NTcells) - globalvar%Nexits
     if (dexit > 0) then
         naddex = dexit
@@ -2875,8 +2881,8 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine vascular_test
-integer :: nsteps = 10*24*60/DELTA_T
-real :: inflow0, act, tnow, exfract
+integer :: nsteps = 0.1*24*60/DELTA_T
+real :: inflow0, act, tnow, exfract, nsum
 
 !globalvar%VEGF = 0
 !globalvar%vascularity = 1.00
@@ -2889,6 +2895,7 @@ globalvar%NTcells = globalvar%NTcells0
 inflow0 = globalvar%NTcells0*DELTA_T/(residence_time*60)
 write(*,*) TC_TO_DC,globalvar%NDC,nsteps,globalvar%NTcells
 
+nsum = 0
 do istep = 1,nsteps
 	tnow = istep*DELTA_T
     call vascular
@@ -2897,11 +2904,13 @@ do istep = 1,nsteps
 		exfract = egressFraction(tnow)
 		globalvar%OutflowTotal = exfract*globalvar%OutflowTotal
 	endif
-    globalvar%NTcells = globalvar%NTcells + globalvar%InflowTotal - globalvar%OutflowTotal
-    if (mod(istep,60) == 0) then
-        act = get_DCactivity()
-        write(nfout,'(2f8.3,e12.3,f8.3,i8,2f6.1)') istep*DELTA_T/60,act,globalvar%VEGF/globalvar%NTcells, &
-            globalvar%vascularity,globalvar%NTcells,globalvar%InflowTotal,globalvar%OutflowTotal
+	nsum = nsum + globalvar%InflowTotal - globalvar%OutflowTotal
+    globalvar%NTcells = globalvar%NTcells0 + nsum
+    if (mod(istep,1) == 0) then
+!        act = get_DCactivity()
+        write(nfout,'(f8.3,3e14.5,f8.3,i8,f9.1,2f8.4)') istep*DELTA_T/60,globalvar%VEGF, globalvar%c_vegf, &
+            globalvar%dVdt,globalvar%vascularity,globalvar%NTcells,nsum, &
+            globalvar%InflowTotal,globalvar%OutflowTotal
     endif
 enddo
 

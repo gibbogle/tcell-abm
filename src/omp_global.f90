@@ -242,7 +242,7 @@ logical, parameter :: compute_travel_time = .false.
 integer, parameter :: n_multiple_runs = 1
 
 ! Parameters and switches for testing
-logical, parameter :: test_vascular = .false.
+logical, parameter :: test_vascular = .true.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
 
@@ -257,12 +257,12 @@ integer, parameter :: idbug = -123
 ! The situation to be simulated is one in which most cells are not subject to exit chemotaxis,
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the residence time
 ! of the tagged cells?
-logical, parameter :: TAGGED_CHEMOTAXIS = .true.	! ==> evaluate_residence_time = .true.
+logical, parameter :: TAGGED_CHEMOTAXIS = .false.	! ==> evaluate_residence_time = .true.
 real, parameter :: TAGGED_CHEMO_FRACTION = 0.1
 real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
-logical, parameter :: evaluate_residence_time = .true.
+logical, parameter :: evaluate_residence_time = .false.
 integer, parameter :: istep_res1 = 5000
-integer, parameter :: istep_res2 = istep_res1 + 5000
+integer, parameter :: istep_res2 = istep_res1 + 50000
 
 ! Parameters for controlling data capture for graphical purposes
 logical, parameter :: save_pos_cmgui = .false.          ! To make movies
@@ -320,6 +320,8 @@ type global_type
     real :: OutflowTotal
     real :: VEGF
     real :: Vascularity
+    real :: dVdt
+    real :: c_vegf
 !!    real, allocatable :: Inflow(:)
 !!    real, allocatable :: Outflow(:)
 end type
@@ -549,7 +551,7 @@ real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 ! Egress parameters
 real :: exit_fraction = 1.0/1000.       ! number of exits as a fraction of T cell population
 real :: Ksurfaceportal = 40			! calibration factor for number of surface portals
-logical :: suppress_egress = .true.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
+logical :: suppress_egress = .false.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
 
 !---------------------------------------------------
 ! end of more parameters to be read from input file
@@ -660,9 +662,9 @@ integer :: check_inflow
 ! Vascularity parameters
 real :: VEGF_alpha = 6.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
 real :: VEGF_beta = 5.0e-8			! rate constant for basal VEGF production (beta_G in hev.m) (was 4.0e-8)
-real :: VEGF_decayrate = 0.0015      ! VEGF decay rate (/min)	(was 0.002)
+real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)	(was 0.002)
 !real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
-real :: vasc_maxrate = 0.004       ! max rate constant for vascularity growth (/min)  (was 0.003)
+real :: vasc_maxrate = 0.001       ! max rate constant for vascularity growth (/min)  (was 0.003)
 !real :: vasc_beta = 1.5				! Hill function parameter
 real :: vasc_beta = 2.0				! Hill function parameter
 integer :: vasc_n = 2               ! Hill function exponent
@@ -700,6 +702,7 @@ real :: XFOLLICLE = 0.6					! normalized x boundary of follicular interface "cap
 real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
 real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
 real :: EGRESS_SUPPRESSION_RAMP = 6		! hours
+real :: INLET_R_FRACTION = 0.7			! fraction of blob radius within which ingress occurs
 
 ! PERIPHERY parameters
 logical, parameter :: SIMULATE_PERIPHERY = .true.

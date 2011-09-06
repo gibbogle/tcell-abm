@@ -2253,7 +2253,7 @@ end subroutine
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
-real :: a, b, c, x
+real :: a, b, c, x, Fe
 real, parameter :: pow = 2./3.
 !real, parameter :: m = 1.607E-8, c = 0.00602
 ! parameters for chemotaxis
@@ -2261,12 +2261,21 @@ real, parameter :: pow = 2./3.
 !real, parameter :: b_chemo_12h = 2.624E-05
 !real, parameter :: c_chemo_12h = 5.510E-03
 
-! parameters for no chemotaxis
+! parameters for no chemotaxis, INLET_R_FRACTION = 1.0
 ! Best fit:
 ! y = -3.873E-08x2 + 5.150E-05x + 1.029E-02
-real, parameter :: a_nochemo_24h = -3.873E-08
-real, parameter :: b_nochemo_24h = 5.150E-05
-real, parameter :: c_nochemo_24h = 1.029E-02
+!real, parameter :: a_nochemo_24h = -3.873E-08
+!real, parameter :: b_nochemo_24h = 5.150E-05
+!real, parameter :: c_nochemo_24h = 1.029E-02
+
+! parameters for no chemotaxis, INLET_R_FRACTION = 0.7
+! Best fit:
+!y = -4.058E-08x2 + 5.590E-05x + 1.006E-02
+real, parameter :: a_nochemo_24h = -4.058E-08
+real, parameter :: b_nochemo_24h = 5.590E-05
+real, parameter :: c_nochemo_24h = 1.006E-02
+
+real, parameter :: K_Ke = 1.0		! 0.64 for Ke = 1.0, Pe = 0.02
 
 !base_exit_prob = 1.0 
 !requiredExitPortals = exit_fraction*ncells**pow + 0.5
@@ -2300,12 +2309,15 @@ if (FIXED_NEXITS) then
 	requiredExitPortals = exit_fraction*globalvar%NTcells0**pow + 0.5
 else
 	x = ncells/1000
-	exit_fraction = (a*x**2 + b*x + c)*24/residence_time
-	requiredExitPortals = exit_fraction*ncells**pow + 0.5
-!	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction
+!	Fe = (a*x**2 + b*x + c)
+!	Fe = 3.028E-03*x**3.571E-01		! power law fit (7 points)
+	Fe = 2.990E-03*x**3.595E-01		! power law fit (8 points, 51k - 1.1m cells)
+	exit_fraction = Fe*24.0/residence_time
+	requiredExitPortals = K_Ke*exit_fraction*ncells**pow + 0.5 
+!	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction 
 !	call logger(logmsg)
 endif
-requiredExitPortals = requiredExitPortals/base_exit_prob
+!requiredExitPortals = requiredExitPortals/base_exit_prob
 end function
 
 !---------------------------------------------------------------------
@@ -2344,6 +2356,8 @@ else
 !        Nex = exit_fraction*globalvar%NTcells0
 		Nex = requiredExitPortals(globalvar%NTcells0)
         max_exits = 10*Nex
+        write(logmsg,*) 'NTcells0, Nex, max_exits: ',globalvar%NTcells0,Nex,max_exits
+        call logger(logmsg)
         allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
     else
         Nex = 0
