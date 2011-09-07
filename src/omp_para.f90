@@ -1894,8 +1894,8 @@ else	! VEGF_MODEL = 1
 ! WRONG
 !    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity
 ! Use this
-	vasc_decayrate = 0
-    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n) - vasc_decayrate*globalvar%Vascularity	!  this works!
+!	vasc_decayrate = 0
+    dVdt = vasc_maxrate*hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)*globalvar%Vascularity - vasc_decayrate*globalvar%Vascularity	!  this works!
 ! Try
 !	dVdt = vasc_maxrate*Ck*(globalvar%VEGF/(VEGF_baserate/VEGF_decayrate) - globalvar%Vascularity)	! no good
 !	dVdt = vasc_maxrate*Cck1*((c_vegf/c_vegf_0 - globalvar%Vascularity) + Cck2*(1-Nfactor))				!  this works!
@@ -1910,8 +1910,8 @@ globalvar%dVdt = dVdt
 !		dVdt, &												! dV/dt
 !		globalvar%Vascularity, &							! V
 !		globalvar%Nexits									! Nexits
-	write(logmsg,'(i6,4f12.6)') globalvar%NTcells,globalvar%VEGF,c_vegf,hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)
-	call logger(logmsg)
+!	write(logmsg,'(i6,4f12.6)') globalvar%NTcells,globalvar%VEGF,c_vegf,hill(c_vegf,vasc_beta*c_vegf_0,vasc_n)
+!	call logger(logmsg)
 !endif
 !write(*,*) 'dVEGFdt, c_vegf, dVdt: ',dVEGFdt, c_vegf, dVdt, globalvar%Vascularity
 end subroutine
@@ -2881,37 +2881,40 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine vascular_test
-integer :: nsteps = 0.1*24*60/DELTA_T
-real :: inflow0, act, tnow, exfract, nsum
+integer :: nsteps = 10.0*24*60/DELTA_T
+real :: inflow0, act, tnow, exfract, nsum, Fin0, Fin, Fout, Tres
 
-!globalvar%VEGF = 0
-!globalvar%vascularity = 1.00
+Tres = 24
 globalvar%NTcells0 = 100000
 use_exit_chemotaxis = .false.
 call initialise_vascularity
 
 globalvar%NDC = DC_FACTOR*globalvar%NTcells0/TC_TO_DC
 globalvar%NTcells = globalvar%NTcells0
-inflow0 = globalvar%NTcells0*DELTA_T/(residence_time*60)
+Fin0 = globalvar%NTcells/(Tres*60)
 write(*,*) TC_TO_DC,globalvar%NDC,nsteps,globalvar%NTcells
 
 nsum = 0
 do istep = 1,nsteps
 	tnow = istep*DELTA_T
     call vascular
-    call generate_traffic(inflow0)
+!    call generate_traffic(inflow0)
+	Fin = Fin0*globalvar%vascularity*DELTA_T
+	Fout = globalvar%NTcells*DELTA_T/(Tres*60)
     if (suppress_egress) then
 		exfract = egressFraction(tnow)
-		globalvar%OutflowTotal = exfract*globalvar%OutflowTotal
+		Fout = exfract*Fout
 	endif
-	nsum = nsum + globalvar%InflowTotal - globalvar%OutflowTotal
-    globalvar%NTcells = globalvar%NTcells0 + nsum
-    if (mod(istep,1) == 0) then
-!        act = get_DCactivity()
-        write(nfout,'(f8.3,3e14.5,f8.3,i8,f9.1,2f8.4)') istep*DELTA_T/60,globalvar%VEGF, globalvar%c_vegf, &
-            globalvar%dVdt,globalvar%vascularity,globalvar%NTcells,nsum, &
-            globalvar%InflowTotal,globalvar%OutflowTotal
+    if (mod(istep,60) == 0) then
+        write(nfout,'(i6,f8.3,5e14.5,i8)') istep,tnow, &
+			globalvar%VEGF, &
+            globalvar%dVdt, &
+            globalvar%vascularity, &
+            Fin, Fout, &
+            globalvar%NTcells
     endif
+    nsum = nsum + (Fin - Fout)
+    globalvar%NTcells = globalvar%NTcells0 + nsum
 enddo
 
 end subroutine

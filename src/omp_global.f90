@@ -660,7 +660,7 @@ integer :: check_egress(1000)		! for checking traffic
 integer :: check_inflow
 
 ! Vascularity parameters
-real :: VEGF_alpha = 6.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
+real :: VEGF_alpha = 4.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
 real :: VEGF_beta = 5.0e-8			! rate constant for basal VEGF production (beta_G in hev.m) (was 4.0e-8)
 real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)	(was 0.002)
 !real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
