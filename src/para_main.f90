@@ -1,5 +1,5 @@
 !-----------------------------------------------------------------------------------------
-! Runs omp_para by calls to libpara32.dll or libpara64.dll
+! Runs omp_para by calls to libpara32.dll or libpara64.dll 
 !-----------------------------------------------------------------------------------------
 #define COMPILE_THIS
 
