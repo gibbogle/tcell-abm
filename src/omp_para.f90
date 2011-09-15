@@ -917,7 +917,7 @@ do kcell = 1,nlist
             unbound = .true.
 !           nsub = nsub + 1
         endif
-     enddo
+     enddo 
      if (unbound) then  ! ensure that a remaining binding is stored in slot 1
         if (cell%DCbound(1) == 0 .and. cell%DCbound(2) /= 0) then
             cell%DCbound(1) = cell%DCbound(2)
@@ -1010,7 +1010,7 @@ do kcell = 1,nlist
 enddo
 !write(*,*) 'me, nadd, nsub: ',me,nadd,nsub,nadd-nsub
 !write(*,'(f6.2,i4,2f6.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
-write(nflog,'(f8.2,i8,2f8.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
+!write(nflog,'(f8.2,i8,2f8.3)') tnow/60,nc,real(nbc)/nc,real(nbt)/nt
 ok = .true.
 end subroutine
 
@@ -1466,7 +1466,7 @@ integer :: iexit, esite(3), esite0(3),site(3), k, slot, indx(2), kcell, ne, iper
 integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs
 real(DP) :: R, df
 logical :: left
-logical :: central, egress_possible, use_full_neighbourhood
+logical :: central, egress_possible, use_full_neighbourhood, tagcell
 integer, allocatable :: permex(:)
 integer :: kpar = 0
 real :: tnow, ssfract, exfract
@@ -1549,7 +1549,7 @@ do while (k < node_inflow)
 !        site = (/x,y,z/)
         if (evaluate_residence_time) then
             ! This is for determining the transit time distribution
-            if (TAGGED_CHEMOTAXIS) then		! tag a fraction of incoming cells
+            if (TAGGED_EXIT_CHEMOTAXIS) then		! tag a fraction of incoming cells
 				R = par_uni(kpar)
 				if (istep*DELTA_T < 48*60 .and. R < TAGGED_CHEMO_FRACTION) then
 					ctype = RES_TAGGED_CELL
@@ -1565,8 +1565,13 @@ do while (k < node_inflow)
 					ctype = NONCOG_TYPE_TAG
 				endif
 			endif
-        elseif (track_DCvisits) then
-            if (ntagged < ntaglimit) then
+        elseif (track_DCvisits) then		! This is the normal procedure for computing the distinct DC visit distribution
+			if (TAGGED_DC_CHEMOTAXIS) then	! This is to quantify the effect of DC chemotaxis on DC visits
+				tagcell = (par_uni(kpar) < TAGGED_CHEMO_FRACTION)
+			else
+				tagcell = .true.
+			endif
+            if (tagcell .and. ntagged < ntaglimit) then
                 ctype = TAGGED_CELL
             else
                 ctype = NONCOG_TYPE_TAG
@@ -3007,6 +3012,27 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+subroutine write_DCvisit_dist
+integer :: i
+real :: total, average
+
+write(nfout,*)
+write(nfout,'(a)') 'DC visits distribution'
+total = 0
+do i = 0,globalvar%NDC
+	total = total + DCvisits(i)
+enddo
+average = 0
+do i = 0,globalvar%NDC
+	write(nfout,'(2i6,f8.4)') i,DCvisits(i),DCvisits(i)/total
+	average = average + i*DCvisits(i)/total
+enddo
+write(nfout,'(a,f8.2)') 'Average number of contacts: ',average
+write(nfout,*)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine write_Tres_dist
 integer :: k, kmax
 real(8) :: Tres
@@ -3023,8 +3049,8 @@ do k = 1,kmax
 enddo
 write(nfout,'(a)') 'Transit time distribution'
 write(nfout,'(a)') 'Parameters: '
-if (TAGGED_CHEMOTAXIS) then
-	write(nfout,'(a,L)') '  TAGGED_CHEMOTAXIS:     ',TAGGED_CHEMOTAXIS
+if (TAGGED_EXIT_CHEMOTAXIS) then
+	write(nfout,'(a,L)') '  TAGGED_EXIT_CHEMOTAXIS:     ',TAGGED_EXIT_CHEMOTAXIS
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_FRACTION: ',TAGGED_CHEMO_FRACTION 
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_ACTIVITY: ',TAGGED_CHEMO_ACTIVITY
 endif
@@ -3962,13 +3988,23 @@ last_portal_update_time = -999
 if (use_exit_chemotaxis) then
 	call chemo_setup
 endif
-if (TAGGED_CHEMOTAXIS .and. .not.use_exit_chemotaxis) then
-	call logger('ERROR: TAGGED_CHEMOTAXIS requires USE_EXIT_CHEMOTAXIS')
+if (TAGGED_EXIT_CHEMOTAXIS .and. .not.use_exit_chemotaxis) then
+	call logger('ERROR: TAGGED_EXIT_CHEMOTAXIS requires USE_EXIT_CHEMOTAXIS')
 	ok = .false.
 	return
 endif
-if (TAGGED_CHEMOTAXIS .and. .not.evaluate_residence_time) then
-	call logger('ERROR: TAGGED_CHEMOTAXIS requires EVALUATE_RESIDENCE_TIME')
+if (TAGGED_EXIT_CHEMOTAXIS .and. .not.evaluate_residence_time) then
+	call logger('ERROR: TAGGED_EXIT_CHEMOTAXIS requires EVALUATE_RESIDENCE_TIME')
+	ok = .false.
+	return
+endif
+if (TAGGED_DC_CHEMOTAXIS .and. .not.use_DC_chemotaxis) then
+	call logger('ERROR: TAGGED_DC_CHEMOTAXIS requires USE_DC_CHEMOTAXIS')
+	ok = .false.
+	return
+endif
+if (TAGGED_DC_CHEMOTAXIS .and. .not.track_DCvisits) then
+	call logger('ERROR: TAGGED_DC_CHEMOTAXIS requires track_DCvisits')
 	ok = .false.
 	return
 endif
@@ -4088,6 +4124,9 @@ integer :: error, i
 call SaveGenDist
 if (evaluate_residence_time) then
 	call write_Tres_dist
+endif
+if (track_DCvisits) then
+	call write_DCvisit_dist
 endif
 call wrapup
 

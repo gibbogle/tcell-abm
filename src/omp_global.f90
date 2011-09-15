@@ -242,9 +242,10 @@ logical, parameter :: compute_travel_time = .false.
 integer, parameter :: n_multiple_runs = 1
 
 ! Parameters and switches for testing
-logical, parameter :: test_vascular = .true.
+logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
+real, parameter :: DC_CHEMO_DELAY = 10.0
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -253,16 +254,23 @@ logical, parameter :: avid_debug = .false.
 integer, parameter :: CHECKING = 0
 integer, parameter :: idbug = -123
 
+real, parameter :: TAGGED_CHEMO_FRACTION = 0.02		! was 0.1 for exit chemotaxis
+real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
+
 ! To investigate the effect of chemotaxis on residence time.
 ! The situation to be simulated is one in which most cells are not subject to exit chemotaxis,
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the residence time
 ! of the tagged cells?
-logical, parameter :: TAGGED_CHEMOTAXIS = .false.	! ==> evaluate_residence_time = .true.
-real, parameter :: TAGGED_CHEMO_FRACTION = 0.1
-real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
+logical, parameter :: TAGGED_EXIT_CHEMOTAXIS = .false.	! ==> evaluate_residence_time = .true.
 logical, parameter :: evaluate_residence_time = .false.
 integer, parameter :: istep_res1 = 5000
 integer, parameter :: istep_res2 = istep_res1 + 50000
+
+! To investigate the effect of chemotaxis on DC contacts.
+! The situation to be simulated is one in which most cells are not subject to DC chemotaxis,
+! but a small fraction of tagged cells are.  The question is: what is the effect on the DC visit frequency
+! of the tagged cells?
+logical, parameter :: TAGGED_DC_CHEMOTAXIS = .true.
 
 ! Parameters for controlling data capture for graphical purposes
 logical, parameter :: save_pos_cmgui = .false.          ! To make movies
@@ -272,7 +280,7 @@ logical, parameter :: generate_exnode = .false.
 logical, parameter :: evaluate_stim_dist = .false.
 integer, parameter :: ntaglimit = 100000
 logical, parameter :: save_DCbinding = .false.
-logical, parameter :: track_DCvisits = .false.
+logical, parameter :: track_DCvisits = .true.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
 logical, parameter :: log_traffic = .true.
@@ -2348,7 +2356,7 @@ if (turn_off_chemotaxis) then
     return
 endif
 
-if (TAGGED_CHEMOTAXIS) then
+if (TAGGED_EXIT_CHEMOTAXIS) then
     tnow = istep*DELTA_T
     t = tnow - cell%entrytime
     if (cell%ctype == RES_TAGGED_CELL) then     ! testing effect of S1P1

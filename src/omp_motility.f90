@@ -355,7 +355,7 @@ integer :: irel,dir1,lastdir1,indx2(2),k,z,e(3),v(3)
 integer :: ne, ee(3,MAX_EX_CHEMO), nd, neardc(MAX_DC_CHEMO), kk, ned, idc
 integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
 real(DP) :: p(MAXRELDIR+1),psum, R, pR, psumm, stay_prob, f, c
-real :: rad, chemo_exit=0, chemo_DC=0
+real :: tnow, rad, chemo_exit=0, chemo_DC=0
 real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 
 !if (kcell == 310 .and. istep == 4801) then
@@ -363,7 +363,7 @@ real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
 !else
 	dbug = .false.
 !endif
-
+tnow = istep*DELTA_T
 cell => cellist(kcell)
 site1 = cell%site
 if (site1(1) < 1) then
@@ -395,8 +395,15 @@ if (globalvar%Nexits > 0 .and. chemo_K_exit > 0) then
     endif
 endif
 nd = 0
+chemo_DC = 0
 if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
-    chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
+	if (TAGGED_DC_CHEMOTAXIS) then
+		if (cell%ctype == TAGGED_CELL .and. cell%unbindtime(2)-tnow > DC_CHEMO_DELAY) then
+			chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
+		endif
+	elseif (cell%unbindtime(2)-tnow > DC_CHEMO_DELAY) then
+		chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
+	endif
     if (chemo_DC > 0) then
         ! Then need to determine if the cell is within the SOI of any DCs.
         call near_DCs(site1,nd,neardc) ! new
