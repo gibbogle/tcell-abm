@@ -398,10 +398,13 @@ nd = 0
 chemo_DC = 0
 if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
 	if (TAGGED_DC_CHEMOTAXIS) then
-		if (cell%ctype == TAGGED_CELL .and. cell%unbindtime(2)-tnow > DC_CHEMO_DELAY) then
-			chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
+		if (cell%ctype == TAGGED_CELL) then
+			if (tnow-cell%unbindtime(2) > DC_CHEMO_DELAY) then
+!				chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
+				chemo_DC = CHEMO_DC_TAG
+			endif
 		endif
-	elseif (cell%unbindtime(2)-tnow > DC_CHEMO_DELAY) then
+	elseif (tnow-cell%unbindtime(2) > DC_CHEMO_DELAY) then
 		chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
 	endif
     if (chemo_DC > 0) then
@@ -410,46 +413,48 @@ if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
     endif
 endif
 
-vsum = 0 ! new
+vsum = 0
 ff = 0
 if (ne > 0 .and. chemo_K_exit > 0) then
-	do k = 1,ne ! new
-		e = ee(:,k) ! new
+	do k = 1,ne
+		e = ee(:,k)
 		v = site1 - e
-		vv(:,k) = v ! new
-		if (dbug) write(*,*) 'site1,v: ',site1,v
+!		vv(:,k) = v
+!		if (dbug) write(*,*) 'site1,v: ',site1,v
 		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
 		if (rad == 0) then
-			ff(k) = 0
+			f = 0
 		else
-			ff(k) = chemo_K_exit*chemo_exit*chemo_g(rad)  ! Note: inserting chemo_K_exit here (was missing) will mean need to
-												  ! change ep_factor in portal_traffic()
-			vsum = vsum + (ff(k)/norm(vv(:,k)))*vv(:,k) ! new
+			f = chemo_K_exit*chemo_exit*chemo_g(rad)  
+			vsum = vsum + (f/norm(real(v)))*v
 		endif
-	enddo ! new
+	enddo
 endif
 
 if (nd > 0) then
 	! augment vsum with DC chemotaxis
-	do k = 1,nd ! new
+	do k = 1,nd
 		kk = ne + k
 		idc = neardc(k)
-		e = DClist(idc)%site ! new
+		e = DClist(idc)%site
 		v = site1 - e
-		vv(:,kk) = v ! new
+!		vv(:,kk) = v ! new
 		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
 		if (rad == 0) then
 			go = .false.
 			return
 		endif
-		ff(kk) = chemo_K_DC*chemo_DC*chemo_g(rad)
-		vsum = vsum + (ff(kk)/norm(vv(:,kk)))*vv(:,kk) ! new
-	enddo ! new
+		f = chemo_K_DC*chemo_DC*chemo_g(rad)
+		vsum = vsum + (f/norm(real(v)))*v
+	enddo
 endif
 ned = ne + nd
 
 if (ned > 0) then
-	f = min(1.0,norm(vsum)) ! new
+	f = min(1.0,norm(vsum))
+	! Need to create estimate of v() that corresponds to the direction of vsum,
+	! nearest discrete location on the 3D lattice (for chemo_p(x,y,z))
+	v = chemo_N*vsum/norm(vsum)	! this is a quick approximation, needs checking!!!!
     stay_prob = dirprob(0)
     c = 1
 !    c = CCR7_ligand(rad)	! no unique rad now - this needs to be changed
@@ -510,17 +515,21 @@ if (sum(p) == 0) then
     return
 endif
 
-if (ned > 0) then
-!    if (v(1) == 0 .and. v(2) == 0 .and. v(3) == 0) then
-!        write(*,*) 'cell at exit: ',kcell
-!        go = .false.
-!        return
-!    endif
-	if (CHEMO_K_EXIT > 0) then
-		call chemo_probs(p,v,f,c)
-	endif
+if (nd == 1 .and. kcell == idbug) then
+	psum = sum(p)
+	idc = neardc(1)
+	write(nfchemo,'(a,i4,a,i6,3i4,a,i6,3i4)') 'istep: ',istep,' cell: ',kcell,site1,' DC: ',idc,DClist(idc)%site
+	write(nfchemo,'(5x,10f6.3)') p/psum
+endif
+if (ne*CHEMO_K_EXIT > 0 .or. nd*CHEMO_K_DC > 0) then
+	call chemo_probs(p,v,f,c)
 endif
 psum = sum(p)
+if (nd == 1 .and. kcell == idbug) then
+	write(nfchemo,'(a,f6.3,a,3f7.3,a,3i2)') 'f: ',f,'vsum: ',vsum,'  v: ',v
+	idc = neardc(1)
+	write(nfchemo,'(5x,10f6.3)') p/psum
+endif
 
 if (psum == 0) then
 	go = .false.
@@ -693,7 +702,7 @@ do kcell = 1,nlist
     endif
     ! TESTING ---------- to track down why case use_exit_chemotaxis + chemo_K_exit = 0
     !                    is not the same as not use_exit_chemotaxis
-	if (use_exit_chemotaxis) then
+	if (use_exit_chemotaxis .or. use_DC_chemotaxis) then
 		call chemo_jumper(kcell,indx,slot,go,kpar)
 	else
 		call jumper(kcell,indx,slot,go,kpar)

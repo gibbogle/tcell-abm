@@ -633,11 +633,13 @@ if (useexitchemo == 1) then
 	use_exit_chemotaxis = .true.
 else
 	use_exit_chemotaxis = .false.
+	chemo_K_exit = 0
 endif
 if (useDCchemo == 1) then
 	use_DC_chemotaxis = .true.
 else
 	use_DC_chemotaxis = .false.
+	chemo_K_DC = 0
 endif
 if (computedoutflow == 1) then
 	computed_outflow = .true.

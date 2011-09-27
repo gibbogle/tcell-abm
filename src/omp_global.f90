@@ -149,7 +149,7 @@ integer, parameter :: OUTSIDE_TAG = -BIG_INT + 1
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 integer, parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
 integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, &
-						nftraffic = 16, nfrun = 17, nftravel = 18, nfcmgui = 19, nfpos = 20, nflog=21
+						nftraffic = 16, nfrun = 17, nftravel = 18, nfcmgui = 19, nfpos = 20, nflog=21, nfchemo=22
 real, parameter :: BIG_TIME = 100000
 real, parameter :: BALANCER_INTERVAL = 10
 integer, parameter :: SCANNER_INTERVAL = 100
@@ -245,14 +245,15 @@ integer, parameter :: n_multiple_runs = 1
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
-real, parameter :: DC_CHEMO_DELAY = 10.0
+real, parameter :: DC_CHEMO_DELAY = 3.0
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
 logical, parameter :: dbug_cog = .false.
 logical, parameter :: avid_debug = .false.
+logical, parameter :: debug_DCchemotaxis = .true.
 integer, parameter :: CHECKING = 0
-integer, parameter :: idbug = -123
+integer :: idbug = 0
 
 real, parameter :: TAGGED_CHEMO_FRACTION = 0.02		! was 0.1 for exit chemotaxis
 real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
@@ -271,6 +272,8 @@ integer, parameter :: istep_res2 = istep_res1 + 50000
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the DC visit frequency
 ! of the tagged cells?
 logical, parameter :: TAGGED_DC_CHEMOTAXIS = .true.
+real, parameter :: CHEMO_DC_TAG = 1.0
+integer, parameter :: istep_DCvisits = 30*60	! 30 hours delay before counting visits
 
 ! Parameters for controlling data capture for graphical purposes
 logical, parameter :: save_pos_cmgui = .false.          ! To make movies
@@ -626,6 +629,7 @@ logical :: use_DC, use_cognate
 type(result_type) :: localres, totalres
 integer :: nvisits, nrevisits
 integer, allocatable :: DCvisits(:)
+integer, allocatable :: DCtotvisits(:)
 !integer :: tot_nvisits, tot_nrevisits, tot_DCvisits(0:MAX_DC+1)
 integer :: noutflow_tag, ninflow_tag
 real :: restime_tot
@@ -2295,16 +2299,18 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 ! Computes the jump probabilities (absolute directions) accounting for chemotaxis
-! towards a single exit.  On input:
+! towards exit (or DC).  On input:
 !   p(:) holds the jump probabilities not accounting for  chemotaxis
-!   v(:) is the site offset relative to the exit
+!   v(:) is the site offset relative to the exit (or DC)
 !   f is the amount of chemotactic influence
 !   c is the amount of CCR7 ligand influence (Cyster).
-! Note that f incorporates both the distance from the exit and the cell's
+! Note that f incorporates both the distance from the exit (or DC) and the cell's
 ! susceptibility to chemotaxis, which may be the S1P1 level of the T cell.
 ! On return p(:) holds the modified jump probabilities.
-! Note: should have p remaining unchanged as chemo_K_exit -> 0
+! Note: should have p remaining unchanged as chemo_K -> 0
 ! Note: when njumpdirs = 27, jump 14 corresponds to (0,0,0) - unused.
+! Note: code modifications now base v and f on net chemotactic attraction of 
+! multiple exits and DCs.
 !--------------------------------------------------------------------------------
 subroutine chemo_probs(p,v,f,c)
 real(DP) :: p(:)
@@ -2315,6 +2321,11 @@ real(DP) :: pc(MAXRELDIR+1)
 
 if (f == 0 .and. c == 1) then
     return
+endif
+if (f > 1) then
+	write(logmsg,*) 'ERROR: chemo_probs: f > 0: ',f
+	call logger(logmsg)
+	return
 endif
 p = p/sum(p)
 if (f > 0) then

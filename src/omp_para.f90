@@ -235,10 +235,10 @@ do k = 1,max_nlist
 	nullify(cellist(k)%cptr)
 enddo
 if (use_DC) then
-
     allocate(DClist(MAX_DC))
     allocate(DCdeadlist(MAX_DC))
     allocate(DCvisits(0:MAX_DC+1))
+    allocate(DCtotvisits(0:1000))		! a guess
     z1 = -DC_RADIUS
     z2 = DC_RADIUS
     if (IN_VITRO) then
@@ -341,6 +341,7 @@ if (track_DCvisits) then
     nvisits = 0
     nrevisits = 0
     DCvisits = 0
+    DCtotvisits = 0
 endif
 
 if (evaluate_residence_time) then
@@ -987,15 +988,7 @@ do kcell = 1,nlist
 						return
                     endif
 					if (track_DCvisits .and. ctype == TAGGED_CELL) then
-						if (revisit(kcell,idc)) then
-							Nrevisits = Nrevisits + 1
-							cell%revisits = cell%revisits + 1
-						else
-							Nvisits = Nvisits + 1
-							cell%visits = cell%visits + 1
-							cell%ndclist = cell%ndclist + 1
-							cell%dclist(cell%ndclist) = idc
-						endif
+						call logDCvisit(kcell,idc)
 					endif
                     if (nbnd == MAX_DC_BIND) exit
                 endif
@@ -1311,7 +1304,7 @@ do while (k < node_inflow)
             else
                 ctype = 1
             endif
-        elseif (track_DCvisits) then
+        elseif (track_DCvisits .and. istep > istep_DCvisits) then
             if (ntagged < ntaglimit) then
                 ctype = TAGGED_CELL
             else
@@ -1388,9 +1381,7 @@ do while (k < node_outflow)
         endif
     endif
     if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-        n = cellist(kcell)%visits
-        DCvisits(n) = DCvisits(n) + 1
-        DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+		call recordDCvisits(kcell)
     endif
 enddo
 nadd_sites = nadd_sites + net_inflow
@@ -1565,7 +1556,7 @@ do while (k < node_inflow)
 					ctype = NONCOG_TYPE_TAG
 				endif
 			endif
-        elseif (track_DCvisits) then		! This is the normal procedure for computing the distinct DC visit distribution
+        elseif (track_DCvisits .and. istep > istep_DCvisits) then	! This is the normal procedure for computing the distinct DC visit distribution
 			if (TAGGED_DC_CHEMOTAXIS) then	! This is to quantify the effect of DC chemotaxis on DC visits
 				tagcell = (par_uni(kpar) < TAGGED_CHEMO_FRACTION)
 			else
@@ -1585,6 +1576,15 @@ do while (k < node_inflow)
 
         call add_Tcell(site,ctype,gen,NAIVE,region,kcell,ok)
         if (.not.ok) return
+        
+        if (debug_DCchemotaxis) then
+	        if (ctype == TAGGED_CELL .and. idbug == 0) then
+				idbug = kcell
+				open(nfchemo,file= 'chemo.log',status='replace')
+				write(nfchemo,*) 'Logging DC chemotaxis for tagged T cell: ',idbug
+			endif
+		endif
+		
         k = k+1
         cycle
     endif
@@ -1692,9 +1692,12 @@ do ipermex = 1,globalvar%lastexit
 							endif
 						endif
 						if (track_DCvisits .and. cellist(kcell)%ctype == TAGGED_CELL) then
-							nv = cellist(kcell)%visits
-							DCvisits(nv) = DCvisits(nv) + 1
-							DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + cellist(kcell)%revisits
+							call recordDCvisits(kcell)
+							if (debug_DCchemotaxis .and. kcell == idbug) then
+								write(nfchemo,*) 'Tagged T cell has left'
+								write(logmsg,*) 'Tagged T cell has left'
+								call logger(logmsg)
+							endif
 						endif
 						if (ne == node_outflow .and. computed_outflow) exit
 					endif
@@ -3012,23 +3015,72 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+subroutine logDCvisit(kcell,idc)
+integer :: kcell, idc
+type(cell_type), pointer :: cell
+
+cell => cellist(kcell)
+if (revisit(kcell,idc)) then
+	Nrevisits = Nrevisits + 1
+	cell%revisits = cell%revisits + 1
+else
+	Nvisits = Nvisits + 1
+	cell%visits = cell%visits + 1		! distinct DC visits
+	cell%ndclist = cell%ndclist + 1
+	cell%dclist(cell%ndclist) = idc
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine recordDCvisits(kcell)
+integer :: kcell
+integer :: nvtot
+
+DCvisits(cellist(kcell)%visits) = DCvisits(cellist(kcell)%visits) + 1	! distinct visits
+nvtot = cellist(kcell)%visits + cellist(kcell)%revisits
+!DCvisits(globalvar%NDC+1) = DCvisits(globalvar%NDC+1) + nv
+DCtotvisits(nvtot) = DCtotvisits(nvtot) + 1
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine write_DCvisit_dist
-integer :: i
-real :: total, average
+integer :: i, nd, nt
+real :: total_distinct, total, ave_distinct, ave_total
 
 write(nfout,*)
-write(nfout,'(a)') 'DC visits distribution'
-total = 0
-do i = 0,globalvar%NDC
-	total = total + DCvisits(i)
+write(nfout,'(a)') 'DC distinct visits distribution'
+total_distinct = 0
+nd = 0
+do i = globalvar%NDC,0,-1
+	total_distinct = total_distinct + DCvisits(i)
+	if (nd == 0 .and. DCvisits(i) > 0) then
+		nd = i
+	endif
 enddo
-average = 0
-do i = 0,globalvar%NDC
-	write(nfout,'(2i6,f8.4)') i,DCvisits(i),DCvisits(i)/total
-	average = average + i*DCvisits(i)/total
+ave_distinct = 0
+do i = 0,nd
+	write(nfout,'(2i6,f8.4)') i,DCvisits(i),DCvisits(i)/total_distinct
+	ave_distinct = ave_distinct + i*DCvisits(i)/total_distinct
 enddo
-write(nfout,'(a,f8.2)') 'Average number of contacts: ',average
+write(nfout,'(a,f8.2)') 'Average number of distinct DC contacts: ',ave_distinct
 write(nfout,*)
+write(nfout,'(a)') 'DC total visits distribution'
+total = 0
+nt = 0
+do i = 1000,0,-1
+	total = total + DCtotvisits(i)
+	if (nt == 0 .and. DCtotvisits(i) > 0) then
+		nt = i
+	endif
+enddo
+ave_total = 0
+do i = 0,nt
+	write(nfout,'(2i6,f8.4)') i,DCtotvisits(i),DCtotvisits(i)/total
+	ave_total = ave_total + i*DCtotvisits(i)/total
+enddo
+write(nfout,'(a,f8.2)') 'Average number of total DC contacts: ',ave_total
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -3985,7 +4037,7 @@ check_inflow = 0
 check_egress = 0
 last_portal_update_time = -999
 
-if (use_exit_chemotaxis) then
+if (use_exit_chemotaxis .or. use_DC_chemotaxis) then
 	call chemo_setup
 endif
 if (TAGGED_EXIT_CHEMOTAXIS .and. .not.use_exit_chemotaxis) then
@@ -4077,6 +4129,7 @@ if (allocated(gaplist)) deallocate(gaplist,stat=ierr)
 if (allocated(DClist)) deallocate(DClist)
 if (allocated(DCdeadlist)) deallocate(DCdeadlist)
 if (allocated(DCvisits)) deallocate(DCvisits)
+if (allocated(DCtotvisits)) deallocate(DCtotvisits)
 if (allocated(nz_sites)) deallocate(nz_sites)
 if (allocated(nz_totsites)) deallocate(nz_totsites)
 if (allocated(nz_cells)) deallocate(nz_cells)
@@ -4105,6 +4158,8 @@ inquire(nftraffic,OPENED=isopen)
 if (isopen) close(nftraffic)
 inquire(nfdcbind,OPENED=isopen)
 if (isopen) close(nfdcbind)
+inquire(nfchemo,OPENED=isopen)
+if (isopen) close(nfchemo)
 
 if (par_zig_init) then
 	call par_zigfree
