@@ -454,6 +454,9 @@ if (ned > 0) then
 	f = min(1.0,norm(vsum))
 	! Need to create estimate of v() that corresponds to the direction of vsum,
 	! nearest discrete location on the 3D lattice (for chemo_p(x,y,z))
+	! This is an approximation to increase speed - it enables a table lookup.
+	! Note that we use only the direction of v (magnitude is insignificant at this stage,
+	! since it has been accounted for in f)
 	v = chemo_N*vsum/norm(vsum)	! this is a quick approximation, needs checking!!!!
     stay_prob = dirprob(0)
     c = 1

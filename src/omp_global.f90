@@ -245,7 +245,7 @@ integer, parameter :: n_multiple_runs = 1
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
 logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
-real, parameter :: DC_CHEMO_DELAY = 3.0
+real, parameter :: DC_CHEMO_DELAY = 0.0					! there is also DC_BIND_DELAY
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
@@ -271,7 +271,7 @@ integer, parameter :: istep_res2 = istep_res1 + 50000
 ! The situation to be simulated is one in which most cells are not subject to DC chemotaxis,
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the DC visit frequency
 ! of the tagged cells?
-logical, parameter :: TAGGED_DC_CHEMOTAXIS = .true.
+logical, parameter :: TAGGED_DC_CHEMOTAXIS = .false.
 real, parameter :: CHEMO_DC_TAG = 1.0
 integer, parameter :: istep_DCvisits = 30*60	! 30 hours delay before counting visits
 
@@ -444,7 +444,7 @@ real :: DC_ANTIGEN_SHAPE = 1.2			! DC antigen density shape param
 real :: DC_LIFETIME_MEAN = 3.5			! days
 real :: DC_LIFETIME_SHAPE  = 1.2		! days
 real :: DC_ACTIV_TAPER = 12				! time (hours) over which DC activity decays to zero
-real :: DC_BIND_DELAY = 2.5				! delay after unbinding before next binding
+real :: DC_BIND_DELAY = 2.5				! delay after unbinding before next binding (mins)
 !real :: DC_BIND_ALFA = 0.95				! binding prob parameter
 real :: DC_MULTIBIND_PROB = 0.0			! reducing factor to bind prob for each current DC binding
 real :: DC_DENS_BY_STIM = 0.0002        ! rate of reduction of density by TCR stimulation
@@ -2287,7 +2287,7 @@ do x = -chemo_N,chemo_N
                 endif
             enddo
             w = w/sum(w)
-            chemo_p(x,y,z,:) = w
+            chemo_p(x,y,z,:) = w	! Note that these probs sum to 1
             if (x >= 0 .and. y >= 0 .and. z >= 0) then
                 chemo_r(x,y,z) = sqrt(r2)
             endif

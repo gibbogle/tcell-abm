@@ -168,7 +168,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell trafficking?",
 "T cell trafficking is simulated (ingress and egress)"},
 
-{"USE_EXIT_CHEMOTAXIS", 1, 0, 1,
+{"USE_EXIT_CHEMOTAXIS", 0, 0, 1,
 "T cell exit chemotaxis?",
 "S1P-modulated T cell chemotaxis towards exit portals is simulated"},
 
@@ -176,7 +176,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell DC chemotaxis?",
 "T cell chemotaxis towards DCs is simulated"},
 
-{"COMPUTED_OUTFLOW", 1, 0, 1,
+{"COMPUTED_OUTFLOW", 0, 0, 1,
 "Compute T cell outflow limit?",
 "The upper bound on T cell outflow is computed together with inflow.  The alternative is to permit (probabilistic) egress of any cell at a portal."},
 
@@ -195,7 +195,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Time at which the level of inflammation signal from the periphery goes to zero.\n\
 [days]"},
 
-{"INFLAMM_LEVEL", 1.0, 0.0, 10.0,
+{"INFLAMM_LEVEL", 0.0, 0.0, 10.0,
 "Inflammation level",
 "The plateau inflammation signal level."},
 
@@ -207,7 +207,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Exit region",
 "Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = blob portals, 4 = surface portals."},
 
-{"CHEMO_RADIUS", 30.0, 10.0, 200.0,
+{"CHEMO_RADIUS", 60.0, 10.0, 200.0,
 "Radius of chemotactic influence",
 "Range of chemotactic influence of an exit site or DC on T cell motion.  At this distance the influence is reduced to 5% of its maximum value.\n\
 [um]"},

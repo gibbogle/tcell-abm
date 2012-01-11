@@ -2277,7 +2277,8 @@ real, parameter :: a_nochemo_24h = -4.058E-08
 real, parameter :: b_nochemo_24h = 5.590E-05
 real, parameter :: c_nochemo_24h = 1.006E-02
 
-real, parameter :: K_Ke = 1.0		! 0.64 for Ke = 1.0, Pe = 0.02
+! This is to adjust Ne when there is general exit chemotaxis, to generate steady-state
+real, parameter :: K_Ke = 1.0		! 0.68 for Ke = 1.0, 1.0 for Ke = 0.0 (Pe = 0.02)
 
 !base_exit_prob = 1.0 
 !requiredExitPortals = exit_fraction*ncells**pow + 0.5
@@ -2363,7 +2364,8 @@ else
         allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
     else
         Nex = 0
-        write(*,*) 'No exits'
+        write(logmsg,*) 'No exits'
+        call logger(logmsg)
         return
     endif
     do iexit = 1,Nex
