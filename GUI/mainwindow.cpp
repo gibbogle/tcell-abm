@@ -690,6 +690,8 @@ void MainWindow::writeout()
 		double val = p.value;
 		if (p.tag.compare("INPUT_FILE") == 0)
 			line = p.label;
+		else if (p.tag.compare("DC_INJECTION_FILE") == 0)
+			line = p.label;
 		else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
 		else
@@ -731,6 +733,8 @@ void MainWindow::readInputFile()
 		QString ptag = p.tag;
 		if (ptag.compare("INPUT_FILE") == 0) {
 			parm->set_label(k,data[0]);
+		} else if (ptag.compare("DC_INJECTION_FILE") == 0) {
+				parm->set_label(k,data[0]);
 		} else {
 			parm->set_value(k,data[0].toDouble());
 		}
@@ -2093,8 +2097,17 @@ void MainWindow::enableDCInjection()
 	for (int i=0; i<lineEdit_list.length(); i++) {
 		QLineEdit *w = lineEdit_list[i];
 		QString wname = w->objectName();
-		if (wname.contains("line_T_DC_INJECTION")) {	// || wname.contains("cbox_IV_SHOW_NONCOGNATE")) {
+		if (wname.contains("text_DC_INJECTION_FILE")) {
 			w->setEnabled(true);
+		}
+		if (wname.contains("line_DCrate_100k")) {
+			w->setEnabled(false);
+		}
+		if (wname.contains("line_T_DC1")) {
+			w->setEnabled(false);
+		}
+		if (wname.contains("line_T_DC2")) {
+			w->setEnabled(false);
 		}
 	}
 }
@@ -2106,10 +2119,18 @@ void MainWindow::disableDCInjection()
 	for (int i=0; i<lineEdit_list.length(); i++) {
 		QLineEdit *w = lineEdit_list[i];
 		QString wname = w->objectName();
-		if (wname.contains("line_T_DC_INJECTION")) {	//|| wname.contains("cbox_IV_SHOW_NONCOGNATE")) {
+		if (wname.contains("text_DC_INJECTION_FILE")) {
 			w->setEnabled(false);
 		}
-	}
+		if (wname.contains("line_DCrate_100k")) {
+			w->setEnabled(true);
+		}
+		if (wname.contains("line_T_DC1")) {
+			w->setEnabled(true);
+		}
+		if (wname.contains("line_T_DC2")) {
+			w->setEnabled(true);
+		}	}
 }
 
 //--------------------------------------------------------------------------------------------------------

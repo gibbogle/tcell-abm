@@ -159,10 +159,9 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DCs injected?",
 "DCs were injected into experimental animals"},
 
-{"T_DC_INJECTION", 0, 0.0, 0.0,
-"DC injection time",
-"Time of injection of DCs (T_DC_INJECTION).  In an experiment simulation antigen density begins to decay at this time.\n\
-[hours]"},
+{"DC_INJECTION_FILE", 0, 0, 0,
+"DC_injection.dat",
+"File with schedule of injection of DCs."},
 
 {"USE_TRAFFIC", 1, 0, 1,
 "T cell trafficking?",

@@ -64,7 +64,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>3</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2218,15 +2218,35 @@ padding: 8px
               </widget>
              </item>
              <item row="9" column="0">
-              <widget class="QMyLabel" name="label_T_DC_INJECTION">
+              <widget class="QMyLabel" name="label_DC_INJECTION_FILE">
                <property name="mouseTracking">
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>label_T_DC_INJECTION</string>
+                <string>DC injection file</string>
                </property>
                <property name="wordWrap">
                 <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="2">
+              <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="23" column="2">
+              <widget class="QCheckBox" name="cbox_savepos">
+               <property name="text">
+                <string>Save cell paths</string>
                </property>
               </widget>
              </item>
@@ -2242,33 +2262,6 @@ padding: 8px
                 </size>
                </property>
               </spacer>
-             </item>
-             <item row="9" column="2">
-              <widget class="QLineEdit" name="line_T_DC_INJECTION">
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="9" column="3">
-              <widget class="QLabel" name="units_T_DC_INJECTION">
-               <property name="text">
-                <string>hours</string>
-               </property>
-              </widget>
-             </item>
-             <item row="23" column="2">
-              <widget class="QCheckBox" name="cbox_savepos">
-               <property name="text">
-                <string>Save cell paths</string>
-               </property>
-              </widget>
              </item>
             </layout>
            </widget>
@@ -2390,7 +2383,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>450</x>
-              <y>240</y>
+              <y>260</y>
               <width>120</width>
               <height>18</height>
              </rect>
@@ -2403,7 +2396,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>450</x>
-              <y>270</y>
+              <y>290</y>
               <width>101</width>
               <height>18</height>
              </rect>

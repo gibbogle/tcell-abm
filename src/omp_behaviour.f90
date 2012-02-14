@@ -563,8 +563,9 @@ read(nfcell,*) TC_TO_DC						! number of T cells for every DC
 read(nfcell,*) DCrate_100k                  ! DC influx rate corresponding to NTcells0 = 100k
 read(nfcell,*) T_DC1                        ! Duration of constant DC influx (hours)
 read(nfcell,*) T_DC2                        ! Time of cessation of DC influx (hours)
-read(nfcell,*) dcsinjected					! select DC injection into experimental animals
-read(nfcell,*) T_DC_INJECTION				! Time of DC injection
+read(nfcell,*) DCsinjected					! select DC injection into experimental animals
+read(nfcell,*) DCinjectionfile				! file with schedule of DC injection
+!read(nfcell,*) T_DC_INJECTION				! Time of DC injection
 !read(nfcell,*) DC_FRACTION					! Fraction of DCs that are bearing antigen
 
 read(nfcell,*) usetraffic					! use T cell trafficking
@@ -619,7 +620,7 @@ else
 	IN_VITRO = .false.
 	IV_SHOW_NONCOGNATE = .false.
 endif
-if (dcsinjected == 1) then
+if (DCsinjected == 1) then
 	DC_INJECTION = .true.
 else
 	DC_INJECTION = .false.
@@ -732,10 +733,10 @@ divide_dist2%p1 = log(60*divide_mean2/exp(sigma*sigma/2))
 divide_dist2%p2 = sigma
 !write(*,*) 'divide_dist2: ',divide_dist2
 
-if (TC_TO_DC == 0) then
-    use_DC = .false.
-else
+if (TC_TO_DC > 0 .or. DC_INJECTION) then
     use_DC = .true.
+else
+    use_DC = .false.
 endif
 
 if (TC_COGNATE_FRACTION == 0 .or. .not.use_DC) then
@@ -816,7 +817,6 @@ call logger(logmsg)
 !endif
 
 call setup_dists
-
 !write(*,*) 'open resultfile: ',resultfile
 !open(nfres,file=resultfile,status='replace')
 !write(nfres,'(i3,a)') ntres,' ntres'
@@ -911,6 +911,64 @@ write(nfout,*) 'avidity_logscale: ',avidity_logscale
 write(nfout,*) 'avidity_min: ',avidity_min
 write(nfout,*) 'avidity_step: ',avidity_step
 
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Read the DC injection schedule file, determine the total number of DCs entering the LN
+! in the experiment.  The total for the simulation run is determined by scaling the
+! experiment total by the ratio of the initial T cell population numbers for the simulation
+! and the experiment.  The total NDCrun must then allocated to the hourly intervals in
+! the appropriate proportions.
+!-----------------------------------------------------------------------------------------
+subroutine setup_DCinjected
+integer :: nthours, NTCexpt, NDCexpt, ntimes, i, ihour, n, NDCrun, nsum, ndeficit
+real :: ratio
+integer, allocatable :: DCexpt(:)
+
+open(nfDC,file=DCinjectionfile,status='old')
+nthours = days*24 + 1
+allocate(DCinjected(nthours))
+allocate(DCexpt(nthours))
+DCinjected = 0
+DCexpt = 0
+read(nfDC,*) NTCexpt
+read(nfDC,*) T_DC_INJECTION
+read(nfDC,*) ntimes
+NDCexpt = 0
+do i = 1,ntimes
+	read(nfDC,*) ihour, n
+	if (ihour > nthours) exit
+	DCexpt(ihour) = n
+	NDCexpt = NDCexpt + n
+enddo
+close(nfDC)
+ratio = real(globalvar%NTcells0)/NTCexpt
+NDCrun = ratio*NDCexpt + 0.5
+write(logmsg,*) 'NTcells0, NTCexpt, ratio, NDCrun: ',globalvar%NTcells0,NTCexpt,ratio,NDCrun
+call logger(logmsg)
+nsum = 0
+do ihour = 1,nthours
+	DCinjected(ihour) = ratio*DCexpt(ihour) + 0.5
+	nsum = nsum + DCinjected(ihour)
+enddo
+ndeficit = NDCrun - nsum
+do ihour = 1,nthours
+	if (ndeficit == 0) exit
+	if (DCinjected(ihour) > 0) then
+		if (ndeficit > 0) then
+			DCinjected(ihour) = DCinjected(ihour) + 1
+			ndeficit = ndeficit - 1
+		elseif (ndeficit < 0) then
+			DCinjected(ihour) = DCinjected(ihour) - 1
+			ndeficit = ndeficit + 1
+		endif
+	endif
+enddo
+deallocate(DCexpt)
+do ihour = 1,nthours
+	write(logmsg,*) ihour,DCinjected(ihour)
+	call logger(logmsg)
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1269,11 +1327,9 @@ do i = 1,n
     DC%density = DCdensity(kpar)
     if (DC_INJECTION) then
         ! If the DCs were injected into an experimental animal, we need to account for the antigen decay since
-        ! the time of injection, which was at -T_DC_INJECTION hours
-        tmins = T_DC_INJECTION*60 + istep*DELTA_T
+        ! the time of injection, which was at T_DC_INJECTION hours
+        tmins = -T_DC_INJECTION*60 + istep*DELTA_T
         DC%density = DC%density*exp(-DCdecayrate*tmins)
-!        write(logmsg,'(a,i4,2f8.2)') 'Antigen density: ',idc,tmins,DC%density
-!		call logger(logmsg)
     endif
     DC%dietime = tnow + DClifetime(kpar)
     occupancy(site1(1),site1(2),site1(3))%indx(1) = -idc
@@ -1976,9 +2032,15 @@ if (IN_VITRO) then
 	nlist = IV_NTCELLS
 endif
 
+!
+! Note: Need to account for DCs with cognate and non-cognate antigen.
+! In the case of DC_INJECTION, there needs to be a distinction between the DCs initially
+! resident in the LN, and injected DCs.
+!
 globalvar%NDC = 0
 globalvar%NDCalive = 0
-if (use_DC) then   ! DC placement needs to be checked to account for SOI overlap
+if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI overlap
+!if (use_DC) then   ! DC placement needs to be checked to account for SOI overlap
     globalvar%NDC = DC_FACTOR*nlist/TC_TO_DC
     NDCtotal = globalvar%NDC
     if (globalvar%NDC > MAX_DC) then
@@ -2016,19 +2078,24 @@ if (use_DC) then   ! DC placement needs to be checked to account for SOI overlap
         DClist(idc)%ID = idc
         DClist(idc)%site = site
         DClist(idc)%nsites = 1
-        DClist(idc)%density = DCdensity(kpar)
-        if (DC_INJECTION) then
-            ! If the DCs were injected into an experimental animal, we need to account for the antigen decay since
-            ! the time of injection, which was at -T_DC_INJECTION hours
-            tmins = T_DC_INJECTION*60
-            DClist(idc)%density = DClist(idc)%density*exp(-DCdecayrate*tmins)
-!			write(logmsg,'(a,i4,2f8.2)') 'Antigen density: ',idc,tmins,DClist(idc)%density
-!		    call logger(logmsg)
-        endif
+! Changed the treatment of injected DCs.  Now assume that all DCs originally in the paracortex are non-cognate,
+! while the schedule of arriving DCs with peptide is read from an input file.
+!        if (DC_INJECTION) then
+!            ! If the DCs were injected into an experimental animal, we need to account for the antigen decay since
+!            ! the time of injection, which was at T_DC_INJECTION hours
+!            tmins = -T_DC_INJECTION*60
+!            DClist(idc)%density = DClist(idc)%density*exp(-DCdecayrate*tmins)
+!        endif
 	    DClist(idc)%dietime = tnow + DClifetime(kpar)
 	    DClist(idc)%alive = .true.
-	    DClist(idc)%capable = .true.
 	    DClist(idc)%stimulation = 0
+        if (DC_INJECTION) then
+		    DClist(idc)%capable = .false.
+	        DClist(idc)%density = 0
+        else
+		    DClist(idc)%capable = .true.
+	        DClist(idc)%density = DCdensity(kpar)
+		endif
     enddo
     globalvar%NDCalive = globalvar%NDC
     do idc = 1,globalvar%NDC

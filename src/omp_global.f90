@@ -149,7 +149,7 @@ integer, parameter :: OUTSIDE_TAG = -BIG_INT + 1
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 integer, parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
 integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, &
-						nftraffic = 16, nfrun = 17, nftravel = 18, nfcmgui = 19, nfpos = 20, nflog=21, nfchemo=22
+						nftraffic = 16, nfrun = 17, nftravel = 18, nfcmgui = 19, nfpos = 20, nflog=21, nfchemo=22, nfDC=23
 real, parameter :: BIG_TIME = 100000
 real, parameter :: BALANCER_INTERVAL = 10
 integer, parameter :: SCANNER_INTERVAL = 100
@@ -188,8 +188,8 @@ integer, parameter :: NDIFFSTEPS = 6    ! divisions of DELTA_T for diffusion com
 integer, parameter :: traffic_mode = TRAFFIC_MODE_2
 logical, parameter :: use_blob = .true.
 logical, parameter :: random_cognate = .false.          ! number of cognate seed cells is random or determined
-integer, parameter :: MMAX_GEN = 25     ! max number of generations (for array dimension only)
-integer, parameter :: NGEN_EXIT = 6     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
+integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
+integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of chemotactic influence (at r = chemo_radius)
 integer :: exit_rule = 1                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
 logical :: USE_S1P = .true.				! this is the default
@@ -244,14 +244,14 @@ integer, parameter :: n_multiple_runs = 1
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
+logical, parameter :: L_selectin = .true.				! T cell inflow is suppressed - to simulate Franca's experiment
 real, parameter :: DC_CHEMO_DELAY = 0.0					! there is also DC_BIND_DELAY
 
 ! Debugging parameters
 !logical, parameter :: dbug = .false.
 logical, parameter :: dbug_cog = .false.
 logical, parameter :: avid_debug = .false.
-logical, parameter :: debug_DCchemotaxis = .true.
+logical, parameter :: debug_DCchemotaxis = .false.
 integer, parameter :: CHECKING = 0
 integer :: idbug = 0
 
@@ -283,7 +283,7 @@ logical, parameter :: generate_exnode = .false.
 logical, parameter :: evaluate_stim_dist = .false.
 integer, parameter :: ntaglimit = 100000
 logical, parameter :: save_DCbinding = .false.
-logical, parameter :: track_DCvisits = .true.
+logical, parameter :: track_DCvisits = .false.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
 logical, parameter :: log_traffic = .true.
@@ -520,7 +520,7 @@ real :: IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 integer :: IV_NTCELLS					! initial T cell population in vitro
 real :: IV_COGNATE_FRACTION				! fraction of in vitro cells that are cognate for DC antigen
 logical :: IV_SHOW_NONCOGNATE = .false.	! display non-cognate T cells
-character*(64) :: fixedfile
+character*(128) :: fixedfile
 
 !---------------------------------------------------
 ! end of parameters to read from input file
@@ -613,6 +613,7 @@ type(cell_type), allocatable, target :: cellist(:)
 type(DC_type), allocatable :: DClist(:)
 integer, allocatable :: cognate_list(:)
 integer, allocatable :: DCdeadlist(:)
+integer, allocatable :: DCinjected(:)
 integer, allocatable :: gaplist(:)
 integer, allocatable :: zrange2D(:,:,:)	! for 2D case
 integer :: DCstack(-4:4,-4:4,3)			! for 2D case
@@ -636,6 +637,7 @@ real :: restime_tot
 real, allocatable :: Tres_dist(:)
 type(counter_type) :: avid_count,avid_count_total
 integer :: dcbind(0:50)
+logical :: firstSummary
 
 ! Travel time computation
 integer :: ntravel
@@ -699,6 +701,7 @@ real :: DC_LIFETIME_MEDIAN				! days
 character*(128) :: inputfile
 character*(128) :: outputfile
 !character*(128) :: resultfile
+character*(128) :: DCinjectionfile
 character*(2048) :: logmsg
 TYPE(winsockport) :: awp_0, awp_1, awp_2, awp_3
 logical :: use_TCP = .true.         ! turned off in para_main()
@@ -2160,9 +2163,14 @@ end subroutine
 ! It also must be scaled by the specified rate of occurrence of DCs, i.e. to
 ! take account of NT_TO_DC.  The value NT_TO_DC = 200 can be used as a baseline.
 ! THIS IS HARD_WIRED, NEEDS TO DEPEND ON STATE OF INFECTION IN THE TISSUE
+! In the case of DCs injected into experimental animals, the schedule of DCs
+! estimated to enter the paracortex in each hour is read from an input file.
+! The number of DCs entering is precomputed for each hour, scaled by the initial
+! T cell population.
 !--------------------------------------------------------------------------------
 integer function DCinflux(t1,t2,kpar)
 integer :: kpar
+integer :: ih1, ih2
 real :: t1, t2
 real :: rate, temp, dn
 real :: DCrate0
@@ -2171,29 +2179,39 @@ real, save :: dn_last = 0
 
 !write(logmsg,*) 'DCinflux: dn_last ',dn_last
 !call logger(logmsg)
-DCrate0 = DC_FACTOR*DCrate_100k*(globalvar%NTcells0/1.0e5)     ! DC influx is scaled by the initial T cell population
-!DCrate0 = DCrate0*(200./TC_TO_DC)                              ! and scaled by 1/TC_TO_DC (TRY CANCELLING THIS)
-if (t1 > T_DC2*60) then
-    DCinflux = 0
-    return
-elseif (t1 < T_DC1*60) then
-    rate = DCrate0      ! rate /min
+if (DC_INJECTION) then
+	ih1 = t1/60
+	ih2 = t2/60
+	if (ih1 < ih2) then
+		DCinflux = DCinjected(ih2)
+	else
+		DCinflux = 0
+	endif
 else
-    rate = DCrate0*(T_DC2 - t1/60)/(T_DC2 - T_DC1)
-endif
-if (RANDOM_DCFLUX) then
-    temp = rate*(t2-t1)
-    DCinflux = temp
-    dn = temp - DCinflux
-    R = par_uni(kpar)
-    if (R < dn) then
-        DCinflux = DCinflux + 1
-    endif
-else
-    ! Try making the DC influx deterministic
-    temp = rate*(t2-t1) + dn_last
-    DCinflux = temp
-    dn_last = temp - DCinflux
+	DCrate0 = DC_FACTOR*DCrate_100k*(globalvar%NTcells0/1.0e5)     ! DC influx is scaled by the initial T cell population
+	!DCrate0 = DCrate0*(200./TC_TO_DC)                              ! and scaled by 1/TC_TO_DC (TRY CANCELLING THIS)
+	if (t1 > T_DC2*60) then
+		DCinflux = 0
+		return
+	elseif (t1 < T_DC1*60) then
+		rate = DCrate0      ! rate /min
+	else
+		rate = DCrate0*(T_DC2 - t1/60)/(T_DC2 - T_DC1)
+	endif
+	if (RANDOM_DCFLUX) then
+		temp = rate*(t2-t1)
+		DCinflux = temp
+		dn = temp - DCinflux
+		R = par_uni(kpar)
+		if (R < dn) then
+			DCinflux = DCinflux + 1
+		endif
+	else
+		! Try making the DC influx deterministic
+		temp = rate*(t2-t1) + dn_last
+		DCinflux = temp
+		dn_last = temp - DCinflux
+	endif
 endif
 !write(logmsg,*) 'DC rate: ',rate,DCinflux,dn_last
 !call logger(logmsg)

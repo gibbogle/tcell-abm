@@ -179,11 +179,14 @@ max_ngaps = 5*NY*NZ
 ID_offset = BIG_INT/Mnodes
 nlist = 0
 MAX_COG = 0.5*NX*NY*NZ
-if (use_DC) then
+if (TC_TO_DC > 0) then
     MAX_DC = 5*(NX*NX*NX)/TC_TO_DC
 else
-    MAX_DC = 10
+	MAX_DC = 1000	! just a guess for DC injection case
 endif
+write(logmsg,*) 'Set MAX_DC = ',MAX_DC
+call logger(logmsg)
+
 allocate(zoffset(0:2*Mnodes))
 allocate(zdomain(NZ))
 allocate(xoffset(0:2*Mnodes))
@@ -1984,14 +1987,13 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
         if (dbug) write(nflog,*) 'balancer: removed DCs: nadd_total: ',nadd_total
     endif
     naddDC = 0
-    if (use_DC .and. use_DCflux) then    ! need to account for incoming DC
-        naddDC = DCinflux(lastbalancetime,tnow,kpar)
-        if (naddDC > 0) then
-!			write(*,*) 'add DCs: ',naddDC
-            call place_DCs(naddDC,nadded)
-            nadd_total = nadd_total + nadded*NDCsites
-            if (dbug) write(nflog,*) 'balancer: added DCs: NDCtotal: ',NDCtotal
-        endif
+    if (use_DC .and. use_DCflux) then    ! need to account for incoming DCs
+		naddDC = DCinflux(lastbalancetime,tnow,kpar)
+		if (naddDC > 0) then
+			call place_DCs(naddDC,nadded)
+			nadd_total = nadd_total + nadded*NDCsites
+			if (dbug) write(nflog,*) 'balancer: added DCs: NDCtotal: ',NDCtotal
+		endif
     endif
     if (dbug) write(nflog,*) 'nadd_total: ',nadd_total
     if (nadd_total > 0) then
@@ -2033,7 +2035,7 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     call growDC
 ! The cognate list is maintained at the time that a cell arrives or leaves
     if (globalvar%NTcells+globalvar%NDCalive*NDCsites /= globalvar%Nsites) then
-	    write(logmsg,'(a,3i6)') 'Error: balancer: cells /= sites: ', &
+	    write(logmsg,'(a,3i10)') 'Error: balancer: cells /= sites: ', &
 			globalvar%NTcells,globalvar%NDCalive,globalvar%Nsites
 	    call logger(logmsg)
 	    ok = .false.
@@ -3326,7 +3328,6 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-logical, save :: first = .true.
 integer :: kcell, ctype, stype, ncog(2), noncog, ntot, nbnd, stage, region, i, iseq, error
 integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
@@ -3337,9 +3338,9 @@ integer, allocatable :: div_gendist(:)  ! cells that are capable of dividing
 character*(6) :: numstr
 character*(256) :: msg
 
-if (first) then
+if (firstSummary) then
 	write(nfout,'(a)') "==========================================================================="
-	first = .false.
+	firstSummary = .false.
 endif
 ok = .true.
 allocate(gendist(TC_MAX_GEN))
@@ -4001,6 +4002,7 @@ call logger(logmsg)
 call logger("read_cell_params")
 call read_cell_params(ok)
 if (.not.ok) return
+call logger("did read_cell_params")
 
 !if (compute_travel_time .and. .not.IN_VITRO) then
 !	call set_travel_params
@@ -4011,6 +4013,7 @@ ndivisions = 0
 call CD69_setparameters(K1_S1P1,K2_S1P1,K1_CD69,K2_CD69)
 call array_initialisation(ok)
 if (.not.ok) return
+call logger('did array_initialisation')
 
 if (calibrate_motility) then
 	use_DC = .false.
@@ -4023,6 +4026,7 @@ if (log_traffic) then
 endif
 
 call place_cells(ok)
+call logger('did place_cells')
 
 if (.not.ok) return
 
@@ -4074,6 +4078,9 @@ endif
 !write(*,*) 'nlist: ',nlist
 
 if (use_DC) then
+	if (DC_INJECTION) then
+		call setup_DCinjected 
+	endif
 	call update_DCstate(ok)
 	if (.not.ok) return
 endif
@@ -4096,7 +4103,7 @@ if (save_input) then
     call save_parameters
 	call save_inputfile(fixedfile)
 endif
-
+firstSummary = .true.
 initialized = .true.
 
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',globalvar%NTcells0
@@ -4145,6 +4152,7 @@ if (allocated(xminmax)) deallocate(xminmax)
 if (allocated(inblob)) deallocate(inblob)
 if (allocated(sitelist)) deallocate(sitelist)
 if (allocated(neighbours)) deallocate(neighbours)
+if (allocated(DCinjected)) deallocate(DCinjected)
 
 ! Close all open files
 inquire(unit=nfout,OPENED=isopen)
