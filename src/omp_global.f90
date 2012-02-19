@@ -244,7 +244,7 @@ integer, parameter :: n_multiple_runs = 1
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
 logical, parameter :: turn_off_chemotaxis = .false.		! to test the chemotaxis model when cells are not attracted to exits
-logical, parameter :: L_selectin = .true.				! T cell inflow is suppressed - to simulate Franca's experiment
+logical, parameter :: L_selectin = .false.				! T cell inflow is suppressed - to simulate Franca's experiment
 real, parameter :: DC_CHEMO_DELAY = 0.0					! there is also DC_BIND_DELAY
 
 ! Debugging parameters
@@ -264,8 +264,8 @@ real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
 ! of the tagged cells?
 logical, parameter :: TAGGED_EXIT_CHEMOTAXIS = .false.	! ==> evaluate_residence_time = .true.
 logical, parameter :: evaluate_residence_time = .false.
-integer, parameter :: istep_res1 = 5000
-integer, parameter :: istep_res2 = istep_res1 + 50000
+integer, parameter :: istep_res1 = 4*60*24*3			! 3 days (was 5000)
+integer, parameter :: istep_res2 = istep_res1 + 4*60*24	! 1 day of tagging
 
 ! To investigate the effect of chemotaxis on DC contacts.
 ! The situation to be simulated is one in which most cells are not subject to DC chemotaxis,
@@ -283,7 +283,7 @@ logical, parameter :: generate_exnode = .false.
 logical, parameter :: evaluate_stim_dist = .false.
 integer, parameter :: ntaglimit = 100000
 logical, parameter :: save_DCbinding = .false.
-logical, parameter :: track_DCvisits = .false.
+logical, parameter :: track_DCvisits = .true.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
 logical, parameter :: log_traffic = .true.
@@ -718,6 +718,10 @@ real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
 real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
 real :: EGRESS_SUPPRESSION_RAMP = 6		! hours
 real :: INLET_R_FRACTION = 0.7			! fraction of blob radius within which ingress occurs
+logical :: RELAX_INLET_EXIT_PROXIMITY = .true.	! override INLET_R_FRACTION, allow inlet closer to exits
+real :: INLET_LAYER_THICKNESS = 5		! if RELAX_INLET_EXIT_PROXIMITY, inlets are within this distance of the blob boundary
+real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines how close an inlet point can be to an exit portal.
+real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
 ! PERIPHERY parameters
 logical, parameter :: SIMULATE_PERIPHERY = .true.
@@ -1365,10 +1369,10 @@ globalvar%InflowTotal = inflow
 !else
     globalvar%OutflowTotal = outflow
 !endif
-!if (mod(istep,240) == 0) then
-!	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
-!	call logger(logmsg)
-!endif
+if (mod(istep,240) == 0) then
+	write(logmsg,*) 'generate_traffic: inflow: ',inflow0,globalvar%Vascularity,globalvar%InflowTotal
+	call logger(logmsg)
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2383,6 +2387,17 @@ real :: tnow, t
 if (turn_off_chemotaxis) then
     chemo_active_exit = 0
     return
+endif
+
+if (RELAX_INLET_EXIT_PROXIMITY) then
+    tnow = istep*DELTA_T
+    t = tnow - cell%entrytime
+    if (t > CHEMO_K_RISETIME) then
+		chemo_active_exit = 1
+	else
+		chemo_active_exit = t/CHEMO_K_RISETIME
+	endif
+	return
 endif
 
 if (TAGGED_EXIT_CHEMOTAXIS) then

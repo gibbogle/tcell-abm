@@ -666,7 +666,12 @@ if ((exit_region == EXIT_EVERYWHERE .or. exit_region == EXIT_LOWERHALF) .and.  &
 	ok = .false.
 	return
 endif
-
+if (DC_INJECTION .and. .not.L_selectin) then
+	write(logmsg,*) 'Error: DC_INJECTION requires L_selectin'
+	call logger(logmsg)
+	ok = .false.
+	return
+endif
 call read_fixed_params(ok)
 if (.not.ok) then
 	write(logmsg,'(a,a)') 'Error reading fixed input data file: ',fixedfile
@@ -2377,6 +2382,13 @@ if (FIXED_NEXITS) then
 	x = globalvar%NTcells0/1000
 	exit_fraction = (a*x**2 + b*x + c)*24/residence_time
 	requiredExitPortals = exit_fraction*globalvar%NTcells0**pow + 0.5
+elseif (RELAX_INLET_EXIT_PROXIMITY) then	! just for ncells = 100k
+	x = ncells/1000
+	Fe = 2.50E-03*x**3.595E-01		! power law fit (8 points, 51k - 1.1m cells)
+	exit_fraction = Fe*24.0/residence_time
+	requiredExitPortals = K_Ke*exit_fraction*ncells**pow + 0.5 
+!	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction 
+!	call logger(logmsg)
 else
 	x = ncells/1000
 !	Fe = (a*x**2 + b*x + c)

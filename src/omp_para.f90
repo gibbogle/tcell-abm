@@ -1435,6 +1435,27 @@ endif
 end function
 
 !-----------------------------------------------------------------------------------------
+! If RELAX_INLET_EXIT_PROXIMITY ingress locations are restricted to a layer near the
+! blob surface, of thickness INLET_LAYER_THICKNESS.  The distance from an exit portal
+! must not be less than INLET_EXIT_LIMIT.
+!-----------------------------------------------------------------------------------------
+logical function inletOK(site)
+integer :: site(3)
+real :: d
+
+d = cdistance(site)
+if (globalvar%radius - d > INLET_LAYER_THICKNESS) then
+	inletOK = .false.
+	return
+endif
+if (tooNearExit(site,INLET_EXIT_LIMIT)) then
+	inletOK = .false.
+	return
+endif
+inletOK = .true.
+end function
+
+!-----------------------------------------------------------------------------------------
 ! This version aims to determine outflow on the basis of the number of exit sites (which
 ! depends on NTcells) and on how many cells arrive at the exits, which also involves the
 ! calibration parameter chemo_K_exit and possibly another.
@@ -1536,9 +1557,13 @@ do while (k < node_inflow)
     R = par_uni(kpar)
     z = 1 + R*NZ
     site = (/x,y,z/)
-    if (cdistance(site) > INLET_R_FRACTION*globalvar%radius) cycle		! TEST with 0.7
     indx = occupancy(x,y,z)%indx
     if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
+    if (RELAX_INLET_EXIT_PROXIMITY) then
+		if (.not.inletOK(site)) cycle
+    else
+		if (cdistance(site) > INLET_R_FRACTION*globalvar%radius) cycle
+	endif
     if (indx(1) == 0 .or. indx(2) == 0) then
 !        site = (/x,y,z/)
         if (evaluate_residence_time) then
@@ -3027,10 +3052,13 @@ if (revisit(kcell,idc)) then
 	cell%revisits = cell%revisits + 1
 else
 	Nvisits = Nvisits + 1
-	cell%visits = cell%visits + 1		! distinct DC visits
+	cell%visits = cell%visits + 1		! distinct DC visits 
 	cell%ndclist = cell%ndclist + 1
 	cell%dclist(cell%ndclist) = idc
 endif
+!write(logmsg,*) 'DC visit: ',kcell,idc
+!call logger(logmsg)
+write(*,*) "No good!"
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -3112,6 +3140,7 @@ write(nfout,'(a,f6.3)') 'chemo_K_exit:            ',chemo_K_exit
 write(nfout,'(a,f6.3)') '  K1_S1P1:               ',K1_S1P1
 write(nfout,'(a,3i8)') 'Results: noutflow_tag, ninflow_tag,kmax: ',noutflow_tag,ninflow_tag,kmax
 write(nfout,'(a,f6.1)') 'Residence time: ',Tres
+!write(nfout,'(a,f6.1)') 'Residence time from restime_tot: ',restime_tot/60.
 write(nfout,'(a)') ' Hour   Probability'
 do k = 1,kmax
     write(nfout,'(f6.1,e12.4)') k-0.5,Tres_dist(k)/noutflow_tag
@@ -4040,7 +4069,11 @@ endif
 check_inflow = 0
 check_egress = 0
 last_portal_update_time = -999
-
+if (evaluate_residence_time .and. track_DCvisits) then
+	call logger('ERROR: evaluate_residence_time and track_DCvisits cannot both be true')
+	ok = .false.
+	return
+endif
 if (use_exit_chemotaxis .or. use_DC_chemotaxis) then
 	call chemo_setup
 endif
