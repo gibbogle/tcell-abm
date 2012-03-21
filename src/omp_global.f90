@@ -144,12 +144,13 @@ integer, parameter :: COG_CD8_TAG  = 3
 integer, parameter :: COG_TREG_TAG  = 4
 integer, parameter :: TAGGED_CELL = 100
 integer, parameter :: RES_TAGGED_CELL = 101
+integer, parameter :: CHEMO_TAGGED_CELL = 102
 integer, parameter :: OUTSIDE_TAG = -BIG_INT + 1
 
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 integer, parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
-integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, &
-						nftraffic = 16, nfrun = 17, nftravel = 18, nfcmgui = 19, nfpos = 20, nflog=21, nfchemo=22, nfDC=23
+integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, nftraffic = 16, nfrun = 17, &
+					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nfDC=23
 real, parameter :: BIG_TIME = 100000
 real, parameter :: BALANCER_INTERVAL = 10
 integer, parameter :: SCANNER_INTERVAL = 100
@@ -255,7 +256,7 @@ logical, parameter :: debug_DCchemotaxis = .false.
 integer, parameter :: CHECKING = 0
 integer :: idbug = 0
 
-real, parameter :: TAGGED_CHEMO_FRACTION = 0.02		! was 0.1 for exit chemotaxis
+real, parameter :: TAGGED_CHEMO_FRACTION = 0.1		! was 0.1 for exit chemotaxis
 real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
 
 ! To investigate the effect of chemotaxis on residence time.
@@ -275,6 +276,28 @@ logical, parameter :: TAGGED_DC_CHEMOTAXIS = .false.
 real, parameter :: CHEMO_DC_TAG = 1.0
 integer, parameter :: istep_DCvisits = 30*60	! 30 hours delay before counting visits
 
+! To investigate how chemotaxis influences T cell paths.
+! Set up a single exit at the centre of the blob.  Tag cells starting at a specified distance from the exit,
+! and log their paths until they exit.  Cells are either chemotactic or not.
+logical, parameter :: TAGGED_LOG_PATHS = .true.
+integer, parameter :: MAX_LOG_PATHS = 100		! number of paths to track for non-chemo (1) and chemo (2) cells
+integer, parameter :: MAX_LOG_PATH_SITES = 1000		! max number of tracking start locations
+!integer :: log_path_list(MAX_LOG_PATHS,2)		! lists of IDs of tracked cells
+integer :: log_path_site(3,MAX_LOG_PATH_SITES)		! list of tracking start locations
+integer :: n_log_path_sites						! number of tracking start locations
+integer :: n_log_path(2)						! current numbers of cells being tracked
+real, parameter :: R_LOG_PATH = 7				! distance of start location from exit
+real, parameter :: LOG_PATH_FACTOR = 0.11		! inflow factor for a single exit (depends on blob size, 18.1 -> 0.11)
+integer, parameter :: MAX_PATH_STEPS = 10000	! maximum number of steps to log on a path
+type path_type
+	integer :: kcell					! cell number
+	integer :: id						! cell ID
+	integer :: kstep					! number of last location logged (kstep = 1 is the start location)
+	logical :: in						! flag for cell in the blob
+	integer :: pos(3,MAX_PATH_STEPS)	! sequence of cell locations
+end type
+type (path_type) :: log_path(MAX_LOG_PATHS,2)
+
 ! Parameters for controlling data capture for graphical purposes
 logical, parameter :: save_pos_cmgui = .false.          ! To make movies
 integer, parameter :: save_interval_hours = 48
@@ -283,7 +306,7 @@ logical, parameter :: generate_exnode = .false.
 logical, parameter :: evaluate_stim_dist = .false.
 integer, parameter :: ntaglimit = 100000
 logical, parameter :: save_DCbinding = .false.
-logical, parameter :: track_DCvisits = .true.
+logical, parameter :: track_DCvisits = .false.
 integer, parameter :: ntres = 60    ! 15 min
 logical, parameter :: log_results = .false.
 logical, parameter :: log_traffic = .true.
@@ -718,7 +741,7 @@ real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
 real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
 real :: EGRESS_SUPPRESSION_RAMP = 6		! hours
 real :: INLET_R_FRACTION = 0.7			! fraction of blob radius within which ingress occurs
-logical :: RELAX_INLET_EXIT_PROXIMITY = .true.	! override INLET_R_FRACTION, allow inlet closer to exits
+logical :: RELAX_INLET_EXIT_PROXIMITY = .false.	! override INLET_R_FRACTION, allow inlet closer to exits
 real :: INLET_LAYER_THICKNESS = 5		! if RELAX_INLET_EXIT_PROXIMITY, inlets are within this distance of the blob boundary
 real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines how close an inlet point can be to an exit portal.
 real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
@@ -822,6 +845,17 @@ r = site - Centre
 cdistance = norm(r)
 end function
 
+!-----------------------------------------------------------------------------------------
+! Distance from the iexit exit (units = grids)
+!-----------------------------------------------------------------------------------------
+real function ExitDistance(site,iexit)
+integer :: site(3),iexit
+real :: r(3)
+
+r = site - exitlist(iexit)%site
+ExitDistance = norm(r)
+end function
+
 !--------------------------------------------------------------------------------
 ! A site is taggable if it is less than a specified distance TagRadius from
 ! the centre.
@@ -846,7 +880,7 @@ integer function struct_type(ctype)
 integer :: ctype
 
 select case(ctype)
-case(NONCOG_TYPE_TAG,TAGGED_CELL,RES_TAGGED_CELL)
+case(NONCOG_TYPE_TAG,TAGGED_CELL,RES_TAGGED_CELL,CHEMO_TAGGED_CELL)
     struct_type = NONCOG_TYPE_TAG
 case(COG_CD4_TAG,COG_CD8_TAG)
     struct_type = COG_TYPE_TAG
@@ -1281,6 +1315,11 @@ end function
 subroutine set_globalvar
 real :: inflow0
 
+if (TAGGED_LOG_PATHS) then
+	globalvar%InflowTotal = LOG_PATH_FACTOR*globalvar%NTcells0*DELTA_T/(residence_time*60)
+	globalvar%OutflowTotal = globalvar%InflowTotal
+	return
+endif
 if (IN_VITRO) then
 	globalvar%InflowTotal = 0
 	globalvar%OutflowTotal = 0
@@ -2406,6 +2445,15 @@ if (TAGGED_EXIT_CHEMOTAXIS) then
     if (cell%ctype == RES_TAGGED_CELL) then     ! testing effect of S1P1
         chemo_active_exit = (1 - exp(-K1_S1P1*t))*TAGGED_CHEMO_ACTIVITY
     else
+		chemo_active_exit = 0
+	endif
+	return
+endif
+
+if (TAGGED_LOG_PATHS) then
+	if (cell%ctype == CHEMO_TAGGED_CELL) then
+		chemo_active_exit = CHEMO_K_EXIT
+	else
 		chemo_active_exit = 0
 	endif
 	return

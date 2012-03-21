@@ -118,6 +118,7 @@ if (compute_travel_time) then
 	close(nftravel)
 	stop
 endif
+
 write(*,*) 'call execute'
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call get_dimensions(NX,NY,NZ,Nsteps)
@@ -129,14 +130,15 @@ do jstep = 1,Nsteps
 	endif
 	if (mod(jstep,240) == 0) then
 		call get_summary(summarydata)
-!summaryData(1:12) = (/istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,teffgen,nbnd,int(globalvar%InflowTotal),globalvar%Nexits/)
-		hour = summaryData(1)/240
-		ntot = summaryData(4)
-		ncog(1:2) = summaryData(6:7)
+!summaryData(1:13) = (/int(tnow/60),istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,	nbnd,int(globalvar%InflowTotal),globalvar%Nexits, teffgen/)
+		hour = summaryData(1)
+		ntot = summaryData(5)
+		ncog(1:2) = summaryData(7:8)
 		inflow = summaryData(11)
 		nexits = summaryData(12)
 		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', nexits		
 	endif
 enddo
+call terminate_run(0)
 end
 

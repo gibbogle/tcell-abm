@@ -21,7 +21,7 @@ integer :: fullslots1,fullslots2,site1(3),site2(3),kslot2,stype
 integer :: irel,dir1,lastdir1,indx2(2),k,z
 integer :: savesite2(3,MAXRELDIR), saveslots2(MAXRELDIR)
 integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
-real(DP) :: psum, p(MAXRELDIR), R, pR, psumm 
+real(DP) :: psum, p(MAXRELDIR+1), R, pR, psumm 
 
 cell => cellist(kcell)
 site1 = cell%site

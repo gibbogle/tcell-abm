@@ -2378,7 +2378,9 @@ real, parameter :: K_Ke = 1.0		! 0.68 for Ke = 1.0, 1.0 for Ke = 0.0 (Pe = 0.02)
 !	c = c_nochemo_12h
 !	base_exit_prob = 1.0
 !endif
-if (FIXED_NEXITS) then
+if (TAGGED_LOG_PATHS) then
+	requiredExitPortals = 1
+elseif (FIXED_NEXITS) then
 	x = globalvar%NTcells0/1000
 	exit_fraction = (a*x**2 + b*x + c)*24/residence_time
 	requiredExitPortals = exit_fraction*globalvar%NTcells0**pow + 0.5
@@ -2425,6 +2427,15 @@ logical :: testing = .false.
 !    write(*,*) 'Error: placeExits: not EXIT_CHEMOTAXIS'
 !    stop
 !endif
+if (TAGGED_LOG_PATHS) then
+	Nex = 1
+    max_exits = 10*Nex
+    allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
+    globalvar%Nexits = 1
+    site = Centre
+	call placeExitPortal(1,site)
+	return
+endif
 if (testing) then
     globalvar%lastexit = 1
     globalvar%Nexits = globalvar%lastexit
@@ -2435,7 +2446,6 @@ else
     globalvar%lastexit = 0
     globalvar%Nexits = 0
     if (use_traffic) then
-!        Nex = exit_fraction*globalvar%NTcells0
 		Nex = requiredExitPortals(globalvar%NTcells0)
         max_exits = 10*Nex
         write(logmsg,*) 'NTcells0, Nex, max_exits: ',globalvar%NTcells0,Nex,max_exits
@@ -2483,20 +2493,8 @@ subroutine addExitPortal
 integer :: site(3)
 integer :: iexit
 
-if (istep >= 10320) then
-	write(logmsg,*) 'addExitPortal: choosePortalSite'
-	call logger(logmsg)
-endif
 call choosePortalSite(site)
-if (istep >= 10320) then
-	write(logmsg,*) 'did choosePortalSite: ',site
-	call logger(logmsg)
-endif
 call getExitNum(iexit)
-if (istep >= 10320) then
-	write(logmsg,*) 'did getExitNum: ',iexit
-	call logger(logmsg)
-endif
 globalvar%Nexits = globalvar%Nexits + 1
 if (globalvar%lastexit > max_exits) then
 	write(logmsg,*) 'Error: addExitPortal: too many exits: need to increase max_exits: ',max_exits
@@ -2504,10 +2502,6 @@ if (globalvar%lastexit > max_exits) then
 	stop
 endif
 call placeExitPortal(iexit,site)
-if (istep >= 10320) then
-	write(logmsg,'(a,6i6)') 'addExitPortal: placeExitPortal: ',istep,iexit,site,globalvar%Nexits
-	call logger(logmsg)
-endif
 end subroutine
 
 !---------------------------------------------------------------------

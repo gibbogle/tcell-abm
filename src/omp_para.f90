@@ -565,7 +565,7 @@ end function
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
 subroutine motility_calibration
-integer :: ic,id,k,ds(3),isub
+integer :: ic,id,k,ds(3), imin,isub
 integer :: NTcells, nvar0, nvar, ntime2
 integer :: ns = 10000
 integer :: npaths = 20
@@ -692,8 +692,10 @@ do ibeta = 1,nbeta
             write(nfpath,'(i3,a)') npaths,' paths'
         endif
 
-        do istep = 1,nvar
+		istep = 0
+        do imin = 1,nvar
             do isub = 1,nsteps_per_min
+				istep = istep + 1
                 call mover(ok)
                 if (.not.ok) stop
                 if (.not.IN_VITRO) then
@@ -706,20 +708,20 @@ do ibeta = 1,nbeta
                     ssum = ssum + d*DELTA_X/DELTA_T
                 enddo
                 if (motility_save_paths) then
-                    k = (istep-1)*nsteps_per_min + isub
+                    k = (imin-1)*nsteps_per_min + isub
                     if (k >= nvar0*nsteps_per_min .and. k < nvar0*nsteps_per_min + npos) then
                         write(nfpath,'(160i4)') (cellist(pathcell(kpath))%site(1:2),kpath=1,npaths)
                     endif
                 endif
             enddo
-            write(*,*) 'speed: ',ssum/(ns*nsteps_per_min*istep)
+            write(*,*) 'speed: ',ssum/(ns*nsteps_per_min*imin)
 
             do ic = 1,nlist
                 cell = cellist(ic)
                 if (cell%ctype == TAGGED_CELL) then
                     id = cell%ID
                     k = tagseq(id)
-                    tagsite(:,k,istep) = cell%site
+                    tagsite(:,k,imin) = cell%site
 !                   if (k < 20) write(*,*) 'site: ',cell%ID,cell%site
                 endif
             enddo
@@ -1496,7 +1498,7 @@ region = LYMPHNODE
 !exit_prob = 0.1*24/RESIDENCE_TIME	! factor of 0.1 is OK for CHEMO_K_EXIT = 1.0
 exit_prob = base_exit_prob
 
-node_inflow = globalvar%InflowTotal
+node_inflow = globalvar%InflowTotal	
 node_outflow = globalvar%OutflowTotal
 df = globalvar%InflowTotal - node_inflow
 R = par_uni(kpar)
@@ -1725,6 +1727,14 @@ do ipermex = 1,globalvar%lastexit
 								write(nfchemo,*) 'Tagged T cell has left'
 								write(logmsg,*) 'Tagged T cell has left'
 								call logger(logmsg)
+							endif
+						endif
+						if (TAGGED_LOG_PATHS) then
+							ctype = cellist(kcell)%ctype
+							if (ctype == TAGGED_CELL) then
+								call end_log_path(kcell,1)
+							elseif (ctype == CHEMO_TAGGED_CELL) then
+								call end_log_path(kcell,2)
 							endif
 						endif
 						if (ne == node_outflow .and. computed_outflow) exit
@@ -2274,6 +2284,7 @@ real :: u(3)
 integer :: nout
 logical :: ok
 
+if (TAGGED_LOG_PATHS) return
 !write(*,*) 'adjustExits'
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
@@ -2342,6 +2353,7 @@ real :: u(3), jump(3), proj, pmin, pmax
 integer :: nin1, nin2
 logical :: ok
 
+if (TAGGED_LOG_PATHS) return
 !write(*,*) 'adjustExits'
 do iexit = 1,globalvar%lastexit
     if (exitlist(iexit)%ID == 0) cycle
@@ -3228,6 +3240,185 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! When TAGGED_LOG_PATHS
+! Set up a list of all sites at the approx distance R_LOG_PATH from the single exit location.
+!-----------------------------------------------------------------------------------------
+subroutine setup_log_path_sites
+integer :: x, y, z, idel, site(3), k, indx(2), kcell, id, ic, kpar=0
+real :: d
+real(DP) :: R
+
+k = 0
+idel = R_LOG_PATH + 1
+do x = Centre(1)-idel,Centre(1)+idel
+	do y = Centre(2)-idel,Centre(2)+idel
+		do z = Centre(3)-idel,Centre(3)+idel
+			site = (/x,y,z/)
+			d = ExitDistance(site,1)
+			if (abs(d-R_LOG_PATH) < 0.5) then
+				if (k < MAX_LOG_PATH_SITES) then
+					k = k+1
+					log_path_site(:,k) = site
+				endif
+			endif
+		enddo
+	enddo
+enddo
+n_log_path_sites = k
+write(*,*) 'Number of log_path start sites: ',n_log_path_sites
+n_log_path = 0
+do k = 1,n_log_path_sites
+	site = log_path_site(:,k)
+	indx = occupancy(site(1),site(2),site(3))%indx
+	if (indx(1) > 0) then
+		kcell = indx(1)
+		id = cellist(kcell)%id
+		R = par_uni(kpar)
+		if (R < TAGGED_CHEMO_FRACTION) then
+			ic = 2
+		else
+			ic = 1
+		endif
+		if (n_log_path(ic) < MAX_LOG_PATHS) then
+			n_log_path(ic) = n_log_path(ic)+1
+			log_path(n_log_path(ic),ic)%kcell = kcell
+			log_path(n_log_path(ic),ic)%id = id
+			log_path(n_log_path(ic),ic)%kstep = 1
+			log_path(n_log_path(ic),ic)%in = .true.
+			log_path(n_log_path(ic),ic)%pos(:,1) = site
+			if (ic == 1) then
+				cellist(kcell)%ctype = TAGGED_CELL
+			else
+				cellist(kcell)%ctype = CHEMO_TAGGED_CELL
+			endif
+		endif
+	endif
+enddo
+write(*,*) 'n_log_path: ',n_log_path
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine add_log_paths
+integer :: k, site(3), indx(2), kcell, id, ic, ctype, nc(2), kpar=0
+real(DP) :: R
+
+if (n_log_path(1) == MAX_LOG_PATHS .and. n_log_path(2) == MAX_LOG_PATHS) then
+	nc = 0
+	do ic = 1,2
+		do k = 1,n_log_path(ic)
+			if (log_path(k,ic)%in .and. log_path(k,ic)%kstep < MAX_PATH_STEPS) then
+				nc(ic) = nc(ic) + 1
+			endif
+		enddo
+	enddo
+	write(*,*) 'add_log_paths: active paths: ',nc
+	return
+endif
+do k = 1,n_log_path_sites
+	site = log_path_site(:,k)
+	indx = occupancy(site(1),site(2),site(3))%indx
+	if (indx(1) > 0) then
+		kcell = indx(1)
+		ctype = cellist(kcell)%ctype
+		if (ctype == TAGGED_CELL .or. ctype == CHEMO_TAGGED_CELL) cycle
+		id = cellist(kcell)%id
+		R = par_uni(kpar)
+		if (R < TAGGED_CHEMO_FRACTION) then
+			ic = 2
+		else
+			ic = 1
+		endif
+		if (n_log_path(ic) < MAX_LOG_PATHS) then
+			n_log_path(ic) = n_log_path(ic)+1
+			log_path(n_log_path(ic),ic)%kcell = kcell
+			log_path(n_log_path(ic),ic)%id = id
+			log_path(n_log_path(ic),ic)%in = .true.
+			log_path(n_log_path(ic),ic)%kstep = 1
+			log_path(n_log_path(ic),ic)%pos(:,1) = site
+			if (ic == 1) then
+				cellist(kcell)%ctype = TAGGED_CELL
+			else
+				cellist(kcell)%ctype = CHEMO_TAGGED_CELL
+			endif
+		endif
+	endif
+enddo
+write(*,*) 'add_log_paths: ',n_log_path
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine update_log_paths
+integer :: ic, k, kcell, nc(2), site(3)
+
+nc = 0
+do ic = 1,2
+	do k = 1,n_log_path(ic)
+		if (log_path(k,ic)%in .and. log_path(k,ic)%kstep < MAX_PATH_STEPS) then
+			nc(ic) = nc(ic) + 1
+			kcell = log_path(k,ic)%kcell
+			site = cellist(kcell)%site
+			log_path(k,ic)%kstep = log_path(k,ic)%kstep + 1
+			log_path(k,ic)%pos(:,log_path(k,ic)%kstep) = site
+			if (ic == 2 .and. k == 7) write(*,'(7i6,f5.1)') istep,ic,kcell,log_path(k,ic)%kstep,site,ExitDistance(site,1)
+		endif
+	enddo
+enddo
+if (nc(2) == 0) then
+	write(*,*) 'update_log_paths: all chemo cells have exited'
+	call terminate_run(0)
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine end_log_path(kcell,ic)
+integer :: kcell, ic
+integer :: k
+logical :: found
+
+found = .false.
+do k = 1,n_log_path(ic)
+	if (log_path(k,ic)%kcell == kcell) then
+		log_path(k,ic)%in = .false.
+		found = .true.
+		exit
+	endif
+enddo
+if (.not.found) then
+	write(*,*) 'Error: end_log_path: cell not found: ',kcell,ic
+	stop
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine write_log_paths
+character*(32) :: fname
+real :: d(MAX_LOG_PATHS), r(3)
+integer :: kstep, ic, k
+logical :: done
+
+write(*,*) 'Enter filename for paths'
+read(*,'(a)') fname
+open(nfpath,file=fname,status='replace')
+do kstep = 1,MAX_PATH_STEPS
+	ic = 2
+	d = 0
+	done = .true.
+	do k = 1,MAX_LOG_PATHS
+		if (kstep > log_path(k,ic)%kstep) cycle
+		done = .false.
+		d(k) = max(0.5,ExitDistance(log_path(k,ic)%pos(:,kstep),1))
+	enddo
+	write(nfpath,'(i6,100f5.1)') kstep,d
+	if (done) exit
+enddo
+close(nfpath)	
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 ! Various logging counters are initialized here.
 !-----------------------------------------------------------------------------------------
 subroutine init_counters
@@ -3520,9 +3711,9 @@ summaryData(1:13) = (/int(tnow/60),istep,globalvar%NDCalive,nact,ntot,ncogseed,n
 	nbnd,int(globalvar%InflowTotal),globalvar%Nexits, teffgen/)
 write(nflog,*) 'ndivisions = ',ndivisions
 
-write(logmsg,'(a,i5,a,2i4,i6,i8,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),globalvar%NTcells
+!write(logmsg,'(a,i5,a,2i4,i6,i8,100i4)') 'In: ',check_inflow,' Out: ',globalvar%nexits,globalvar%lastexit,sum(check_egress),globalvar%NTcells
 	!,(check_egress(i),i=1,globalvar%lastexit)
-call logger(logmsg)
+!call logger(logmsg)
 check_inflow = 0
 check_egress = 0
 end subroutine
@@ -3781,13 +3972,9 @@ if (dbug) then
 	call logger(logmsg)
 endif
 
-!if (istep > 25900) then
-!	write(logmsg,*) 'exit #10: ',istep,exitlist(10)%site,exitlist(5)%site
-!	call logger(logmsg)
-!endif
 if (mod(istep,240) == 0) then
-	call checkExits("simulate_step")
-	call checkExitSpacing("simulate_step")
+!	call checkExits("simulate_step")
+!	call checkExitSpacing("simulate_step")
     globalvar%Radius = (globalvar%NTcells*3/(4*PI))**0.33333
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, globalvar%NTcells, globalvar%Nexits, total_in, total_out, &
@@ -3795,6 +3982,12 @@ if (mod(istep,240) == 0) then
     endif
     total_in = 0
     total_out = 0
+    if (TAGGED_LOG_PATHS) then
+		call add_log_paths
+	endif
+endif
+if (TAGGED_LOG_PATHS .and. mod(istep,1) == 0) then
+	call update_log_paths
 endif
 if (mod(istep,240*12) == 1) then
 	call displayExits
@@ -3886,13 +4079,7 @@ if (.not.ok) then
 	res = 1
 	return
 endif
-!if (istep > 25900) then
-!	write(logmsg,*) 'did balancer: exit #10: ',exitlist(10)%site,exitlist(5)%site
-!	call logger(logmsg) 
-!endif
-!if (dbug) write(nflog,*) 'call set_globalvar'
 call set_globalvar
-!if (dbug) write(nflog,*) 'did set_globalvar'
 
 end subroutine
 
@@ -4128,9 +4315,10 @@ if (.not.IN_VITRO) then
 	call scanner
 endif
 call init_counters
-!    call arrayview(NX)
-!    read(*,*)
-!    stop
+if (TAGGED_LOG_PATHS) then
+	write(*,*) 'Exit site: ',exitlist(1)%site, Centre
+	call setup_log_path_sites
+endif
 if (save_input) then
     call save_inputfile(inputfile)
     call save_parameters
@@ -4223,6 +4411,9 @@ if (evaluate_residence_time) then
 endif
 if (track_DCvisits) then
 	call write_DCvisit_dist
+endif
+if (TAGGED_LOG_PATHS) then
+	call write_log_paths
 endif
 call wrapup
 
