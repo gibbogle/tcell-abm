@@ -45,14 +45,15 @@ typedef bond_pos BOND_POS;
 class MyVTK
 {
 public:
-	MyVTK(QWidget *);
+    MyVTK(QWidget *, QWidget *);
 	~MyVTK();
 
+    void test_canvas(QWidget *test_page);
 	void read_cell_positions(QString, QString, bool);
 	void get_cell_positions(bool fast);
 	void init();
 	void cleanup();
-	void renderCells(bool,bool);
+    void renderCells(bool);
     void process_Tcells();
     void process_Dcells(bool);
     void process_bonds();

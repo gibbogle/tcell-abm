@@ -132,13 +132,13 @@ ExecThread::ExecThread(QString infile)
 //-----------------------------------------------------------------------------------------
 void ExecThread::run()
 {
-	LOG_MSG("Invoking DLL...");
-	int res=0;
+    int res = 0;
 	const char *infile, *outfile;
-//	char *outfile = "para.out";
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
-	infile_path = inputFile;
+
+    LOG_MSG("Invoking DLL...");
+    infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
 	len_infile = infile_path.length();
 	std::string std_infile = infile_path.toStdString();
@@ -149,13 +149,6 @@ void ExecThread::run()
 	outfile = std_outfile.c_str();
 
 
-#ifdef __COMPILETIME_LOADING__
-
-#ifdef __GFORTRAN_DLL__
-	/*
-	__para_mod_MOD_execute(&nsteps);
-	*/
-#else
 	paused = false;
 //	LOG_MSG("execute called");
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
@@ -198,8 +191,6 @@ void ExecThread::run()
 	snapshot();
 	Sleep(10);
 	terminate_run(&res);
-#endif
-#endif
 	return;
 }
 

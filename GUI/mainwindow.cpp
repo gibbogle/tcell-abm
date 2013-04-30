@@ -44,7 +44,7 @@ int NX, NY, NZ, NBY;
 int nt_vtk;
 bool leftb;
 
-#define NO_USE_PGRAPH false
+#define NO_USE_PGRAPH true
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
@@ -92,15 +92,6 @@ MainWindow::MainWindow(QWidget *parent)
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
 	}
-//    stopfile = "stop_dll";
-//    pausefile = "pause_dll";
-//    cellfile = "cell_pos.dat";
-//#ifdef __GFORTRAN_DLL__
-//	dll_path = "libpara32.dll";
-//#else
-//	dll_path = "libpara32_ms.dll";
-//#endif
-//	dll_path = " ";
 	vtkfile = "basecase.pos";
 	savepos_start = 0;
 	ntimes = 0;
@@ -121,7 +112,7 @@ MainWindow::MainWindow(QWidget *parent)
 	writeout();
     timer = new QTimer(this);
 //	vtk = new MyVTK(page_3D);
-	vtk = new MyVTK(mdiArea_VTK);
+    vtk = new MyVTK(mdiArea_VTK, test_page);
 	vtk->init();
 	tabs->setCurrentIndex(0);
 	goToInputs();
@@ -1442,7 +1433,7 @@ void MainWindow::displayScene()
 //	bool fast = cbox_fastdisplay->isChecked();
 	bool fast = true;
 	vtk->get_cell_positions(fast);
-	vtk->renderCells(redo,false);
+    vtk->renderCells(redo);
 	mutex2.unlock();
 }
 
@@ -1531,7 +1522,7 @@ void MainWindow::outputData(QString qdata)
 				redo = true;
 				showingVTK = 2;
 			} 
-	        vtk->renderCells(redo,false);
+            vtk->renderCells(redo);
 		} 
 	    posdata = true;
 		if (qdata.length() == 0)

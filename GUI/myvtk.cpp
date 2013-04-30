@@ -70,11 +70,12 @@ vtkStandardNewMacro(MouseInteractorStyle4);
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-MyVTK::MyVTK(QWidget *page)
+MyVTK::MyVTK(QWidget *page, QWidget *test_page)
 {
 	zoomlevel = 0.7;
 	double backgroundColor[] = {0.0,0.0,0.0};
 
+    test_canvas(test_page);
 	Pi = 4*atan(1.0);
 	leftb = false;
 	qvtkWidget = new QVTKWidget(page,QFlag(0));
@@ -140,6 +141,28 @@ MyVTK::MyVTK(QWidget *page)
 //-----------------------------------------------------------------------------------------
 MyVTK::~MyVTK()
 {
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MyVTK::test_canvas(QWidget *test_page)
+{
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 200, 300));
+    QBrush brush;
+    QGraphicsTextItem *text;
+    brush.setColor(QColor(255,0,0));
+    brush.setStyle(Qt::SolidPattern);
+    scene->addRect(10,10,20,20,Qt::NoPen, brush);
+    text = scene->addText("Red square");
+    text->setPos(35, 10);
+    brush.setColor(QColor(0,255,0));
+    scene->addEllipse(10,40,20,20,Qt::NoPen, brush);
+    text = scene->addText("Green circle");
+    text->setPos(35, 40);
+    QGraphicsView* view = new QGraphicsView(test_page);
+    view->setScene(scene);
+    view->setGeometry(QRect(0, 0, 220, 320));
+    view->show();
 }
 
 //-----------------------------------------------------------------------------------------
@@ -289,7 +312,7 @@ void MyVTK::cleanup()
 
 //---------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------
-void MyVTK::renderCells(bool redo, bool zzz)
+void MyVTK::renderCells(bool redo)
 {
 	process_Tcells();
     process_Dcells(redo);
@@ -371,8 +394,8 @@ void MyVTK::process_Tcells()
 //---------------------------------------------------------------------------------------------
 void MyVTK::getTCColor(int state, double *r, double *g, double *b)
 {
-	int TC_MAX_GEN = 15;
-	double genfac;
+//	int TC_MAX_GEN = 15;
+//	double genfac;
 	bool CD4;
 	int deep_blue[]   = {30,20,255};
 	int deep_green[]  = {0,150,0};
@@ -665,7 +688,7 @@ bool MyVTK::nextFrame()
 	if (first_VTK) {
 		redo = true;
 	}
-    renderCells(redo,false);
+    renderCells(redo);
 	char numstr[5];
 	sprintf(numstr,"%04d",framenum);
 	if (save_image) {
