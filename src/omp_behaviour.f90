@@ -209,6 +209,7 @@ real :: p1,p2
 p1 = log(DC_LIFETIME_MEDIAN*24*60)
 p2 = log(DC_LIFETIME_SHAPE)
 DClifetime = rv_lognormal(p1,p2,kpar)
+write(*,*) 'DClifetime: ',DClifetime 
 end function
 
 !--------------------------------------------------------------------------------------
@@ -404,6 +405,9 @@ end subroutine
 subroutine read_fixed_params(ok)
 logical :: ok
 logical :: ext
+real :: TC_CD8_FRACTIONzzz
+logical :: use_DCvisits_params
+character*(128) :: DCparamfile
 
 inquire(file=fixedfile,exist=ext)
 if (.not.ext) then
@@ -452,7 +456,7 @@ read(nfcell,*) CD25_SURVIVAL_THRESHOLD		! CD25 store level needed for survival o
 read(nfcell,*) TC_RADIUS					! radius of T cell (um)
 read(nfcell,*) TC_STIM_WEIGHT				! contribution of stimulation to act level
 read(nfcell,*) TC_MAX_GEN				    ! maximum T cell generation
-read(nfcell,*) TC_CD8_FRACTION				! fraction of all T cells that are CD8
+read(nfcell,*) TC_CD8_FRACTIONzzz			! fraction of all T cells that are CD8 (now in the GUI)
 read(nfcell,*) CD8_DIVTIME_FACTOR			! CD8 divide time as multiple of CD4 divide time
 read(nfcell,*) DC_MULTIBIND_PROB			! reducing factor to bind prob for each current DC binding
 read(nfcell,*) MAX_DC_BIND					! number of DC that a cell can bind to simultaneously
@@ -477,6 +481,31 @@ read(nfcell,*) K1_S1P1
 read(nfcell,*) K2_S1P1
 read(nfcell,*) K1_CD69
 read(nfcell,*) K2_CD69
+! Parameters added to control HEV and DC placement
+read(nfcell,*) R_HEV_min
+read(nfcell,*) R_HEV_max
+read(nfcell,*) R_DC_min
+read(nfcell,*) R_DC_max
+! Parameters added for DCvisits simulations
+!read(nfcell,'(L)') use_DCvisits_params
+!if (use_DCvisits_params) then
+!	track_DCvisits = .true.
+!	read(nfcell,'(a)') DCparamfile
+!	close(nfcell)
+!	open(nfcell,file=DCparamfile,status='old')
+!	read(nfcell,'(L)') TAGGED_DC_CHEMOTAXIS		! DC visits are logged for tagged T cells only
+!	read(nfcell,*) istep_DCvisits	! 24*60*4	! delay before counting visits (when use_traffic) (steps)
+!	read(nfcell,*) t_log_DCvisits	! 2*24*60	! time to log DC visits of retained cells (mins)
+!	read(nfcell,'(L)') USE_DC_COGNATE 		! if only a fraction (0.5) of DCs bear cognate antigen, secrete chemokine
+!	read(nfcell,*) DC_COGNATE_FRACTION		! fraction of DCs that bear cognate antigen
+!	read(nfcell,*) RETAIN_TAGLIMIT_FRACTION ! 0.5 (when use_traffic)
+!	read(nfcell,'(L)') DC_CHEMO_NOTRAFFIC   ! cells are tagged initially, no use_traffic
+!	read(nfcell,*) DC_CHEMO_FRACTION 		! fraction of cells tagged when DC_CHEMO_NOTRAFFIC
+!	read(nfcell,*) HI_CHEMO_FRACTION 		! fraction of tagged cells with full chemotactic susceptibility
+!	read(nfcell,*) HI_CHEMO 				! chemotactic susceptibility of the HI_CHEMO_FRACTION cells
+!	read(nfcell,*) LO_CHEMO 				! chemotactic susceptibility of the other tagged cells
+!endif
+MAX_DC_BIND = 1
 close(nfcell)
 return
 99	continue
@@ -488,9 +517,11 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
-integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected
-integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow
+integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
+integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow, useCCL3secretion
+character(64) :: specialfile
 character(4) :: logstr
+logical, parameter :: use_chemo = .false.
 
 ok = .false.
 !write(*,*) 'Read cell parameter file: ',inputfile
@@ -499,8 +530,9 @@ ok = .false.
 open(nfcell,file=inputfile,status='old')
 read(nfcell,*) TC_AVIDITY_MEAN              ! mean of avidity distribution (only if fix_avidity = false)
 read(nfcell,*) TC_AVIDITY_SHAPE			    ! shape -> 1 gives normal dist with small variance
-!read(nfcell,*) TC_CD8_FRACTION				! fraction of all T cells that are CD8
-read(nfcell,*) TC_COGNATE_FRACTION		! fraction of T cells that are cognate
+read(nfcell,*) TC_CD8_FRACTION				! fraction of all T cells that are CD8
+read(nfcell,*) TC_COGNATE_FRACTION(1)		! fraction of CD4 T cells that are cognate
+read(nfcell,*) TC_COGNATE_FRACTION(2)		! fraction of CD8 T cells that are cognate
 !read(nfcell,*) TC_CONVERSION_TIME			! time (in hours) over which T cells become cognate
 read(nfcell,*) TC_STIM_RATE_CONSTANT		! rate const for TCR stimulation (-> molecules/min)
 !read(nfcell,*) TC_STIM_WEIGHT				! contribution of stimulation to act level
@@ -572,7 +604,8 @@ read(nfcell,*) usetraffic					! use T cell trafficking
 read(nfcell,*) useexitchemo                 ! use exit chemotaxis
 read(nfcell,*) useDCchemo					! use DC chemotaxis
 read(nfcell,*) computedoutflow				! compute outflow (with inflow)
-read(nfcell,*) RESIDENCE_TIME               ! T cell residence time in hours -> inflow rate
+read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours -> inflow rate
+read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
 ! Vascularity parameters
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
@@ -582,7 +615,20 @@ read(nfcell,*) exit_region                  ! blob region for cell exits (1 = al
 !read(nfcell,*) VEGF_MODEL                  ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
 read(nfcell,*) chemo_radius			        ! radius of chemotactic influence (um)
 read(nfcell,*) chemo_K_exit                 ! level of chemotactic influence towards exits
-read(nfcell,*) chemo_K_DC                   ! level of chemotactic influence towards DCs
+read(nfcell,*) chemo_K_DC                  ! level of chemotactic influence towards DCs
+
+!!read(nfcell,*) receptor(CCR1)%strength      ! relative strength of CCL3-CCR1 chemotactic influence (chemo_K_DC)
+    read(nfcell,*) receptor(CCR1)%level(1)
+    read(nfcell,*) receptor(CCR1)%level(2)
+    read(nfcell,*) receptor(CCR1)%level(3)
+    read(nfcell,*) receptor(CCR1)%saturation_threshold	! CCL3 signal level to saturate CCR1 receptor
+    read(nfcell,*) receptor(CCR1)%refractory_time	! Time for CCR1 receptor to recover sensitivity after desensitization
+    read(nfcell,*) chemo(CCL3)%diff_coef
+    read(nfcell,*) chemo(CCL3)%halflife
+    read(nfcell,*) useCCL3secretion
+    read(nfcell,*) chemo(CCL3)%bdry_rate
+    read(nfcell,*) chemo(CCL3)%bdry_conc
+    read(nfcell,*) chemo(CCL3)%radius		! Sites within this radius of the DC receive CCL3 concentration (+ all DC sites)
 
 !read(nfcell,*) fix_avidity                  ! true if avidity takes discrete values, false if a distribution is used
 !read(nfcell,*) avidity_logscale             ! true if actual avidity = 10^(avidity_min + i*avidity_step)
@@ -601,14 +647,25 @@ read(nfcell,*) IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 read(nfcell,*) IV_NTCELLS					! initial T cell population in vitro
 read(nfcell,*) IV_COGNATE_FRACTION			! fraction of in vitro cells that are cognate for DC antigen
 read(nfcell,*) shownoncog			        ! display non-cognate T cells
+read(nfcell,*) ispecial						! special case
+read(nfcell,*) specialfile					! special case input data file
 read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
+
 !call logger('Finished reading cell parameter file')
 
 DC_RADIUS = real_DCradius                       ! convert real -> integer
 DCrate_100k = DCrate_100k*Inflammation_level	! DC influx is scaled by the inflammation level
 T_DC1 = T_DC1*24								! convert days -> hours
 T_DC2 = T_DC2*24
+CTYPE_FRACTION(CD8) = TC_CD8_FRACTION
+CTYPE_FRACTION(CD4) = 1 - CTYPE_FRACTION(CD8)
+ave_residence_time = CTYPE_FRACTION(CD4)*residence_time(CD4) + CTYPE_FRACTION(CD8)*residence_time(CD8)
+if (useCCL3secretion) then
+	chemo(CCL3)%use_secretion = .true.
+else
+	chemo(CCL3)%use_secretion = .false.
+endif
 if (shownoncog == 0) then
     IV_SHOW_NONCOGNATE = .false.
 else
@@ -636,16 +693,40 @@ else
 	use_exit_chemotaxis = .false.
 	chemo_K_exit = 0
 endif
-if (useDCchemo == 1) then
+
+receptor(CCR1)%strength = chemo_K_DC
+if (useDCchemo == 1 .and. receptor(CCR1)%strength > 0) then
 	use_DC_chemotaxis = .true.
+endif
+if (ispecial /= 0) then
+	call read_specialcase(ispecial,specialfile,ok)
+	if (.not.ok) return
+endif
+
+if (use_DC_chemotaxis .and. receptor(CCR1)%strength > 0) then
+	receptor(CCR1)%used = .true.
+	chemo(CCL3)%used = .true.
+	chemo_K_DC = receptor(CCR1)%strength
+	DC_CHEMO_DELAY = DC_BIND_DELAY
 else
 	use_DC_chemotaxis = .false.
+	receptor(CCR1)%used = .false.
+	chemo(CCL3)%used = .false.
 	chemo_K_DC = 0
 endif
+if (useCCL3secretion) then
+	chemo(CCL3)%use_secretion = .true.
+else
+	chemo(CCL3)%use_secretion = .false.
+endif
+
 if (computedoutflow == 1) then
 	computed_outflow = .true.
 else
 	computed_outflow = .false.
+endif
+if (track_DCvisits) then
+	TC_COGNATE_FRACTION = 0
 endif
 BLOB_PORTALS = .false.
 SURFACE_PORTALS = .false.
@@ -655,6 +736,7 @@ if (exit_region == EXIT_BLOB_PORTALS) then
 elseif (exit_region == EXIT_SURFACE_PORTALS) then
 	use_portal_egress = .true.
 	SURFACE_PORTALS = .true.
+	call logger('use_portal_egress')
 else
 	use_portal_egress = .false.
 endif
@@ -677,6 +759,9 @@ if (.not.ok) then
 	write(logmsg,'(a,a)') 'Error reading fixed input data file: ',fixedfile
 	call logger(logmsg)
 	return
+endif
+if (DCrate_100k == 0) then
+	use_DCflux = .false.
 endif
 
 mean_stagetime_1(2,:) = transient_stagetime		! Note that these times are not needed for gen>1,
@@ -704,7 +789,7 @@ if (IN_VITRO) then
 	use_DCflux = .false.
 	use_traffic = .false.
 	exit_region = EXIT_NONE
-	TC_COGNATE_FRACTION = IV_COGNATE_FRACTION
+!	TC_COGNATE_FRACTION = IV_COGNATE_FRACTION
 	call logger("In vitro simulation  ")
 endif
 
@@ -719,7 +804,6 @@ chemo_N = max(3,int(chemo_radius + 0.5))	! convert from um to lattice grids
 !write(*,*) 'chemo_N: ',chemo_N
 ! Note that currently exit chemotaxis and DC chemotaxis are treated in the same way - same decay
 chemo_exp = log(1/CHEMO_MIN)/log(chemo_radius)
-
 FIRST_DIVISION_THRESHOLD(2) = FIRST_DIVISION_THRESHOLD(1)
 DIVISION_THRESHOLD(2) = DIVISION_THRESHOLD(1)
 EXIT_THRESHOLD(2) = EXIT_THRESHOLD(1)
@@ -744,7 +828,7 @@ else
     use_DC = .false.
 endif
 
-if (TC_COGNATE_FRACTION == 0 .or. .not.use_DC) then
+if ((TC_COGNATE_FRACTION(1) == 0 .and. TC_COGNATE_FRACTION(2) == 0) .or. .not.use_DC) then
     use_cognate = .false.
 else
     use_cognate = .true.
@@ -775,14 +859,15 @@ else
 endif
 
 if (DC_DENS_HALFLIFE > 0) then
-    DCdecayrate = log(2.0)/(DC_DENS_HALFLIFE*60)    ! rate/min
+!    DCdecayrate = log(2.0)/(DC_DENS_HALFLIFE*60)    ! rate/min
+	DCdecayrate = DecayRate(DC_DENS_HALFLIFE)
 else
     DCdecayrate = 0
 endif
 
 if (TC_STIM_HALFLIFE > 0) then
-    TCRdecayrate = log(2.0)/(TC_STIM_HALFLIFE*60)    ! rate/min
-    !write(*,*) 'TCRdecayrate: ',TCRdecayrate
+!    TCRdecayrate = log(2.0)/(TC_STIM_HALFLIFE*60)    ! rate/min
+    TCRdecayrate = DecayRate(TC_STIM_HALFLIFE)    ! rate/min
 else
     TCRdecayrate = 0
 endif
@@ -811,8 +896,9 @@ Ve = DELTA_X*DELTA_X*DELTA_X
 Vc = FLUID_FRACTION*Ve
 
 Nsteps = days*60*24/DELTA_T
-!write(*,'(a,f6.2,a,i4)') 'DELTA_X: ',DELTA_X,'  DC_RADIUS: ',DC_RADIUS
+call make_outputfilename
 open(nfout,file=outputfile,status='replace')
+write(nfout,*) 'TC_COGNATE_FRACTION: ',TC_COGNATE_FRACTION
 write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
 !if (save_input) then
@@ -852,6 +938,90 @@ if (save_DCbinding) then
     dcbind = 0
 endif
 ok = .true.
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! Special cases:
+! 1 
+! To quantify DC visits for an artificial situation of no trafficking.
+! The T cell population does not change, a small fraction of T cells are tagged.  These 
+! tagged cells are assigned either HI or LO chemotactic susceptibility.  There is no TCR
+! stimulation, no T cell activation.  DC visits are counted.
+! 2
+! To quantify DC visits with trafficking.
+! 3
+! DC chemokine secretion is linked to contact with cognate CD4  cells.
+!----------------------------------------------------------------------------------------
+subroutine read_specialcase(icase,casefile,ok)
+integer :: icase
+character*(*) :: casefile
+logical :: ok
+
+!if (use_DCvisits_params) then
+ok = .true.
+write(logmsg,*) 'read_specialcase: icase, casefile: ',icase,'  ',casefile
+call logger(logmsg)
+if (icase == 1) then
+	if (receptor(CCR1)%strength == 0) then
+		call logger('Error: need to specify chemo_K_DC for special case: TAGGED_DC_CHEMOTAXIS')
+		ok = .false.
+		return
+	endif
+	track_DCvisits = .true.
+	use_traffic = .false.
+	open(nfcell,file=casefile,status='old')
+	read(nfcell,'(L)') USE_DC_CHEMOTAXIS		! DC chemotaxis
+	read(nfcell,'(L)') TAGGED_DC_CHEMOTAXIS		! DC visits are logged for tagged T cells only
+	read(nfcell,*) istep_DCvisits	! 24*60*4	! delay before counting visits (when use_traffic) (steps)
+	read(nfcell,*) t_log_DCvisits	! 2*24*60	! time to log DC visits of retained cells (mins)
+	read(nfcell,'(L)') USE_DC_COGNATE 		! if only a fraction (0.5) of DCs bear cognate antigen, secrete chemokine
+	read(nfcell,*) DC_COGNATE_FRACTION		! fraction of DCs that bear cognate antigen
+	read(nfcell,*) RETAIN_TAGGED_CELLS		! applies with use_traffic
+	read(nfcell,'(L)') DC_CHEMO_NOTRAFFIC   ! cells are tagged initially, no use_traffic
+	read(nfcell,*) DC_CHEMO_FRACTION 		! fraction of cells tagged when DC_CHEMO_NOTRAFFIC
+	read(nfcell,*) HI_CHEMO_FRACTION 		! fraction of tagged cells with full chemotactic susceptibility
+	read(nfcell,*) HI_CHEMO 				! chemotactic susceptibility of the HI_CHEMO_FRACTION cells
+	read(nfcell,*) LO_CHEMO 				! chemotactic susceptibility of the other tagged cells
+	close(nfcell)
+elseif (icase == 2) then
+	track_DCvisits = .true.
+	use_traffic = .true.
+	open(nfcell,file=casefile,status='old')
+	read(nfcell,'(L)') USE_DC_CHEMOTAXIS		! DC chemotaxis
+	read(nfcell,'(L)') TAGGED_DC_CHEMOTAXIS		! DC visits are logged for tagged T cells only
+	read(nfcell,*) istep_DCvisits	! 24*60*4	! delay before counting visits (when use_traffic) (steps)
+	read(nfcell,*) t_log_DCvisits	! 2*24*60	! time to log DC visits of retained cells (mins)
+	read(nfcell,'(L)') USE_DC_COGNATE 		! if only a fraction (0.5) of DCs bear cognate antigen, secrete chemokine
+	read(nfcell,*) DC_COGNATE_FRACTION		! fraction of DCs that bear cognate antigen
+	read(nfcell,*) RETAIN_TAGGED_CELLS		! applies with use_traffic
+	read(nfcell,*) RETAIN_TAGLIMIT_FRACTION ! 0.5 (when use_traffic)
+	read(nfcell,'(L)') DC_CHEMO_NOTRAFFIC   ! cells are tagged initially, no use_traffic
+	read(nfcell,*) TAGGED_CHEMO_FRACTION 		! fraction of cells tagged when DC_CHEMO_NOTRAFFIC
+	read(nfcell,*) HI_CHEMO_FRACTION 		! fraction of tagged cells with full chemotactic susceptibility
+	read(nfcell,*) HI_CHEMO 				! chemotactic susceptibility of the HI_CHEMO_FRACTION cells
+	read(nfcell,*) LO_CHEMO 				! chemotactic susceptibility of the other tagged cells
+	close(nfcell)
+
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine make_outputfilename
+
+if (track_DCvisits) then
+	! Filename reporting parameters determining HEV and DC regions
+	!write(outputfile,'(a,a,f3.1,a,f3.1,a,f3.1,a,f3.1,a)') 'V_','RHV',R_HEV_min,'_',R_HEV_max, &
+	!	'RDC',R_DC_min,'_',R_DC_max,'.out'
+	! Filename reporting parameters determining chemotaxis for DC visits, USE_DC_COGNATE = false
+	!write(outputfile,'(a,f3.1,a,f3.1,a,f3.1,a,f3.1,a)') 'notraffic_DCF',DC_CHEMO_FRACTION,'_HCF',HI_CHEMO_FRACTION, &
+	!	'_LO',LO_CHEMO,'_HI',HI_CHEMO,'.out'
+	! Filename reporting parameters determining chemotaxis for DC visits, USE_DC_COGNATE = true
+	write(outputfile,'(a,f3.1,a,f3.1,a,f3.1,a,f3.1,a,f3.1,a)') 'DC_CogF',DC_COGNATE_FRACTION,'_TF',DC_CHEMO_FRACTION, &
+		'_HCF',HI_CHEMO_FRACTION,'_LO',LO_CHEMO,'_HI',HI_CHEMO,'.out'
+else
+	outputfile = 'para.out'
+endif
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -930,26 +1100,26 @@ integer :: nthours, NTCexpt, NDCexpt, ntimes, i, ihour, n, NDCrun, nsum, ndefici
 real :: ratio
 integer, allocatable :: DCexpt(:)
 
-open(nfDC,file=DCinjectionfile,status='old')
+open(nfDCinfo,file=DCinjectionfile,status='old')
 nthours = days*24 + 1
 allocate(DCinjected(nthours))
 allocate(DCexpt(nthours))
 DCinjected = 0
 DCexpt = 0
-read(nfDC,*) NTCexpt
-read(nfDC,*) T_DC_INJECTION
-read(nfDC,*) ntimes
+read(nfDCinfo,*) NTCexpt
+read(nfDCinfo,*) T_DC_INJECTION
+read(nfDCinfo,*) ntimes
 NDCexpt = 0
 do i = 1,ntimes
-	read(nfDC,*) ihour, n
+	read(nfDCinfo,*) ihour, n
 	if (ihour > nthours) exit
 	DCexpt(ihour) = n
 	NDCexpt = NDCexpt + n
 enddo
-close(nfDC)
-ratio = real(globalvar%NTcells0)/NTCexpt
+close(nfDCinfo)
+ratio = real(NTcells0)/NTCexpt
 NDCrun = ratio*NDCexpt + 0.5
-write(logmsg,*) 'NTcells0, NTCexpt, ratio, NDCrun: ',globalvar%NTcells0,NTCexpt,ratio,NDCrun
+write(logmsg,*) 'NTcells0, NTCexpt, ratio, NDCrun: ',NTcells0,NTCexpt,ratio,NDCrun
 call logger(logmsg)
 nsum = 0
 do ihour = 1,nthours
@@ -1003,6 +1173,7 @@ do k = 1,MAX_DC_BIND
         endif
         if (cognate) then
             DClist(idc)%ncogbound = DClist(idc)%ncogbound - 1
+            call RemoveCogbound(idc,kcell)
 !            if (idc == idbug) then
 !                write(*,*) 'Tcell_death: decremented ncogbound to: cell: ',DClist(idc)%ncogbound,kcell
 !            endif
@@ -1018,7 +1189,12 @@ cellist(kcell)%ID = 0
 totalres%dN_Dead = totalres%dN_Dead + 1
 totalres%N_Dead = totalres%N_Dead + 1
 ctype = cellist(kcell)%ctype
-stype = struct_type(ctype)
+!stype = struct_type(ctype)
+if (associated(cellist(kcell)%cptr)) then
+	stype = COG_TYPE_TAG
+else
+	stype = NONCOG_TYPE_TAG
+endif
 if (stype == COG_TYPE_TAG) then
     cognate_list(cellist(kcell)%cptr%cogID) = 0
 endif
@@ -1030,10 +1206,10 @@ endif
 gaplist(ngaps) = kcell
 
 if (region == PERIPHERY) then
-	globalvar%NTcellsPer = globalvar%NTcellsPer - 1
+	NTcellsPer = NTcellsPer - 1
 	return
 else
-	globalvar%NTcells = globalvar%NTcells - 1
+	NTcells = NTcells - 1
 endif
 site = cellist(kcell)%site
 indx = occupancy(site(1),site(2),site(3))%indx
@@ -1080,12 +1256,14 @@ integer :: iseq, tag, kfrom, kto
 real :: tnow
 type(cog_type), pointer :: p1, p2
 !real :: IL_state(CYT_NP)
+logical :: cognate
 integer :: kpar = 0
 
 ok = .true.
 tnow = istep*DELTA_T
 !call show_cognate_cell(kcell)
 p1 => cellist(kcell)%cptr
+cognate = .true.
 gen = get_generation(p1)
 call get_region(p1,region)
 !write(*,*) 'cell_division: ',kcell,gen,istep,tnow
@@ -1124,6 +1302,7 @@ if (TCR_splitting) then
     p1%stimulation = p1%stimulation/2
 endif
 ctype = cellist(kcell)%ctype
+tag = 0
 p1%dietime = tnow + TClifetime(p1)
 p1%dividetime = tnow
 if (revised_staging) then
@@ -1135,7 +1314,7 @@ if (region == LYMPHNODE) then
 	site = cellist(kcell)%site
 	indx = occupancy(site(1),site(2),site(3))%indx
 endif
-call create_Tcell(icnew,cellist(icnew),site2,ctype,gen,POST_DIVISION,region,ok)
+call create_Tcell(icnew,cellist(icnew),site2,ctype,cognate,gen,tag,POST_DIVISION,region,ok)
 if (.not.ok) return
 
 p2 => cellist(icnew)%cptr
@@ -1180,7 +1359,7 @@ p2%S1P1 = p1%S1P1
 
 ndivisions = ndivisions + 1
 if (region /= LYMPHNODE) then
-	globalvar%NTcellsPer = globalvar%NTcellsPer + 1
+	NTcellsPer = NTcellsPer + 1
 	return
 endif
 
@@ -1193,10 +1372,10 @@ else
 	ok = .false.
     return
 endif
-globalvar%NTcells = globalvar%NTcells + 1
-if (IN_VITRO .and. globalvar%NTcells > 0.95*n2Dsites) then
+NTcells = NTcells + 1
+if (IN_VITRO .and. NTcells > 0.95*n2Dsites) then
 	ok = .false.
-	write(logmsg,'(a,2i6)')'More than 95% of the available space is occupied by T cells: ',globalvar%NTcells,n2Dsites
+	write(logmsg,'(a,2i6)')'More than 95% of the available space is occupied by T cells: ',NTcells,n2Dsites
 	call logger(logmsg)
 endif
 end subroutine
@@ -1212,7 +1391,7 @@ end subroutine
 !     from any DC.
 ! (4) The site is not too near an exit, i.e. it is more than exit_DCprox from any exit.
 ! (5) The site is not too near the blob boundary, i.e. it is more than
-!     bdry_DCprox*DC_RADIUS from the sphere with radius = globalvar%Radius
+!     bdry_DCprox*DC_RADIUS from the sphere with radius = Radius
 ! (6) Either the site is free, or it is occupied by a T cell that can be moved
 !     to a neighbouring site.
 ! A site meeting these requirements is selected for the DC, then as many as
@@ -1235,12 +1414,12 @@ integer, parameter :: kmax = 100000
 !ndbug = DClist(idbug)%ncogbound
 !write(*,*) 'place_DCs (1): ',DClist(idbug)%ncogbound
 tnow = istep*DELTA_T
-xmin = x0 - globalvar%Radius
-xmax = x0 + globalvar%Radius + 1
-ymin = y0 - globalvar%Radius
-ymax = y0 + globalvar%Radius + 1
-zmin = z0 - globalvar%Radius
-zmax = z0 + globalvar%Radius + 1
+xmin = x0 - Radius
+xmax = x0 + Radius + 1
+ymin = y0 - Radius
+ymax = y0 + Radius + 1
+zmin = z0 - Radius
+zmax = z0 + Radius + 1
 xmin = max(1,xmin)
 xmax = min(NX,xmax)
 ymin = max(1,ymin)
@@ -1249,7 +1428,7 @@ zmin = max(1,zmin)
 zmax = min(NZ,zmax)
 nadded = 0
 do i = 1,n
-	OK = .true.
+	OK = .false.
 	k = 0
     do
 		k = k+1
@@ -1269,11 +1448,16 @@ do i = 1,n
         indx = occupancy(x,y,z)%indx
         if (indx(1) < 0) cycle                          ! OUTSIDE_TAG or DC
         if (indx(1) /= 0 .and. indx(2) /= 0) cycle      ! two T cells at this site
-        if (tooNearDC(site1,globalvar%NDC,DC_DCprox*DC_RADIUS)) cycle
-        if (tooNearExit(site1,exit_DCprox)) cycle
-!        prox = 0.5*DC_DCprox*DC_RADIUS
-        prox = bdry_DCprox*DC_RADIUS
-        if (.not.tooNearBdry(site1,prox)) then
+!        prox = proximity_limit(DC_SITE,DC_SITE)
+!        if (tooNearDC(site1,prox)) cycle
+!        prox = proximity_limit(DC_SITE,EXIT_SITE)
+!        if (tooNearExit(site1,prox)) cycle
+!!        prox = 0.5*DC_DCprox*DC_RADIUS
+!!        prox = bdry_DCprox*DC_RADIUS
+!        prox = proximity_limit(DC_SITE,BDRY_SITE)
+!        if (.not.tooNearBdry(site1,prox)) then
+		call CheckSite(DC_SITE,site1,ok)
+		if (ok) then
             jslot = 0
             if (indx(1) /= 0) then
                 jslot = 1
@@ -1304,7 +1488,7 @@ do i = 1,n
     if (.not.OK) exit
     idc = 0
     if (reuse_DC_index) then
-	    do k = 1,globalvar%NDC
+	    do k = 1,NDC
 		    if (.not.DClist(k)%alive) then
 		        idc = k
 		        exit
@@ -1312,14 +1496,14 @@ do i = 1,n
 		enddo
 	endif
     if (idc == 0) then    ! If there isn't a free spot in DClist()
-        globalvar%NDC = globalvar%NDC + 1
-        if (globalvar%NDC > max_DC) then
+        NDC = NDC + 1
+        if (NDC > max_DC) then
 			write(logmsg,'(a,i6)') 'Error: place_DCs: number of DCs exceeds limit: ',max_DC
 			call logger(logmsg)
 			ok = .false.
 			return
 		endif
-        idc = globalvar%NDC
+        idc = NDC
     endif
     DC%ID = idc
     DC%alive = .true.
@@ -1329,6 +1513,7 @@ do i = 1,n
     DC%stimulation = 0
     DC%nbound = 0
     DC%ncogbound = 0
+    allocate(DC%cogbound(MAX_COG_BIND))
     DC%density = DCdensity(kpar)
     if (DC_INJECTION) then
         ! If the DCs were injected into an experimental animal, we need to account for the antigen decay since
@@ -1363,12 +1548,12 @@ enddo
 NDCtotal = NDCtotal + nadded
 
 ! Now check the DC locations wrt the blob perimeter
-do k = 1,globalvar%NDC
+do k = 1,NDC
     if (DClist(k)%alive) then
         rvec = DClist(k)%site - (/x0,y0,z0/)
         dist = norm(rvec)
-        if (dist > globalvar%Radius) then
-            write(logmsg,*) 'Place_DCs: warning: DC distance: ',k,dist,globalvar%Radius
+        if (dist > Radius) then
+            write(logmsg,*) 'Place_DCs: warning: DC distance: ',k,dist,Radius
 			call logger(logmsg)
         endif
     endif
@@ -1405,7 +1590,7 @@ if (indx(1) /= 0 .and. indx(2) /= 0) then   ! two T cells at this site
     err = 2
     return
 endif
-!if (tooNearDC(site1,globalvar%NDC)) then    ! too close to another DC
+!if (tooNearDC(site1,NDC)) then    ! too close to another DC
 !    err = 3
 !    return
 !endif
@@ -1520,13 +1705,13 @@ logical :: added
 occupancy(:,:,:)%DC(0) = 0
 occupancy(:,:,:)%cDC(0) = 0
 allocate(perm(MAX_DC))
-do k = 1, globalvar%NDC
+do k = 1, NDC
     perm(k) = k
 enddo
 
-call permute(perm,globalvar%NDC,kpar)
-globalvar%NDCalive = 0
-do k = 1,globalvar%NDC
+call permute(perm,NDC,kpar)
+NDCalive = 0
+do k = 1,NDC
     idc = perm(k)
     if (.not.DClist(idc)%alive) cycle
 !    write(*,*) 'idc: ',idc
@@ -1537,7 +1722,7 @@ do k = 1,globalvar%NDC
 !		write(*,*) 'assigned DC sites for: ',idc,nassigned
 		DClist(idc)%nsites = nassigned
 	endif
-    globalvar%NDCalive = globalvar%NDCalive + 1
+    NDCalive = NDCalive + 1
     site = DClist(idc)%site
     xdc = site(1)
     ydc = site(2)
@@ -1588,12 +1773,12 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Try to expand any DC that are not yet occupying their full allocation of sites.
+! Try to expand any DCs that are not yet occupying their full allocation of sites.
 !-----------------------------------------------------------------------------------------
 subroutine growDC
 integer :: k, idc, err, site0(3), site(3)
 
-do idc = 1,globalvar%NDC
+do idc = 1,NDC
     if (.not.DClist(idc)%alive) cycle
     if (DClist(idc)%nsites < NDCsites) then
         site0 = DClist(idc)%site
@@ -1624,7 +1809,7 @@ if (NDCsites /= 7) then
     stop
 endif
 do
-    idc = random_int(1,globalvar%NDC,kpar)
+    idc = random_int(1,NDC,kpar)
     if (DClist(idc)%alive) exit
 enddo
 dir = random_int(1,6,kpar)
@@ -1701,27 +1886,27 @@ end subroutine
 ! Create a new T cell.
 ! We could give a progeny cell (the result of cell division) the same ID as its parent.
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,cell,site,ctype,gen,stage,region,ok)
+subroutine create_Tcell(kcell,cell,site,ctype,cognate,gen,tag,stage,region,ok)
 type(cell_type) :: cell
-integer :: kcell, site(3), ctype, gen, stage, region
-logical :: ok
+integer :: kcell, site(3), ctype, gen, tag, stage, region
+logical :: cognate, ok
 integer :: stype, cogID, i
-real :: tnow, param1, param2
+real :: tnow, param1, param2, R
 integer :: kpar = 0
 
 ok = .true.
 tnow = istep*DELTA_T
-stype = struct_type(ctype)
+!stype = struct_type(ctype)
 !write(*,*) 'create_Tcell: ',kcell,ctype,stype
 cell%entrytime = tnow
-if (stype == NONCOG_TYPE_TAG) then
+if (.not.cognate) then
     if (dbug) then
         write(*,*) 'create_Tcell: ',kcell,site,associated(cell%cptr)
     endif
     if (associated(cell%cptr)) then
         deallocate(cell%cptr)
     endif
-elseif (stype == COG_TYPE_TAG) then
+else
     if (.not.associated(cell%cptr)) then
         allocate(cell%cptr)
     endif
@@ -1747,9 +1932,6 @@ elseif (stype == COG_TYPE_TAG) then
     else
         cell%cptr%avidity = rv_lognormal(param1,param2,kpar)
     endif
-!if (avid_debug) then
-!    write(nfout,'(a,i7,2f8.4)') 'create_Tcell (1): ',kcell, cell%cptr%avidity
-!endif
     cell%cptr%stimulation = 0
 !    cell%cptr%IL_state = 0
 !    cell%cptr%IL_statep = 0
@@ -1762,10 +1944,11 @@ elseif (stype == COG_TYPE_TAG) then
     ! to chemotaxis and exit until it has received enough TCR signal to drive CD69 high.
     cell%cptr%CD69 = 0
     cell%cptr%S1P1 = 0
-	cell%cptr%DCchemo = BASE_DCchemo
+!	cell%cptr%DCchemo = BASE_DCchemo
     cell%cptr%dietime = tnow + TClifetime(cell%cptr)
     cell%cptr%dividetime = tnow
     cell%cptr%stagetime = BIG_TIME
+	cell%cptr%cnt = 0
 
 ! Maintain cognate_list at start or if we are running on a single node
 ! Otherwise cogID and cognate_list is maintained by make_cognate_list
@@ -1783,28 +1966,39 @@ elseif (stype == COG_TYPE_TAG) then
 !    else
 !        cell%cptr%cogID = 0
 !    endif
-else
-    write(*,*) 'ERROR: create_Tcell: bad ctype: ',ctype
-    stop
 endif
 lastID = lastID + 1     ! Each node makes its own numbers, with staggered offset
 cell%ID = lastID
 cell%site = site
 cell%ctype = ctype
+cell%tag = tag
 cell%step = 0
 cell%DCbound = 0
 cell%unbindtime = -1000
 cell%lastdir = random_int(1,6,kpar)
+!cell%DCchemo = BASE_DCchemo
+cell%receptor_level(CCR1) = BASE_DCchemo
+cell%receptor_saturation_time = 0
 ! For recording DC scanning statistics
-if (track_DCvisits .and. ctype == TAGGED_CELL) then
+if (track_DCvisits .and. tag == TAGGED_CELL) then
     ntagged = ntagged + 1
     if (.not.allocated(cell%dclist)) then
-        allocate(cell%dclist(max(1,globalvar%NDC)))
+        allocate(cell%dclist(max(1,NDC)))
     endif
     cell%dclist = 0
     cell%ndclist = 0
     cell%visits = 0
     cell%revisits = 0
+!    if (DC_CHEMO_NOTRAFFIC) then	! also needed for use_traffic case
+		R = par_uni(kpar)
+		if (R < HI_CHEMO_FRACTION) then
+!			cell%DCchemo = HI_CHEMO
+			cell%receptor_level(CCR1) = HI_CHEMO
+		else
+!			cell%DCchemo = LO_CHEMO
+			cell%receptor_level(CCR1) = LO_CHEMO
+!		endif
+	endif
 endif
 
 end subroutine
@@ -1812,9 +2006,9 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Add a cell (kcell) with characteristics (ctype, gen, stage) at site.
 !--------------------------------------------------------------------------------
-subroutine add_Tcell(site,ctype,gen,stage,region,kcell,ok)
-integer :: site(3), ctype, gen, stage, region, kcell
-logical :: ok
+subroutine add_Tcell(site,ctype,cognate,gen,tag,stage,region,kcell,ok)
+integer :: site(3), ctype, gen, tag, stage, region, kcell
+logical :: cognate, ok
 integer :: indx(2)
 
 ok = .true.
@@ -1832,9 +2026,9 @@ else
     kcell = nlist
 endif
 if (dbug) then
-    write(*,'(a,9i7)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region
+    write(*,'(a,9i7,L2)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region,cognate
 endif
-call create_Tcell(kcell,cellist(kcell),site,ctype,gen,stage,region,ok)
+call create_Tcell(kcell,cellist(kcell),site,ctype,cognate,gen,tag,stage,region,ok)
 if (.not.ok) return
 
 indx = occupancy(site(1),site(2),site(3))%indx
@@ -1979,21 +2173,23 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Initial cell position data is loaded into occupancy() and cellist().
 !-----------------------------------------------------------------------------------------
-subroutine place_cells(ok)
+subroutine PlaceCells(ok)
 logical :: ok
 integer :: id, cogid, x, y, z, site(3), ctype
-integer :: idc, kdc, k, x2, y2, z2, gen, stage, region
-integer :: xdc, ydc, zdc, xmin, xmax, ymin, ymax, zmin, zmax, nzlim, nassigned
+integer :: idc, kdc, k, x2, y2, z2, gen, tag, stage, region, ncogDC
+integer :: xdc, ydc, zdc, xmin, xmax, ymin, ymax, zmin, zmax, nzlim, nassigned, NDCrequired
+integer :: cnt(2)
 real(DP) :: R
 real :: d, d2, p1, p2, tnow, prox, iv_fraction=0, tmins
 integer, allocatable :: permc(:)
-logical :: added, done
+logical :: added, done, cognate
 integer :: kpar = 0
 
-!write(logmsg,*) 'place_cells: Radius: ',globalvar%Radius
+!write(logmsg,*) 'PlaceCells: Radius: ',Radius
 !call logger(logmsg)
 ok = .false.
 
+cnt = 0
 IDTEST = 0
 tnow = 0
 nlist = 0
@@ -2005,10 +2201,11 @@ do x = 1,NX
             occupancy(x,y,z)%cDC = 0
             occupancy(x,y,z)%indx = 0
             occupancy(x,y,z)%exitnum = 0
+            occupancy(x,y,z)%isrc = 0
             site = (/x,y,z/)
             d = cdistance(site)
             if (IN_VITRO) then
-				if (d > globalvar%Radius) then
+				if (d > Radius) then
 					occupancy(x,y,z)%indx = OUTSIDE_TAG
 					zrange2D(x,y,:) = 0
 				elseif (z == 1) then	! count only layer 1 sites
@@ -2016,7 +2213,7 @@ do x = 1,NX
 					zrange2D(x,y,:) = 1
 				endif
             else
-				if (use_blob .and. d > globalvar%Radius) then
+				if (use_blob .and. d > Radius) then
 					occupancy(x,y,z)%indx = OUTSIDE_TAG
 				else
 					nlist = nlist + 1
@@ -2030,7 +2227,7 @@ enddo
 if (IN_VITRO) then
 	iv_fraction = IV_NTCELLS/real(n2Dsites)
 	if (iv_fraction > 0.9) then
-		call logger("Error: place_cells: Too many cells, reduce IV_NTCELLS")
+		call logger("Error: PlaceCells: Too many cells, reduce IV_NTCELLS")
 		ok = .false.
 		return
 	endif
@@ -2042,21 +2239,24 @@ endif
 ! In the case of DC_INJECTION, there needs to be a distinction between the DCs initially
 ! resident in the LN, and injected DCs.
 !
-globalvar%NDC = 0
-globalvar%NDCalive = 0
+NDC = 0
+NDCalive = 0
 if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI overlap
 !if (use_DC) then   ! DC placement needs to be checked to account for SOI overlap
-    globalvar%NDC = DC_FACTOR*nlist/TC_TO_DC
-    NDCtotal = globalvar%NDC
-    if (globalvar%NDC > MAX_DC) then
-        write(logmsg,'(a,i6)') 'Error: place_cells: NDC exceeds MAX_DC: ',MAX_DC
+    NDCrequired = DC_FACTOR*nlist/TC_TO_DC
+    if (use_single_DC) then
+		NDCrequired = 1
+	endif
+    NDCtotal = NDCrequired
+    if (NDCrequired > MAX_DC) then
+        write(logmsg,'(a,i6)') 'Error: PlaceCells: NDC exceeds MAX_DC: ',MAX_DC
         call logger(logmsg)
 		ok = .false.
         return
     endif
     p1 = log(DC_ANTIGEN_MEDIAN)
     p2 = log(DC_ANTIGEN_SHAPE)
-    do idc = 1,globalvar%NDC
+    do idc = 1,NDCrequired
         do
             R = par_uni(kpar)
             x = 1 + R*NX
@@ -2068,21 +2268,21 @@ if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI o
 	            R = par_uni(kpar)
 		        z = 1 + R*NZ
 		    endif
+		    if (use_single_DC) then
+				x = NX/2
+				y = NY/2
+				z = NZ/2
+			endif
             site = (/x,y,z/)
             if (occupancy(x,y,z)%indx(1) < 0) cycle     ! OUTSIDE_TAG or DC
-            kdc = idc-1
-            if (tooNearDC(site,kdc,DC_DCprox*DC_RADIUS)) cycle
-!            prox = 0.5*DC_DCprox*DC_RADIUS
-            prox = bdry_DCprox*DC_RADIUS
-            if (.not.tooNearBdry(site,prox)) then
-!                write(*,*) 'idc,site: ',idc,site
-!                if (idc == 3) stop
-                exit
-            endif
+			call CheckSite(DC_SITE,site,ok)
+			if (ok) exit
         enddo
         DClist(idc)%ID = idc
         DClist(idc)%site = site
         DClist(idc)%nsites = 1
+        NDC = NDC + 1
+		NDCalive = NDC
 ! Changed the treatment of injected DCs.  Now assume that all DCs originally in the paracortex are non-cognate,
 ! while the schedule of arriving DCs with peptide is read from an input file.
 !        if (DC_INJECTION) then
@@ -2094,6 +2294,10 @@ if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI o
 	    DClist(idc)%dietime = tnow + DClifetime(kpar)
 	    DClist(idc)%alive = .true.
 	    DClist(idc)%stimulation = 0
+	    DClist(idc)%nbound = 0
+	    DClist(idc)%ncogbound = 0
+	    allocate(DClist(idc)%cogbound(MAX_COG_BIND))
+		DClist(idc)%cognate = .true.
         if (DC_INJECTION) then
 		    DClist(idc)%capable = .false.
 	        DClist(idc)%density = 0
@@ -2102,8 +2306,7 @@ if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI o
 	        DClist(idc)%density = DCdensity(kpar)
 		endif
     enddo
-    globalvar%NDCalive = globalvar%NDC
-    do idc = 1,globalvar%NDC
+    do idc = 1,NDC
 		call assignDCsites(idc,nassigned,ok)
 		if (.not.ok) return
         DClist(idc)%nsites = nassigned
@@ -2159,12 +2362,19 @@ if (TC_TO_DC > 0) then   ! DC placement needs to be checked to account for SOI o
     enddo
     call check_DCproximity
 endif
-write(logmsg,*) 'Number of DCs: ',globalvar%NDC
+write(logmsg,*) 'Number of DCs: ',NDC
 call logger(logmsg)
-
+if (USE_DC_COGNATE) then
+	ncogDC = DC_COGNATE_FRACTION*NDC
+	do idc = ncogDC+1,NDC
+		DClist(idc)%cognate = .false.
+	enddo
+	write(logmsg,*) 'Number of DCs bearing cognate antigen: ',ncogDC
+	call logger(logmsg)
+endif
 if (IN_VITRO) then
 	nzlim = 1
-	n2Dsites = n2Dsites - globalvar%NDC*NDCsites
+	n2Dsites = n2Dsites - NDC*NDCsites
 else
 	nzlim = NZ
 	allocate(permc(nlist))
@@ -2175,6 +2385,7 @@ else
 endif
 istep = 0
 ntagged  = 0
+ntagged_left = 0
 id = 0
 cogid = 0
 done = .false.
@@ -2197,23 +2408,28 @@ do x = 1,NX
                 gen = 1
                 stage = NAIVE
                 region = LYMPHNODE
-                ctype = 1
+                call select_cell_type(ctype,cognate,kpar)
+		        tag = 0
+                cnt(ctype) = cnt(ctype) + 1
                 if (evaluate_residence_time) then
-!                    if (Mnodes /= 1) then
-!                        write(*,*) 'evaluate_residence_time requires Mnodes = 1'
-!                        stop
-!                    endif
-                    ctype = 1
+	                cognate = .false.
                 elseif (calibrate_motility) then
+	                cognate = .false.
                     if (taggable(site)) then
-						ctype = TAGGED_CELL
+						tag = TAGGED_CELL
+	                    ntagged = ntagged + 1
 					endif
 			    elseif (track_DCvisits) then
-			        ctype = NONCOG_TYPE_TAG
+	                cognate = .false.
+					if (DC_CHEMO_NOTRAFFIC) then	! cells are tagged initially
+			            R = par_uni(kpar)
+			            if (R < DC_CHEMO_FRACTION) then
+							tag = TAGGED_CELL
+						endif
+				    endif
 			    else
-                    ctype = select_cell_type(kpar)
-                    if (ctype /= NONCOG_TYPE_TAG) then
-                        ncogseed = ncogseed + 1
+                    if (cognate) then
+                        ncogseed(ctype) = ncogseed(ctype) + 1
                     endif
                 endif
                 if (IN_VITRO) then
@@ -2221,15 +2437,18 @@ do x = 1,NX
 				else
 	                k = permc(id)
 	            endif
-                call create_Tcell(k,cellist(k),site,ctype,gen,stage,region,ok)
+                call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,ok)
                 if (.not.ok) return
-!                cellist(k)%entrytime = -12*60   ! testing for K1_S1P1 setting
                 occupancy(x,y,z)%indx(1) = k
-                if (calibrate_motility .and. taggable(site)) then
-                    ntagged = ntagged + 1
-                    cellist(k)%ctype = TAGGED_CELL
-                endif
-                if (IDTEST == 0 .and. ctype /= NONCOG_TYPE_TAG) IDTEST = cellist(k)%ID
+! Redundant - in create_Tcell()
+!                if (track_DCvisits .and. DC_CHEMO_NOTRAFFIC .and. tag == TAGGED_CELL) then
+!					R = par_uni(kpar)
+!					if (R < HI_CHEMO_FRACTION) then
+!						cellist(k)%DCchemo = HI_CHEMO
+!					else
+!						cellist(k)%DCchemo = LO_CHEMO
+!					endif
+!				endif
             endif
 	    enddo
 	    if (done) exit
@@ -2247,14 +2466,49 @@ if (.not.ok) return
 !write(*,*) 'nlist,id,RESIDENCE_TIME: ',nlist,id,RESIDENCE_TIME
 write(nfout,*) 'nlist,RESIDENCE_TIME: ',nlist,RESIDENCE_TIME
 nlist = id	! this is already the case for 3D blob
-globalvar%NTcells = nlist
-globalvar%Nsites = globalvar%NTcells + globalvar%NDC*NDCsites	! not relevant for IN_VITRO
-globalvar%NTcells0 = globalvar%NTcells
-globalvar%Radius0 = globalvar%Radius
-scale_factor = real(NTC_LN)*NLN_RESPONSE/globalvar%NTcells0
+NTcells = nlist
+Nsites = NTcells + NDC*NDCsites	! not relevant for IN_VITRO
+NTcells0 = NTcells
+Radius0 = Radius
+scale_factor = real(NTC_LN)*NLN_RESPONSE/NTcells0
 !write(*,*) 'scale_factor: ',scale_factor
 
 if (use_DC .and. .not.IN_VITRO) call initial_binding
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine PlaceHEVPortals(ok)
+logical :: ok
+real(DP) :: R
+integer :: kpar = 0
+integer :: ihev, k, x, y, z, site(3)
+integer :: nhev_required = 50	! testing
+
+allocate(HEVlist(nhev_required))
+do ihev = 1,nhev_required
+	k = 0
+	do
+		k = k+1
+		if (k > 10000) then
+			call logger('PlaceHEVPortals: too many iterations')
+			ok = .false.
+			return
+		endif
+        R = par_uni(kpar)
+        x = 1 + R*NX
+        R = par_uni(kpar)
+        y = 1 + R*NY
+        R = par_uni(kpar)
+        z = 1 + R*NZ
+        site = (/x,y,z/)
+		call CheckSite(HEV_SITE,site,ok)
+		if (ok) exit
+	enddo
+	HEVlist(ihev)%site = site
+	write(*,*) 'HEV: ',ihev,site
+enddo
+NHEV = nhev_required
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2324,6 +2578,8 @@ end subroutine
 ! Better is a quadratic fit (from Excel, steady_chemo_0_1.xls):
 ! exit_fraction = a.x^2 + b.x + c
 ! where x = Ncells/1000
+!
+! The number of exit portals is based on the residence time for CD4 cells
 !-----------------------------------------------------------------------------
 integer function requiredExitPortals(ncells)
 integer :: ncells
@@ -2352,10 +2608,6 @@ real, parameter :: c_nochemo_24h = 1.006E-02
 ! This is to adjust Ne when there is general exit chemotaxis, to generate steady-state
 real, parameter :: K_Ke = 1.0		! 0.68 for Ke = 1.0, 1.0 for Ke = 0.0 (Pe = 0.02)
 
-!base_exit_prob = 1.0 
-!requiredExitPortals = exit_fraction*ncells**pow + 0.5
-!return
-
 ! TESTING
 !if (use_exit_chemotaxis) then 
 	a = a_nochemo_24h
@@ -2371,23 +2623,21 @@ real, parameter :: K_Ke = 1.0		! 0.68 for Ke = 1.0, 1.0 for Ke = 0.0 (Pe = 0.02)
 !	c = 22.0E-03*24/residence_time	! for R=41.5 (300k)
 !	c = 24.5E-03*24/residence_time	! for R=45.7 (400k)
 !	c = 26.5E-03*24/residence_time	! for R=49.2 (500k)
-	base_exit_prob = 1.0
 !else
 !	a = a_nochemo_12h
 !	b = b_nochemo_12h
 !	c = c_nochemo_12h
-!	base_exit_prob = 1.0
 !endif
 if (TAGGED_LOG_PATHS) then
 	requiredExitPortals = 1
 elseif (FIXED_NEXITS) then
-	x = globalvar%NTcells0/1000
-	exit_fraction = (a*x**2 + b*x + c)*24/residence_time
-	requiredExitPortals = exit_fraction*globalvar%NTcells0**pow + 0.5
+	x = NTcells0/1000
+	exit_fraction = (a*x**2 + b*x + c)*24/residence_time(CD4)
+	requiredExitPortals = exit_fraction*NTcells0**pow + 0.5
 elseif (RELAX_INLET_EXIT_PROXIMITY) then	! just for ncells = 100k
 	x = ncells/1000
 	Fe = 2.50E-03*x**3.595E-01		! power law fit (8 points, 51k - 1.1m cells)
-	exit_fraction = Fe*24.0/residence_time
+	exit_fraction = Fe*24.0/residence_time(CD4)
 	requiredExitPortals = K_Ke*exit_fraction*ncells**pow + 0.5 
 !	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction 
 !	call logger(logmsg)
@@ -2396,12 +2646,11 @@ else
 !	Fe = (a*x**2 + b*x + c)
 !	Fe = 3.028E-03*x**3.571E-01		! power law fit (7 points)
 	Fe = 2.990E-03*x**3.595E-01		! power law fit (8 points, 51k - 1.1m cells)
-	exit_fraction = Fe*24.0/residence_time
+	exit_fraction = Fe*24.0/residence_time(CD4)
 	requiredExitPortals = K_Ke*exit_fraction*ncells**pow + 0.5 
 !	write(logmsg,'(a,f7.4)') 'exit_fraction: ',exit_fraction 
 !	call logger(logmsg)
 endif
-!requiredExitPortals = requiredExitPortals/base_exit_prob
 end function
 
 !---------------------------------------------------------------------
@@ -2418,53 +2667,58 @@ end function
 ! must have %exitnum either set to 0 or, if within the SOI of another
 ! exit, set to the ID of the nearest exit.
 ! This is analogous to the treatment of DCs
+!
+! PlaceExitPortals > AddExitPortal > ChoosePortalSite > fPlaceExitPortal
 !---------------------------------------------------------------------
-subroutine placeExits
+subroutine PlaceExitPortals(ok)
 integer :: Nex, iexit, site(3)
+logical :: ok
 logical :: testing = .false.
 
 !if (exit_region /= EXIT_CHEMOTAXIS) then
 !    write(*,*) 'Error: placeExits: not EXIT_CHEMOTAXIS'
 !    stop
 !endif
+call logger('PlaceExitPortals')
+ok = .true.
 if (TAGGED_LOG_PATHS) then
 	Nex = 1
     max_exits = 10*Nex
     allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
-    globalvar%Nexits = 1
+    Nexits = 1
     site = Centre
-	call placeExitPortal(1,site)
+	call PlaceExitPortal(1,site)
 	return
 endif
 if (testing) then
-    globalvar%lastexit = 1
-    globalvar%Nexits = globalvar%lastexit
-    allocate(exitlist(globalvar%lastexit))
+    lastexit = 1
+    Nexits = lastexit
+    allocate(exitlist(lastexit))
     exitlist(1)%ID = 1
     exitlist(1)%site = (/NX/2,NY/2,NZ/2/)
-else
-    globalvar%lastexit = 0
-    globalvar%Nexits = 0
-    if (use_traffic) then
-		Nex = requiredExitPortals(globalvar%NTcells0)
-        max_exits = 10*Nex
-        write(logmsg,*) 'NTcells0, Nex, max_exits: ',globalvar%NTcells0,Nex,max_exits
-        call logger(logmsg)
-        allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
-    else
-        Nex = 0
-        write(logmsg,*) 'No exits'
-        call logger(logmsg)
-        return
-    endif
-    do iexit = 1,Nex
-		call addExitPortal
-!		write(logmsg,*) 'Placed exit portal: ',iexit,Nex
-!		call logger(logmsg)
-    enddo
-    write(logmsg,*) 'Number of exit portals: ',Nex
-    call logger(logmsg)
+    return
 endif
+lastexit = 0
+Nexits = 0
+if (use_traffic) then
+	Nex = requiredExitPortals(NTcells0)
+    max_exits = 10*Nex
+    write(logmsg,*) 'NTcells0, Nex, max_exits: ',NTcells0,Nex,max_exits
+    call logger(logmsg)
+    allocate(exitlist(max_exits))       ! Set the array size to 10* the initial number of exits
+else
+    Nex = 0
+    write(logmsg,*) 'No exits'
+    call logger(logmsg)
+    return
+endif
+do iexit = 1,Nex
+	call AddExitPortal
+!	write(logmsg,*) 'Placed exit portal: ',iexit,Nex
+!	call logger(logmsg)
+enddo
+write(logmsg,*) 'Number of exit portals: ',Nex
+call logger(logmsg)
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2475,33 +2729,33 @@ integer :: i
 
 iexit = 0
 ! First look for an unused index
-do i = 1,globalvar%lastexit
+do i = 1,lastexit
 	if (exitlist(i)%ID == 0) then
 		iexit = i
 		exit
 	endif
 enddo
 if (iexit == 0) then
-	globalvar%lastexit = globalvar%lastexit + 1
-	iexit = globalvar%lastexit
+	lastexit = lastexit + 1
+	iexit = lastexit
 endif
 end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
-subroutine addExitPortal
+subroutine AddExitPortal
 integer :: site(3)
 integer :: iexit
 
-call choosePortalSite(site)
+call ChoosePortalSite(site)
 call getExitNum(iexit)
-globalvar%Nexits = globalvar%Nexits + 1
-if (globalvar%lastexit > max_exits) then
-	write(logmsg,*) 'Error: addExitPortal: too many exits: need to increase max_exits: ',max_exits
+Nexits = Nexits + 1
+if (lastexit > max_exits) then
+	write(logmsg,*) 'Error: AddExitPortal: too many exits: need to increase max_exits: ',max_exits
 	call logger(logmsg)
 	stop
 endif
-call placeExitPortal(iexit,site)
+call PlaceExitPortal(iexit,site)
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2536,7 +2790,7 @@ integer :: k, x, y, z, nb
 real :: r0, r
 
 ok = .false.		
-r0 = globalvar%radius
+r0 = radius
 do k = -10,10
 	r = r0 + k*0.5
 	x = x0 + u(1)*r
@@ -2554,9 +2808,12 @@ site = (/x,y,z/)
 end subroutine
 
 !-----------------------------------------------------------------------------
-! Exit sites (portals) are either on the blob surface, or within the blob
+! Exit sites (portals) are either on the blob surface, or within the blob.
+! If this is the initial placement (istep = 0) then only blob boundary and
+! other exit portals need be considered.
+! Otherwise HEV and DC locations need to be avoided as well.
 !-----------------------------------------------------------------------------
-subroutine choosePortalSite(site)
+subroutine ChoosePortalSite(site)
 integer :: site(3)
 integer :: xex, yex, zex
 real(DP) :: R
@@ -2564,7 +2821,7 @@ real :: prox, u(3), theta, rx
 integer :: kpar = 0
 logical :: ok
 
-!call logger('choosePortalSite')
+!call logger('ChoosePortalSite')
 if (SURFACE_PORTALS) then
 	! randomly choose direction in 3D, then locate sites near this vector on the blob boundary
 	! Need to restrict the sinus interface by removing the follicle interface.
@@ -2580,24 +2837,26 @@ if (SURFACE_PORTALS) then
 		u(3) = rx*sin(theta)
 		call getBoundarySite(u,site,ok)
 		if (.not.ok) cycle
-		xex = site(1)
-		yex = site(2)
-		zex = site(3)
-		if (use_DC) then
-			if (tooNearDC(site,globalvar%NDC,exit_DCprox)) then		! exit_DCprox is min distance in sites
-				call logger('tooNearDC')
-				cycle
-			endif
-		endif
-		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
-		prox = 0.5*prox
-!		if (USE_PORTAL_EGRESS) then
-!			prox = 0.3*prox
+!		xex = site(1)
+!		yex = site(2)
+!		zex = site(3)
+		call CheckSite(EXIT_SITE,site,ok)
+		if (.not.ok) cycle
+!		if (use_DC) then
+!			if (tooNearDC(site,exit_DCprox)) then		! exit_DCprox is min distance in sites
+!				call logger('tooNearDC')
+!				cycle
+!			endif
 !		endif
-		if (tooNearExit(site,prox)) then	! too near another exit
-!			call logger('tooNearExit')
-			cycle
-		endif	
+!		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
+!		prox = 0.5*prox
+!!		if (USE_PORTAL_EGRESS) then
+!!			prox = 0.3*prox
+!!		endif
+!		if (tooNearExit(site,prox)) then	! too near another exit
+!!			call logger('tooNearExit')
+!			cycle
+!		endif	
 		exit
 	enddo
 else	! blob portals
@@ -2613,7 +2872,7 @@ else	! blob portals
 		if (use_DC) then
 	!        write(*,*) 'use_DC?'
 	!        stop
-			if (tooNearDC(site,globalvar%NDC,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
+			if (tooNearDC(site,exit_DCprox)) cycle    ! exit_DCprox is min distance in sites
 		endif
 		prox = exit_prox*chemo_N				! chemo_N is chemo_radius in units of sites
 		if (tooNearExit(site,prox)) cycle       ! too near another exit
@@ -2626,7 +2885,7 @@ end subroutine
 
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
-subroutine placeExitPortal(iexit,site)
+subroutine PlaceExitPortal(iexit,site)
 integer :: iexit, site(3)
 integer :: kexit, x, y, z, x2, y2, z2, ek(3), vk(3), ns
 integer :: xex, yex, zex, xmin, xmax, ymin, ymax, zmin, zmax
@@ -2634,8 +2893,8 @@ real(DP) :: R
 real :: d2, d2k
 integer :: kpar = 0
 
-if (iexit == globalvar%lastexit + 1) then
-	globalvar%lastexit = iexit
+if (iexit == lastexit + 1) then
+	lastexit = iexit
 endif
 ns = 0
 exitlist(iexit)%ID = iexit      ! when an exit site is lost (because the blob retracted) set %ID = 0
@@ -2644,7 +2903,7 @@ xex = site(1)
 yex = site(2)
 zex = site(3)
 occupancy(xex,yex,zex)%exitnum = -iexit     ! This site holds an exit 
-!write(logmsg,*) 'placeExitPortal: site,exitnum: ',xex,yex,zex,-iexit
+!write(logmsg,*) 'PlaceExitPortal: site,exitnum: ',xex,yex,zex,-iexit
 !call logger(logmsg)
 
 xmin = xex - chemo_N
@@ -2702,13 +2961,14 @@ end subroutine
 ! Remove the last nremex exits in the list.
 ! Perhaps it would make more sense to remove exits that are close to 
 ! others, or to adjust the locations of remaining exits.
+! NOT USED
 !---------------------------------------------------------------------
 subroutine removeExits1(nremex)
 integer :: nremex
 integer :: Nex, k, iexit, site(3)
 
 !write(*,*) 'removeExits: ',nremex
-Nex = globalvar%lastexit
+Nex = lastexit
 k = 0
 do iexit = Nex,1,-1
     if (exitlist(iexit)%ID == 0) cycle
@@ -2716,7 +2976,7 @@ do iexit = Nex,1,-1
     site = exitlist(iexit)%site
 !    write(logmsg,'(a,4i6)') 'removeExits: removeExitPortal: ',iexit,site
 !    call logger(logmsg)
-    call removeExitPortal(site)
+    call RemoveExitPortal(site)
 !    write(logmsg,'(a,4i6)') 'did removeExitPortal'
 !    call logger(logmsg)
     if (k == nremex) exit
@@ -2727,14 +2987,14 @@ end subroutine
 !---------------------------------------------------------------------
 ! Remove exits that are close to others.
 !---------------------------------------------------------------------
-subroutine removeExits(nremex)
+subroutine RemoveExitPortals(nremex)
 integer :: nremex
 integer :: Nex, k, iexit, kexit, site1(3), site2(3)
 real :: r(3), sum, d2, cmin
 real, allocatable :: closeness(:)
 
-!write(*,*) 'removeExits: ',nremex
-Nex = globalvar%lastexit
+!write(*,*) 'RemoveExitPortals: ',nremex
+Nex = lastexit
 allocate(closeness(Nex))
 closeness = 0
 do iexit = 1,Nex
@@ -2763,20 +3023,16 @@ do k = 1,nremex
 	enddo
 	closeness(iexit) = 0
     site1 = exitlist(iexit)%site
-!    write(logmsg,'(a,4i6)') 'removeExits: removeExitPortal: ',iexit,site
-!    call logger(logmsg)
-    call removeExitPortal(site1)
-!    write(logmsg,'(a,4i6)') 'did removeExitPortal'
-!    call logger(logmsg)
+    call RemoveExitPortal(site1)
 enddo
-!call checkExits("in removeExits")
+!call checkExits("in RemoveExitPortals")
 deallocate(closeness)
 end subroutine
 
 !---------------------------------------------------------------------
 ! Remove the exit portal at site.
 !---------------------------------------------------------------------
-subroutine removeExitPortal(site)
+subroutine RemoveExitPortal(site)
 integer :: site(3)
 integer :: iexit,xex,yex,zex,xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,ek(3),vk(3),k,kmin,i
 real :: d2k, d2min
@@ -2786,9 +3042,9 @@ yex = site(2)
 zex = site(3)
 iexit = -occupancy(xex,yex,zex)%exitnum
 if (iexit <= 0) then
-	write(logmsg,*) 'Error: removeExitPortal: no exit at: ',site,iexit
+	write(logmsg,*) 'Error: RemoveExitPortal: no exit at: ',site,iexit
 	call logger(logmsg)
-	do i = 1,globalvar%lastexit
+	do i = 1,lastexit
 		site = exitlist(i)%site
 		write(logmsg,*) 'exit: ',i,site,occupancy(site(1),site(2),site(3))%exitnum
 		call logger(logmsg)
@@ -2798,7 +3054,7 @@ endif
 exitlist(iexit)%ID = 0
 occupancy(xex,yex,zex)%exitnum = iexit      ! to ensure that the site is processed in the next section
 											! effectively it is treated like a site within the portal's SOI
-!write(*,*) 'removeExitPortal: site,exitnum: ',site,iexit
+!write(*,*) 'RemoveExitPortal: site,exitnum: ',site,iexit
 
 xmin = xex - chemo_N
 xmax = xex + chemo_N
@@ -2820,7 +3076,7 @@ do x = xmin,xmax
                 ! at this point we need to check to see if (x,y,z) is within the SOI of another exit
                 d2min = 9999
                 kmin = 0
-                do k = 1,globalvar%lastexit
+                do k = 1,lastexit
                     if (exitlist(k)%ID == 0) cycle
                     ek = exitlist(k)%site
                     vk = (/x,y,z/) - ek
@@ -2834,23 +3090,22 @@ do x = xmin,xmax
 		        enddo
 		        if (kmin > 0) then
 		            occupancy(x,y,z)%exitnum = kmin
-!					write(*,*) '  removeExitPortal: site,exitnum: ',x,y,z,kmin
+!					write(*,*) '  RemoveExitPortal: site,exitnum: ',x,y,z,kmin
 		        endif
             endif
         enddo
     enddo
 enddo
-if (iexit == globalvar%lastexit) then
-	globalvar%lastexit = globalvar%lastexit - 1
+if (iexit == lastexit) then
+	lastexit = lastexit - 1
 endif
-globalvar%Nexits = globalvar%Nexits - 1
-!write(*,*) 'removeExitPortal: Nexits: ',globalvar%Nexits
+Nexits = Nexits - 1
 end subroutine
 
 !---------------------------------------------------------------------
-! Move the exit portal at site closer to the blob centre.
+! Move the exit portal to a site closer to the blob centre.
 !---------------------------------------------------------------------
-subroutine moveExitPortalInwards(site0)
+subroutine MoveExitPortalInwards(site0)
 integer :: site0(3)
 integer :: site(3), site1(3), iexit0, iexit1, dx, dy, dz
 real :: d0, dc, d2, d2min, r(3)
@@ -2858,7 +3113,7 @@ real, parameter :: dlim = 1.95
 
 iexit0 = -occupancy(site0(1),site0(2),site0(3))%exitnum
 ! First, remove the exit
-call removeExitPortal(site0)
+call RemoveExitPortal(site0)
 !write(logmsg,*) 'Removed exit within moveExitPortalInwards: ',iexit0,site0
 !call logger(logmsg)
 !call checkexits("in moveExitPortalInwards")
@@ -2868,7 +3123,7 @@ call removeExitPortal(site0)
 ! specified distance from the centre.
 ! NOTE: need to check that there is not a DC or another exit portal nearby.  
 ! If there is then a completely new portal site will need to be chosen, 
-! using choosePortalSite()
+! using ChoosePortalSite()
 d0 = cdistance(site0)
 d2min = 1.0e10
 site1 = 0
@@ -2898,8 +3153,8 @@ call getExitNum(iexit1)
 !call logger(logmsg)
 !write(logmsg,*) '                new #: ',iexit1,'   at: ',site1
 !call logger(logmsg)
-globalvar%Nexits = globalvar%Nexits + 1
-call placeExitPortal(iexit1,site1)
+Nexits = Nexits + 1
+call PlaceExitPortal(iexit1,site1)
 if (exitlist(iexit1)%site(1) /= site1(1) .or. &
 	exitlist(iexit1)%site(2) /= site1(2) .or. &
 	exitlist(iexit1)%site(3) /= site1(3)) then
@@ -2911,7 +3166,7 @@ endif
 !call logger(logmsg)
 !write(logmsg,*) 'and exit #10 is at: ',exitlist(10)%site
 !call logger(logmsg)
-!write(logmsg,'(a,6i6)') 'moveExitPortalInwards: placeExitPortal: ',istep,iexit,site1,globalvar%Nexits
+!write(logmsg,'(a,6i6)') 'moveExitPortalInwards: PlaceExitPortal: ',istep,iexit,site1,Nexits
 !call logger(logmsg)
 end subroutine
 
@@ -2919,7 +3174,7 @@ end subroutine
 ! The exit portal iexit needs to be moved by one site in the direction 
 ! closest to that given by the unit vector v(:).
 !---------------------------------------------------------------------
-subroutine moveExitPortal(iexit0,v)
+subroutine MoveExitPortal(iexit0,v)
 integer :: iexit0
 real :: v(3)
 integer :: iexit1, site0(3), site1(3), k, kmax
@@ -2939,10 +3194,92 @@ site0 = exitlist(iexit0)%site
 site1 = site0 + jumpvec(:,kmax)
 write(logmsg,'(a,i4,a,3i4,a,3i4)') 'moveExitPortal: ',iexit0,' from: ',site0,' to: ',site1
 call logger(logmsg)
-call removeExitPortal(site0)
+call RemoveExitPortal(site0)
 call getExitNum(iexit1)
-globalvar%Nexits = globalvar%Nexits + 1
-call placeExitPortal(iexit1,site1)
+Nexits = Nexits + 1
+call PlaceExitPortal(iexit1,site1)
+end subroutine
+
+!---------------------------------------------------------------------
+! Check the suitability of site(:) for locating sitetype:
+! EXIT_SITE, HEV_SITE, or DC_SITE
+!---------------------------------------------------------------------
+subroutine CheckSite(sitetype,site,ok)
+integer :: sitetype, site(3)
+logical :: ok
+real :: proxlimit, r
+
+select case(sitetype)
+case(EXIT_SITE)
+	proxlimit = proximity_limit(EXIT_SITE,EXIT_SITE)
+	if (tooNearExit(site,proxlimit)) then	! too near another exit
+		ok = .false.
+		return
+	endif
+	proxlimit = proximity_limit(EXIT_SITE,DC_SITE)
+	if (tooNearDC(site,proxlimit)) then	! too near a DC
+		ok = .false.
+		return
+	endif
+	proxlimit = proximity_limit(EXIT_SITE,HEV_SITE)
+	if (tooNearHEV(site,proxlimit)) then	! too near an HEV
+		ok = .false.
+		return
+	endif
+case(HEV_SITE)
+	r = cdistance(site)
+	if (r/radius < R_limit(HEV_SITE,1) .or. r/radius > R_limit(HEV_SITE,2)) then
+		ok = .false.
+		return
+	endif
+   proxlimit = proximity_limit(HEV_SITE,HEV_SITE)
+    if (tooNearHEV(site,proxlimit)) then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(HEV_SITE,EXIT_SITE)
+    if (tooNearExit(site,proxlimit))  then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(HEV_SITE,BDRY_SITE)
+    if (tooNearBdry(site,proxlimit))  then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(HEV_SITE,DC_SITE)
+	if (tooNearDC(site,proxlimit)) then	! too near an HEV
+		ok = .false.
+		return
+	endif
+case(DC_SITE)
+	r = cdistance(site)
+	if (r/radius < R_limit(DC_SITE,1) .or. r/radius > R_limit(DC_SITE,2)) then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(DC_SITE,DC_SITE)
+    if (tooNearDC(site,proxlimit)) then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(DC_SITE,EXIT_SITE)
+    if (tooNearExit(site,proxlimit))  then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(DC_SITE,BDRY_SITE)
+    if (tooNearBdry(site,proxlimit))  then
+		ok = .false.
+		return
+	endif
+    proxlimit = proximity_limit(DC_SITE,HEV_SITE)
+	if (tooNearHEV(site,proxlimit)) then	! too near an HEV
+		ok = .false.
+		return
+	endif
+end select
+ok = .true.
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2952,8 +3289,7 @@ subroutine displayExits
 integer :: Nex, k, iexit, kexit, site1(3), site2(3), count
 real :: r(3), sum, d2
 
-!write(*,*) 'removeExits: ',nremex
-Nex = globalvar%lastexit
+Nex = lastexit
 do iexit = 1,Nex
 	sum = 0
     if (exitlist(iexit)%ID == 0) cycle
@@ -2975,7 +3311,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! need to ensure that exits do not get too close together
 !-----------------------------------------------------------------------------------------
-subroutine checkExitSpacing(msg)
+subroutine CheckExitSpacing(msg)
 character*(*) :: msg
 integer :: iexit1, iexit2, site1(3), site2(3), im1=0, im2=0
 real :: r(3), d, dmin, f(3), df(3)
@@ -2984,11 +3320,11 @@ real :: dlim
 
 dlim = exit_prox*chemo_radius
 dmin = 1.0e10
-do iexit1 = 1,globalvar%lastexit
+do iexit1 = 1,lastexit
 	if (exitlist(iexit1)%ID == 0) cycle
 	site1 = exitlist(iexit1)%site
 	f = 0
-	do iexit2 = 1,globalvar%lastexit
+	do iexit2 = 1,lastexit
 		if (iexit1 == iexit2) cycle
 		if (exitlist(iexit2)%ID == 0) cycle
 		site2 = exitlist(iexit2)%site
@@ -3009,7 +3345,7 @@ do iexit1 = 1,globalvar%lastexit
 	enddo
 	if (f(1) /= 0 .or. f(2) /= 0 .or. f(3) /= 0) then
 		f = f/norm(f)
-		call moveExitPortal(iexit1,f)
+		call MoveExitPortal(iexit1,f)
 	endif
 enddo
 write(logmsg,*) msg,': Min exit spacing: ',im1,im2,dmin
@@ -3106,7 +3442,7 @@ do icyt = 1,Ncytokines
             enddo
         enddo
         ! need to make # of mols correspond to cyt_init
-        mols_pM = L_um3*M_pM/(globalvar%NTcells*Vc*Navo)
+        mols_pM = L_um3*M_pM/(NTcells*Vc*Navo)
         cyt_mols(icyt) = cyt_init(icyt)/mols_pM   ! -> total number of molecules
         write(*,'(a,f8.3,f12.0)') cyt_name(cyt_tag(icyt)),cyt_init(icyt),cyt_mols(icyt)
     endif
@@ -3182,14 +3518,19 @@ ntot = 0
 ncog = 0
 tnow = istep*DELTA_T
 ! Scaling factor to convert total number of molecules in the region to conc in pM
-mols_pM = L_um3*M_pM/(globalvar%NTcells*Vc*Navo)
+mols_pM = L_um3*M_pM/(NTcells*Vc*Navo)
 
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
     ntot = ntot + 1
     if (dbg) write(*,*) 'kcell: ',kcell
     ctype = cellist(kcell)%ctype
-    stype = struct_type(ctype)
+!    stype = struct_type(ctype)
+	if (associated(cellist(kcell)%cptr)) then
+		stype = COG_TYPE_TAG
+	else
+		stype = NONCOG_TYPE_TAG
+	endif
     if (stype /= COG_TYPE_TAG) cycle
     ! Only cognate cells considered
     ncog = ncog + 1
@@ -3227,6 +3568,7 @@ do kcell = 1,nlist
 					idc = cellist(kcell)%DCbound(k)
 					DClist(idc)%nbound = DClist(idc)%nbound - 1
 					DClist(idc)%ncogbound = DClist(idc)%ncogbound - 1
+                    call RemoveCogbound(idc,kcell)
 					cellist(kcell)%DCbound(k) = 0
 					unbound = .true.
 				endif
@@ -3297,7 +3639,7 @@ do kcell = 1,nlist
 					endif
 				else
 					! increment total number of molecules of this cytokine
-					dcyt_mols(iseq) = dcyt_mols(iseq) + (cyt_conc - ctemp)/(mols_pM*globalvar%NTcells)
+					dcyt_mols(iseq) = dcyt_mols(iseq) + (cyt_conc - ctemp)/(mols_pM*NTcells)
 	!                write(*,*) cyt_mols(iseq),dcyt_mols(iseq),ctemp,cyt_conc
 				endif
 			enddo
@@ -3347,6 +3689,51 @@ do kcell = 1,nlist
         call show_cognate_cell(kcell)
     endif
 
+enddo
+call UpdateHelp
+end subroutine
+
+!--------------------------------------------------------------------------------
+! The idea is to record the time spent by a cognate CD8 cell bound to a DC at the
+! same time as a cognate activated CD4 cell.
+! At this time it is not clear how or when help is effective.  For a start we can
+! record total timesteps.
+!--------------------------------------------------------------------------------
+subroutine UpdateHelp
+integer :: idc, ncb, k1, k2, n1, n2, kcell1, kcell2
+integer :: ctype1, ctype2
+logical :: help
+
+do idc = 1,NDC
+	ncb = DClist(idc)%ncogbound
+	if (ncb == 0) cycle
+	n1 = 0
+	do k1 = 1,MAX_COG_BIND
+		kcell1 = DClist(idc)%cogbound(k1)
+		if (kcell1 == 0) cycle
+		n1 = n1+1
+		ctype1 = cellist(kcell1)%ctype
+		help = .false.
+		n2 = 0
+		do k2 = 1,MAX_COG_BIND
+			kcell2 = DClist(idc)%cogbound(k2)
+			if (kcell2 == 0) cycle
+			n2 = n2+1
+			ctype2 = cellist(kcell2)%ctype
+			if (ctype1 == CD4 .and. ctype2 == CD8) then
+				help = .true.
+				exit
+			elseif (ctype1 == CD8 .and. ctype2 == CD4) then
+				help = .true.
+				exit
+			endif
+			if (n2 == ncb) exit
+		enddo
+		if (help) then
+			cellist(kcell1)%cptr%cnt(1) = cellist(kcell1)%cptr%cnt(1) + 1
+		endif
+		if (n1 == ncb) exit
+	enddo
 enddo
 end subroutine
 

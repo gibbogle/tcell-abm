@@ -51,9 +51,6 @@ real, public, parameter :: NAvo = 6.022e23          ! Avogadro's number
 real, public, parameter :: M_pM = 1.0e12            ! convert M -> pM
 real, public, parameter :: L_um3 = 1.0e15           ! convert L -> um^3
 
-integer, parameter :: CD4_CELL = 2          ! global::COG_CD4_TAG
-integer, parameter :: CD8_CELL = 3          ! global::COG_CD8_TAG
-
 real, parameter :: Kr = 0.0138;             ! dissociation rate (min^-1)
 real, parameter :: Kf = Kr/11.1;            ! association rate constant (pM^-1 min^-1)
 real, parameter :: Kre = 8*Kr;              ! dissociation rate constant, endosome (min^-1)
@@ -69,6 +66,7 @@ real, parameter :: Kdecay = 1/(60*Tdecay);  ! integrated CD25 stimulation decay 
 real, parameter :: Vs = 10.5;               ! constitutive receptor synthesis rate (min^-1) (10.5)
 real, parameter :: Vendo = 1.0e-14;         ! total endosomal volume (L/cell)
 
+integer, parameter :: CD8=2
 integer, parameter :: IL2_HILL_N = 4        ! should be 6?
 real, parameter :: IL2_HILL_C = 1000
 real, parameter :: IL2_MAX_RATE = 200     ! max IL2 synthesis rate /min
@@ -384,7 +382,7 @@ endif
 c = CD25_HILL_C
 n = CD25_HILL_N
 CD25_rate = rmax*S_Rec**n/(c**n + S_Rec**n)
-if (celltype == CD8_CELL) then
+if (celltype == CD8) then
 	CD25_rate = CD25_rate*IL2_PROD_CD8_CD4
 endif
 !write(*,*) 'S_Rec, CD25_rate: ',S_Rec,CD25_rate
@@ -407,7 +405,7 @@ end function
 real function IL2_rate()
 real :: n,an,afactor
 
-if (celltype == CD8_CELL) then
+if (celltype == CD8) then
 	IL2_rate = 0
 	return
 endif

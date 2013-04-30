@@ -10,7 +10,7 @@ integer :: ncpu, res, summarydata(100)
 character*(128) :: infile,outfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour, ntot, ncog(2), inflow, nexits
+integer :: jstep, hour, ntot, ncog(2), inflow, exits
 character*(128) :: b, c, progname
 
 call process_command_line(ncpu,infile,outfile)
@@ -124,9 +124,13 @@ call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call get_dimensions(NX,NY,NZ,Nsteps)
 do jstep = 1,Nsteps
 	call simulate_step(res)
-	if (res /= 0) then
+	if (res < 0) then
 		write(*,*) 'Error exit'
 		stop
+	endif
+	if (res > 0) then
+		write(*,*) 'Successful execution'
+		exit
 	endif
 	if (mod(jstep,240) == 0) then
 		call get_summary(summarydata)
@@ -135,8 +139,8 @@ do jstep = 1,Nsteps
 		ntot = summaryData(5)
 		ncog(1:2) = summaryData(7:8)
 		inflow = summaryData(11)
-		nexits = summaryData(12)
-		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', nexits		
+		exits = summaryData(12)
+		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits		
 	endif
 enddo
 call terminate_run(0)

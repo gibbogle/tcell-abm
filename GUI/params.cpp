@@ -14,9 +14,17 @@ Params::Params()
 "TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
 The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
 
-{"TC_COGNATE_FRACTION", 0.0001, 0.0, 0.002,
-"T cell cognate fraction",
-"The fraction of T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
+{"TC_CD8_FRACTION", 0.33, 0.0, 1.0,
+"T cell CD8 fraction",
+"The fraction of T cells that are CD8."},
+
+{"TC_COGNATE_FRACTION_CD4", 0.0001, 0.0, 0.002,
+"CD4 T cell cognate fraction",
+"The fraction of CD4 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
+
+{"TC_COGNATE_FRACTION_CD8", 0.0001, 0.0, 0.002,
+"CD8 T cell cognate fraction",
+"The fraction of CD8 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
 {"TC_STIM_RATE_CONSTANT", 1, 0.0, 100.0,
 "TCR stimulation rate constant",
@@ -83,11 +91,11 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Antigen density on a DC decays with a specified half-life.\n\
 [hours]"},
 
-{"MAX_TC_BIND", 100, 50, 200,
+{"MAX_TC_BIND", 30, 0, 0,
 "Max T cell binding/DC",
 "The maximum number of T cells that can be in simultaneous contact with a DC."},
 
-{"MAX_COG_BIND", 15, 5, 20,
+{"MAX_COG_BIND", 15, 0, 0,
 "Max cognate T cell binding/DC",
 "The maximum number of cognate T cells that can bind simultaneously to a DC."},
 
@@ -179,9 +187,14 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Compute T cell outflow limit?",
 "The upper bound on T cell outflow is computed together with inflow.  The alternative is to permit (probabilistic) egress of any cell at a portal."},
 
-{"RESIDENCE_TIME", 24.0, 12.0, 36.0,
-"T cell residence time",
-"T cell residence time (based on no DCs).\n\
+{"RESIDENCE_TIME_CD4", 12.0, 0, 0,
+"CD4 T cell residence time",
+"CD4 T cell residence time (based on no DCs).\n\
+[hours]"},
+
+{"RESIDENCE_TIME_CD8", 24.0, 0, 0,
+"CD8 T cell residence time",
+"CD8 T cell residence time (based on no DCs).\n\
 [hours]"},
 
 {"INFLAMM_DAYS1", 3.5, 0.0, 10.0,
@@ -217,7 +230,51 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 
 {"CHEMO_K_DC", 0.0, 0.0, 10.0,
 "DC chemotaxis influence parameter",
-"Strength of chemotactic influence on T cell motion towards DCs."},
+"Strength of chemotactic influence on T cell motion towards DCs (CCL3-CCR1)."},
+
+{"CCR1_1", 1, 0, 0,
+"CCR1_1",
+"Level for naive cell"},
+
+{"CCR1_2", 1, 0, 0,
+"CCR1_2",
+"Level for cell that has met antigen"},
+
+{"CCR1_3", 1, 0, 0,
+"CCR1_3",
+"Level for activated cell"},
+
+{"CCR1_SAT_THRESHOLD", 1, 0, 0,
+"CCR1_SAT_THRESHOLD",
+"CCL3 signal level to saturate CCR1 receptor"},
+
+{"CCR1_REFRACTORY_TIME", 5, 0, 0,
+"CCR1_REFRACTORY_TIME",
+"Time for CCR1 receptor to recover sensitivity after desensitization (min)"},
+
+{"CCL3_DIFF_COEFF", 0.01, 0, 0,
+"CCL3 diffusion coeff",
+"CCL3 diffusion coefficient"},
+
+{"CCL3_HALFLIFE", 11.55, 0, 0,
+"CCL3 half life",
+"CCL3 half life"},
+
+{"DC_CCL3_0", 0, 0, 0,
+"Use CCL3 secretion?",
+"Use CCL3 secretion? (otherwise use concentration)"},
+
+{"DC_CCL3_RATE", 1, 0, 0,
+"Rate of CCL3 secretion",
+"DC rate of secretion of CCL3"},
+
+{"DC_CCL3_CONC", 1, 0, 0,
+"CCL3 concentration",
+"DC CCL3 concentration"},
+
+{"DC_CCL3_RADIUS", 2.025, 0, 0,
+"Radius of CCL3 conc",
+"Sites within this radius of the DC receive CCL3 concentration (+ all DC sites)"},
 
 {"NDAYS", 1.0, 0.0, 30.0,
 "Number of days",
@@ -263,6 +320,14 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 {"IV_SHOW_NONCOGNATE", 0, 0, 1,
 "Display non-cognate cells",
 "Display both non-cognate and cognate T cells"},
+
+{"SPECIAL_CASE", 0, 0, 0,
+"Special case simulation",
+"Select one of the hard-coded special cases (> 0)"},
+
+{"SPECIAL_CASE_FILE", 0, 0, 0,
+"",
+"Input file required by the selected hard-coded special case"},
 
 {"INPUT_FILE", 0, 0, 0,
 "fixed.inpdata",

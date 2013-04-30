@@ -191,9 +191,9 @@ do icyt = 1,Ncytokines
 !        enddo
 !    enddo
     asum = sum(cyt(:,:,:,icyt))
-    cyt_mean(icyt) = asum/globalvar%NTcells
+    cyt_mean(icyt) = asum/NTcells
 enddo
-!write(*,*) 'nsum,ntcells: ',nsum,globalvar%NTcells
+!write(*,*) 'nsum,ntcells: ',nsum,NTcells
 !write(*,*) 'asum,csum: ',asum,csum
 !write(*,*) 'cmin,cmax: ',cmin,cmax,ix,iy,iz
 !stop
@@ -329,11 +329,11 @@ real :: mols_pM
 !if (me == 0) then
     kIL2 = cyt_seq(IL2_TAG)
     cyt_mols(kIL2) = cyt_mols(kIL2)*(1 - IL2_DECAY_RATE*DELTA_T)                ! decay of IL2
-    mols_pM = L_um3*M_pM/(globalvar%NTcells*Vc*Navo)
+    mols_pM = L_um3*M_pM/(NTcells*Vc*Navo)
 !    write(*,'(a,4f8.1)') 'molsynch: ',cyt_mols(kIL2),dcyt_mols(kIL2), &
-!        cyt_constit(kIL2)*DELTA_T*globalvar%NTcells*Vc,mols_pM*cyt_mols(kIL2)
+!        cyt_constit(kIL2)*DELTA_T*NTcells*Vc,mols_pM*cyt_mols(kIL2)
 
-    cyt_mols = cyt_mols + dcyt_mols + cyt_constit*DELTA_T*globalvar%NTcells*Vc  ! constitutive production of cytokines
+    cyt_mols = cyt_mols + dcyt_mols + cyt_constit*DELTA_T*NTcells*Vc  ! constitutive production of cytokines
     dcyt_mols = 0
 !    if (Mnodes > 1) then
 !        do source = 1,Mnodes-1

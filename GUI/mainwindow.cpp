@@ -149,13 +149,15 @@ void MainWindow::createActions()
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
     connect(action_play_VTK, SIGNAL(triggered()), SLOT(playVTK()));
     connect(action_set_speed, SIGNAL(triggered()), SLOT(setVTKSpeed()));
+    connect(actionShow_2D_gradient_field, SIGNAL(triggered()), this, SLOT(on_action_show_gradient2D_triggered()));
+    connect(actionShow_3D_gradient_field, SIGNAL(triggered()), this, SLOT(on_action_show_gradient3D_triggered()));
 	for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
-		LOG_QMSG(label_str);
+//		LOG_QMSG(label_str);
 		if (label_str.startsWith("label_")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
-			LOG_QMSG(label_str);
+//			LOG_QMSG(label_str);
 		}
 	}
 	// Graph menu
@@ -690,6 +692,8 @@ void MainWindow::writeout()
 		double val = p.value;
 		if (p.tag.compare("INPUT_FILE") == 0)
 			line = p.label;
+		else if (p.tag.compare("SPECIAL_CASE_FILE") == 0)
+			line = p.label;
 		else if (p.tag.compare("DC_INJECTION_FILE") == 0)
 			line = p.label;
 		else if (val == int(val)) 	// whole number, write as integer
@@ -733,16 +737,26 @@ void MainWindow::readInputFile()
 		QString ptag = p.tag;
 		if (ptag.compare("INPUT_FILE") == 0) {
 			parm->set_label(k,data[0]);
+		} if (ptag.compare("SPECIAL_CASE_FILE") == 0) {
+			parm->set_label(k,data[0]);
 		} else if (ptag.compare("DC_INJECTION_FILE") == 0) {
 				parm->set_label(k,data[0]);
 		} else {
 			parm->set_value(k,data[0].toDouble());
 		}
 	}
-
     reloadParams();
     paramSaved = true;
 	inputFile = fileName;
+	QLineEdit *ql = findChild<QLineEdit*>("line_SPECIAL_CASE");
+	QLineEdit *qt = findChild<QLineEdit*>("text_SPECIAL_CASE_FILE");
+	int ispecial_case = ql->text().toInt();
+	sprintf(msg,"ispecial_case: %d",ispecial_case);
+	LOG_MSG(msg);
+	if (ispecial_case != 0)
+		qt->setEnabled(true);
+	else
+		qt->setEnabled(false);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1447,11 +1461,14 @@ void MainWindow::showSummary()
 
 	mutex1.lock();
 
-	hour = summaryData[0]*DELTA_T/60;
+//	hour = summaryData[0]*DELTA_T/60;
+	hour = summaryData[1]*DELTA_T/60;
 	progress = int(100.*hour/hours);
 	progressBar->setValue(progress);
 	QString hourstr = QString::number(int(hour));
 	hour_display->setText(hourstr);
+//	sprintf(msg,"showSummary: step: %d summaryData[1]: %d hour: %6.1f",step,summaryData[1],hour);
+//	LOG_MSG(msg);
 
 	QString casename = newR->casename;
 	newR->tnow[step] = step;		//summaryData[0];
@@ -2213,6 +2230,18 @@ void MainWindow::disableUseDCChemotaxis()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow::on_line_SPECIAL_CASE_textEdited(QString str)
+{
+	QLineEdit *ql = findChild<QLineEdit*>("text_SPECIAL_CASE_FILE");
+	int num = str.toInt();
+	if (num == 0) 
+		ql->setEnabled(false);
+	else
+		ql->setEnabled(true);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::redrawDistPlot()
 {
         int i_m = 0, i_s = 0;
@@ -2368,6 +2397,52 @@ void MainWindow::create_lognorm_dist(double p1, double p2,int n, double *x, doub
 	}
 }
 
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_action_show_gradient2D_triggered()
+{
+	LOG_QMSG("on_action_show_gradient2D_triggered");
+	showGradient2D();
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_action_show_gradient3D_triggered()
+{
+	LOG_QMSG("on_action_show_gradient3D_triggered");
+	showGradient3D();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showGradient2D()
+{
+    LOG_MSG("showGradient2D");
+    SimpleView2D *mySimpleView2D = new SimpleView2D();
+//    QSize size = mySimpleView2D->size();
+//    sprintf(msg,"mySimpleView2D size: %d %d",size.height(),size.width());
+//    LOG_MSG(msg);
+    mySimpleView2D->chooseParameters();
+    mySimpleView2D->create();
+    mySimpleView2D->show();
+    mySimpleView2D->aimCamera();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showGradient3D()
+{
+    LOG_MSG("showGradient3D");
+    SimpleView3D *mySimpleView3D = new SimpleView3D();
+//    QSize size = mySimpleView3D->size();
+//    sprintf(msg,"mySimpleView3D size: %d %d",size.height(),size.width());
+//    LOG_MSG(msg);
+    mySimpleView3D->chooseParameters();
+    mySimpleView3D->create();
+    mySimpleView3D->show();
+    mySimpleView3D->aimCamera();
+//    mySimpleView3D->GetRenderWindow()->SetSize(768,768);
+}
 
 //======================================================================================================
 //------------------------------------------------------------------------------------------------------

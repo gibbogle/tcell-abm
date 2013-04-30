@@ -307,11 +307,9 @@ void MyVTK::renderCells(bool redo, bool zzz)
 void MyVTK::process_Tcells()
 {
 	int i, tag;
-	double r, g, b, genfac;
-	double TC_MAX_GEN = 15;
+	double r, g, b;
 	CELL_POS cp;
 	vtkActor *actor;
-	double TCColor[] = {0.0, 0.0, 1.0};
 
     int na = T_Actor_list.length();
     int np = TCpos_list.length();
@@ -336,23 +334,12 @@ void MyVTK::process_Tcells()
 			}
 			actor = vtkActor::New();
             actor->SetMapper(TcellMapper);
-            actor->GetProperty()->SetColor(TCColor);
+ //           actor->GetProperty()->SetColor(TCColor);
             ren->AddActor(actor);
             T_Actor_list.append(actor);
             na = tag + 1;
 		}
-		if (cp.state == -1) {	// non-cognate
-			r = 0.5; g = 0.5; b = 0.5;
-		} else if (cp.state == 0) {
-			r = 0; g = 0; b = 1;
-		} else if (cp.state <= TC_MAX_GEN) {
-			genfac = (cp.state-1)/(TC_MAX_GEN-1);		// 0 - 1
-			b = genfac*0.4;
-			g = 1 - b;
-			r = 0;
-		} else {
-			r = 1.0; g = 0.6; b = 0.0;
-		}
+		getTCColor(cp.state,&r,&g,&b);
         actor = T_Actor_list[tag];
         actor->GetProperty()->SetColor(r, g, b);
         actor->SetPosition(cp.x, cp.y, cp.z);
@@ -372,6 +359,72 @@ void MyVTK::process_Tcells()
             T_Actor_list[k] = 0;
 		}
 	}
+}
+
+//---------------------------------------------------------------------------------------------
+// Need to choose colours to distinguish CD4 and CD8 cells
+//           |     CD4     |     CD8     |
+//----------------------------------------
+// Naive     |  deep blue  |  deep green |
+// Activated | light blue  | light green |
+// Bound     |   purple    |   yellow    |
+//---------------------------------------------------------------------------------------------
+void MyVTK::getTCColor(int state, double *r, double *g, double *b)
+{
+	int TC_MAX_GEN = 15;
+	double genfac;
+	bool CD4;
+	int deep_blue[]   = {30,20,255};
+	int deep_green[]  = {0,150,0};
+	int light_blue[]  = {0,200,255};
+	int light_green[] = {50,255,150};
+	int purple[]      = {200,30,255};
+	int yellow[]      = {255,255,30};
+
+	if (state < 100) 
+		CD4 = true;
+	else {
+		CD4 = false;
+		state -= 100;
+	}
+	if (state == -1) {	// non-cognate
+		*r = 0.5; *g = 0.5; *b = 0.5;
+	} else if (CD4){
+		if (state == 0) {			// naive
+			setColor(r,g,b,deep_blue);
+//			r = deep; g = 0; b = 1;
+		} else if (state == 99) {	// bound
+			setColor(r,g,b,purple);
+//			r = 1.0; g = 0.6; b = 0.0;
+		} else {					// activated
+			setColor(r,g,b,light_blue);
+			/*
+			if (state <= TC_MAX_GEN) {
+				genfac = (state-1)/(TC_MAX_GEN-1);		// 0 - 1
+				b = genfac*0.4;
+				g = 1 - b;
+				r = 0;
+			}
+			*/
+		}
+	} else {
+		if (state == 0) {			// naive
+			setColor(r,g,b,deep_green);
+		} else if (state == 99) {	// bound
+			setColor(r,g,b,yellow);
+		} else {					// activated
+			setColor(r,g,b,light_green);
+		}
+	}
+}
+
+//---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+void MyVTK::setColor(double *r, double *g, double *b, int col[])
+{
+	*r = col[0]/255.;
+	*g = col[1]/255.;
+	*b = col[2]/255.;
 }
 
 //---------------------------------------------------------------------------------------------

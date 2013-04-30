@@ -2,6 +2,7 @@ module omp_motility
 
 !use omp_transfer
 use omp_global
+use chemokine
 
 implicit none
 
@@ -44,7 +45,12 @@ if (fullslots1 /= BOTH) then
 endif
 ! Now we must jump (if possible)
 
-stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+!stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+if (associated(cell%cptr)) then
+	stype = COG_TYPE_TAG
+else
+	stype = NONCOG_TYPE_TAG
+endif
 
 z = site1(3)
 lastdir1 = cell%lastdir
@@ -189,7 +195,7 @@ do k = 1,2
 enddo
 ! Need first to determine if the cell is subject to chemotaxis
 in_exit_SOI = .false.
-if (globalvar%Nexits > 0) then
+if (Nexits > 0) then
     chemo_exit = chemo_active_exit(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_exit > 0) then
         ! Then need to determine if the cell is within the SOI of an exit.
@@ -223,7 +229,12 @@ if (fullslots1 /= BOTH) then
 endif
 ! Now we must jump (if possible)
 
-stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+!stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+if (associated(cell%cptr)) then
+	stype = COG_TYPE_TAG
+else
+	stype = NONCOG_TYPE_TAG
+endif
 
 z = site1(3)
 lastdir1 = cell%lastdir
@@ -346,7 +357,7 @@ end subroutine
 ! In the limit of CHEMO_K_EXIT = 0, this should be the same as jumper(), i.e. the same
 ! as setting USE_EXIT_CHEMOTAXIS = false.
 !-----------------------------------------------------------------------------------------
-subroutine chemo_jumper(kcell,indx1,kslot1,go,kpar)
+subroutine chemo_jumper2(kcell,indx1,kslot1,go,kpar)
 integer :: kpar,kcell,indx1(2),kslot1
 logical :: go
 type (cell_type), pointer :: cell
@@ -356,7 +367,7 @@ integer :: ne, ee(3,MAX_EX_CHEMO), nd, neardc(MAX_DC_CHEMO), kk, ned, idc
 integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
 real(DP) :: p(MAXRELDIR+1),psum, R, pR, psumm, stay_prob, f, c
 real :: tnow, rad, chemo_exit=0, chemo_DC=0
-real :: ff(MAX_CHEMO), vv(3,MAX_CHEMO), vsum(3)
+real :: ff(MAX_EX_CHEMO+MAX_DC_CHEMO), vv(3,MAX_EX_CHEMO+MAX_DC_CHEMO), vsum(3)
 
 !if (kcell == 310 .and. istep == 4801) then
 !	dbug = .true.
@@ -381,7 +392,7 @@ ned = 0
 
 ! Need first to determine if the cell is subject to chemotaxis
 ne = 0
-if (globalvar%Nexits > 0 .and. chemo_K_exit > 0) then
+if (Nexits > 0 .and. chemo_K_exit > 0) then
     chemo_exit = chemo_active_exit(cell)    ! the degree of chemotactic activity, possibly based on S1P1 as surrogate
     if (chemo_exit > 0) then
         ! Then need to determine if the cell is within the SOI of any exits.
@@ -396,20 +407,28 @@ if (globalvar%Nexits > 0 .and. chemo_K_exit > 0) then
 endif
 nd = 0
 chemo_DC = 0
-if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. globalvar%NDC > 0) then
+if (use_DC_chemotaxis .and. chemo_K_DC > 0 .and. NDC > 0) then
 	if (TAGGED_DC_CHEMOTAXIS) then
-		if (cell%ctype == TAGGED_CELL) then
+		if (cell%tag == TAGGED_CELL) then
 			if (tnow-cell%unbindtime(2) > DC_CHEMO_DELAY) then
-!				chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
-				chemo_DC = CHEMO_DC_TAG
+				chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
 			endif
 		endif
 	elseif (tnow-cell%unbindtime(2) > DC_CHEMO_DELAY) then
 		chemo_DC = chemo_active_DC(cell)    ! the degree of chemotactic activity
 	endif
     if (chemo_DC > 0) then
-        ! Then need to determine if the cell is within the SOI of any DCs.
-        call near_DCs(site1,nd,neardc) ! new
+		if (USE_CHEMOKINE_GRADIENT) then
+			nd = 1
+			if (ne /= 0) then
+				write(logmsg,*) 'Combination of DC gradient chemotaxis and exit chemotaxis not yet implemented'
+				call logger(logmsg)
+				stop
+			endif
+		else
+	        ! Need to determine if the cell is within the SOI of any DCs.
+		    call near_DCs(site1,nd,neardc) ! new
+		endif
     endif
 endif
 
@@ -418,9 +437,9 @@ ff = 0
 if (ne > 0 .and. chemo_K_exit > 0) then
 	do k = 1,ne
 		e = ee(:,k)
-		v = site1 - e
-!		vv(:,k) = v
-!		if (dbug) write(*,*) 'site1,v: ',site1,v
+!		v = site1 - e	! Note: vector v directed AWAY from exit 
+! CHANGED
+		v = e - site1	! v now directed towards attractant site - like chemokine gradient vector
 		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
 		if (rad == 0) then
 			f = 0
@@ -433,20 +452,27 @@ endif
 
 if (nd > 0) then
 	! augment vsum with DC chemotaxis
-	do k = 1,nd
-		kk = ne + k
-		idc = neardc(k)
-		e = DClist(idc)%site
-		v = site1 - e
-!		vv(:,kk) = v ! new
-		rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
-		if (rad == 0) then
-			go = .false.
-			return
-		endif
-		f = chemo_K_DC*chemo_DC*chemo_g(rad)
-		vsum = vsum + (f/norm(real(v)))*v
-	enddo
+	if (USE_CHEMOKINE_GRADIENT) then
+!		vsum = -occupancy(site1(1),site1(2),site1(3))%chemo_grad	! - sign for consistency with radius method
+		vsum = chemo(1)%grad(:,site1(1),site1(2),site1(3))	
+		! sign change no longer needed - chemo_p(:) changed 
+		vsum = CHEMO_K_DC*vsum	
+	else
+		do k = 1,nd
+			kk = ne + k
+			idc = neardc(k)
+			e = DClist(idc)%site
+			v = site1 - e	! Note: vector v directed AWAY from DC
+	!		vv(:,kk) = v ! new
+			rad = chemo_r(abs(v(1)),abs(v(2)),abs(v(3)))
+			if (rad == 0) then
+				go = .false.
+				return
+			endif
+			f = chemo_K_DC*chemo_DC*chemo_g(rad)
+			vsum = vsum + (f/norm(real(v)))*v
+		enddo
+	endif
 endif
 ned = ne + nd
 
@@ -457,7 +483,7 @@ if (ned > 0) then
 	! This is an approximation to increase speed - it enables a table lookup.
 	! Note that we use only the direction of v (magnitude is insignificant at this stage,
 	! since it has been accounted for in f)
-	v = chemo_N*vsum/norm(vsum)	! this is a quick approximation, needs checking!!!!
+	v = chemo_N*vsum/norm(vsum)	! this is a quick approximation, needs checking! OK.
     stay_prob = dirprob(0)
     c = 1
 !    c = CCR7_ligand(rad)	! no unique rad now - this needs to be changed
@@ -476,7 +502,12 @@ if (fullslots1 /= BOTH) then
 endif
 ! Now we must jump (if possible)
 
-stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+!stype = struct_type(int(cell%ctype))     ! COG_TYPE_TAG or NONCOG_TYPE_TAG
+if (associated(cell%cptr)) then
+	stype = COG_TYPE_TAG
+else
+	stype = NONCOG_TYPE_TAG
+endif
 
 ! Compute jump probabilities in the absence of chemotaxis
 site1 = cell%site
@@ -600,6 +631,229 @@ occupancy(site2(1),site2(2),site2(3))%indx(kslot2) = kcell
 occupancy(site1(1),site1(2),site1(3))%indx(kslot1) = 0
 
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+! This is the version from bcell-abm
+!-----------------------------------------------------------------------------------------
+subroutine chemo_jumper(kcell,indx1,kslot1,go,kpar)
+integer :: kpar,kcell,indx1(2),kslot1
+logical :: go
+type (cell_type), pointer :: cell
+integer :: fullslots1,fullslots2,site1(3),site2(3),kslot2
+integer :: irel,dir1,lastdir1,indx2(2),k,kr,rv(3),id, ichemo, nfull, nrest, nout
+integer :: savesite2a(3,MAXRELDIR+1), saveslots2a(MAXRELDIR+1)
+real(DP) :: p(MAXRELDIR+1),psum, R, pR, psumm, stay_prob,  psave(MAXRELDIR+1)
+real :: tnow, v(3), vsum(3), f
+logical :: ischemo, cognate
+
+tnow = istep*DELTA_T
+cell => cellist(kcell)
+cognate = associated(cell%cptr)
+
+id = cell%id
+site1 = cell%site
+if (site1(1) < 1) then
+    write(logmsg,*) 'chemo_jumper: bad site1: ',site1
+    call logger(logmsg)
+    stop
+endif
+fullslots1 = 0
+do k = 1,2
+    if (indx1(k) > 0) then
+        fullslots1 = fullslots1 + k
+    endif
+enddo
+stay_prob = dirprob(0)
+
+ischemo = .false.
+do kr = 1,MAX_RECEPTOR
+    if (cell%receptor_saturation_time(kr) /= 0) then
+!        if (tnow > cell%receptor_saturation_time(kr) + T_RECEPTOR_REFRACTORY) then
+        if (tnow > cell%receptor_saturation_time(kr) + receptor(kr)%refractory_time) then
+            cell%receptor_saturation_time(kr) = 0
+!			call logger('Receptor resensitized')
+        endif
+    endif
+	f = cell%receptor_level(kr)*receptor(kr)%strength
+    if (receptor(kr)%used .and. (f > 0) .and. (cell%receptor_saturation_time(kr) == 0)) then
+        ischemo = .true.
+        exit
+    endif
+enddo
+
+vsum = 0
+if (ischemo) then
+    do kr = 1,MAX_RECEPTOR
+        if (receptor(kr)%used .and. (cell%receptor_saturation_time(kr) == 0)) then
+			ichemo = receptor(kr)%chemokine
+			f = receptor(kr)%sign*cell%receptor_level(kr)*receptor(kr)%strength
+			v = chemo(ichemo)%grad(:,site1(1),site1(2),site1(3))
+			if (receptor_saturation(kr,site1,f,v)) then
+			    cell%receptor_saturation_time(kr) = tnow
+			    f = f/2
+!			    call logger('Receptor saturation')
+			endif
+	    	vsum = vsum + f*v
+!	    	! TRY THIS  - not needed now, chemo_p(:) has been changed
+!	    	vsum = -vsum
+	    endif
+	enddo
+	! For exit chemotaxis:
+	! Need to create estimate of v() that corresponds to the direction of vsum,
+	! nearest discrete location on the 3D lattice (for chemo_p(x,y,z))
+	! This is an approximation to increase speed - it enables a table lookup.
+	! Note that we use only the direction of v (magnitude is insignificant at this stage,
+	! since it is accounted for in f)
+    if (norm(vsum) > 0) then
+		f = min(1.0,norm(vsum))     ! Note: f is in (0-1)
+		v = vsum/norm(vsum)
+		rv = chemo_N*v
+	else
+		f = 0
+		ischemo = .false.
+	endif
+    stay_prob = dirprob(0)
+    stay_prob = (1-f)*stay_prob
+else
+    stay_prob = dirprob(0)
+endif
+
+if (fullslots1 /= BOTH) then
+    R = par_uni(kpar)
+    if (R <= stay_prob) then    ! case of no jump
+	    go = .false.
+        return
+    endif
+endif
+! Now we must jump (if possible)
+! Compute jump probabilities in the absence of chemotaxis
+site1 = cell%site
+lastdir1 = cell%lastdir
+p = 0
+savesite2a = 0
+saveslots2a = 0
+nfull = 0
+nrest = 0
+nout = 0
+do irel = 1,nreldir
+	dir1 = reldir(lastdir1,irel)
+	site2 = site1 + jumpvec(:,dir1)
+	if (inside_xyz(site2)) then
+	    indx2 = occupancy(site2(1),site2(2),site2(3))%indx
+		if (indx2(1) >= 0) then     ! not OUTSIDE_TAG or DC
+            fullslots2 = 0
+            do k = 1,2
+                if (indx2(k) > 0) then
+                    fullslots2 = fullslots2 + k
+                endif
+            enddo
+            if (fullslots2 == BOTH) then
+                nfull = nfull + 1
+                cycle
+            elseif (fullslots2 /= 0) then
+                nrest = nrest + 1
+                p(dir1) = dirprob(irel)*GAMMA
+            else
+                nrest = nrest + 1
+                p(dir1) = dirprob(irel)
+            endif
+            saveslots2a(dir1) = fullslots2
+        else
+	        nout = nout + 1
+		endif
+	endif
+	savesite2a(:,dir1) = site2
+enddo
+if (sum(p) == 0) then
+    go = .false.
+    return
+endif
+
+if (ischemo) then
+	psave = p
+!	call chemo_probs(p,v,f)
+	call chemo_probs_pre(p,rv,f)     ! this is the precomputed version
+endif
+psum = sum(p)
+
+if (psum == 0) then
+	go = .false.
+	return
+else
+    go = .true.
+endif
+
+! Now choose a direction on the basis of these probs p()
+R = par_uni(kpar)
+pR = psum*R
+psumm = 0
+do dir1 = 1,njumpdirs
+   	psumm = psumm + p(dir1)
+   	if (pR <= psumm) then
+   		exit
+   	endif
+enddo
+if (dir1 > njumpdirs) then
+    dir1 = 0
+    do k = 1,njumpdirs
+        if (p(k) > 0) then
+            dir1 = k
+            exit
+        endif
+    enddo
+endif
+site2 = savesite2a(:,dir1)
+
+fullslots2 = saveslots2a(dir1)
+! new code
+if (diagonal_jumps) then
+	dir1 = fix_lastdir(dir1,kpar)
+elseif (dir1 == 0) then
+	dir1 = random_int(1,6,kpar)
+endif
+
+if (fullslots2 == 0) then       ! randomly select a slot
+    R = par_uni(kpar)
+    if (R <= 0.5) then
+        kslot2 = SLOT_NUM1
+    else
+        kslot2 = SLOT_NUM2
+    endif
+elseif (fullslots2 == SLOT_NUM1) then
+    kslot2 = SLOT_NUM2
+elseif (fullslots2 == SLOT_NUM2) then
+    kslot2 = SLOT_NUM1
+else
+    write(logmsg,*) 'ERROR in jumper: jump to crowded site'
+	call logger(logmsg)
+    stop
+endif
+cell%site = site2
+cell%lastdir = dir1
+occupancy(site2(1),site2(2),site2(3))%indx(kslot2) = kcell
+occupancy(site1(1),site1(2),site1(3))%indx(kslot1) = 0
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Determine whether a receptor at site1(:) is saturated.
+! Currently the decision is made from:
+! f = total strength, which is cell%receptor_level(kr)*receptor(kr)%strength
+! v = chemokine gradient
+!-----------------------------------------------------------------------------------------
+logical function receptor_saturation(kr,site,f,v)
+integer :: kr, site(3)
+real :: f, v(3), a(3)
+real :: magnitude
+!real :: saturation_threshold = 0.8
+
+a = f*v
+magnitude = norm(a)
+if (magnitude > receptor(kr)%saturation_threshold) then
+    receptor_saturation = .true.
+else
+    receptor_saturation = .false.
+endif
+end function
 
 !-----------------------------------------------------------------------------------------
 ! In this version the parallel section has been made into a subroutine.
@@ -799,7 +1053,7 @@ if (istep == 1) then    ! must be executed when the blob size changes
         i = cellist(kcell)%site(1)
         xcount(i) = xcount(i) + 1
     enddo
-    nslice = globalvar%NTcells/(2*Mnodes)
+    nslice = NTcells/(2*Mnodes)
     i = 0
     sum = 0
     sump = 0
@@ -816,7 +1070,7 @@ if (istep == 1) then    ! must be executed when the blob size changes
         endif
     enddo
     xlim(2*Mnodes) = NX
-    xtotal(2*Mnodes) = globalvar%NTcells - sum
+    xtotal(2*Mnodes) = NTcells - sum
     write(*,*) 'i,sum: ',i,sum,xtotal(i)
     deallocate(xcount)
 endif
@@ -1204,7 +1458,7 @@ err = .false.
 do i = 1,2
     idc = DCbound(i)
     if (idc == 0) cycle
-    if (globalvar%NDCalive == 0) then
+    if (NDCalive == 0) then
         write(*,*) 'check_DCbound: NDCalive = 0, T cell bound to DC: ',idc
         err = .true.
     endif

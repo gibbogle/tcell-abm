@@ -15,7 +15,7 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkProperty.h"
 #include "vtkCamera.h"
-#include <vtkMPEG2Writer.h>
+//#include <vtkMPEG2Writer.h>
 #include <vtkPNGWriter.h>
 #include <vtkJPEGWriter.h>
 #include <vtkTIFFWriter.h>
@@ -56,6 +56,8 @@ public:
     void process_Tcells();
     void process_Dcells(bool);
     void process_bonds();
+	void getTCColor(int state, double *r, double *g, double *b);
+	void setColor(double *r, double *g, double *b, int col[]);
 	bool startPlayer(QString, QTimer *, bool);
 	bool nextFrame();
 	void pause();
@@ -77,7 +79,7 @@ public:
 	vtkPolyDataMapper *TcellMapper;
 	vtkPolyDataMapper *DcellMapper;
 	vtkPolyDataMapper *bondMapper;
-	vtkMPEG2Writer *mpg;
+//	vtkMPEG2Writer *mpg;
 //	vtkSmartPointer<vtkPNGWriter> writer;
 //	vtkSmartPointer<vtkBMPWriter> writer;
 	vtkSmartPointer<vtkJPEGWriter> writer;

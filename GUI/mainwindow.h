@@ -20,6 +20,8 @@ using namespace std;
 #include "myvtk.h"
 #include "result_set.h"
 #include "log.h"
+#include "SimpleView2DUI.h"
+#include "SimpleView3DUI.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -67,6 +69,9 @@ protected:
     void closeEvent(QCloseEvent *event);
 
 private slots:
+	void on_action_show_gradient2D_triggered();
+	void on_action_show_gradient3D_triggered();
+	void on_line_SPECIAL_CASE_textEdited(QString);
     void newFile();
     void open();
     void about();
@@ -133,6 +138,8 @@ private:
 	void drawGraphs();
 	QString selectResultSet();
 	int selectGraphCase();
+	void showGradient2D();
+	void showGradient3D();
 
 	double erf(double z);
     double pnorm(double x1, double x2, double mu, double sig);
