@@ -118,6 +118,15 @@ MainWindow::MainWindow(QWidget *parent)
 	loadParams();
 	writeout();
     timer = new QTimer(this);
+    QRect rect;
+    rect = groupBox_run->geometry();
+#ifdef __DISPLAY768
+    rect.setHeight(440);
+#else
+    rect.setHeight(600);
+#endif
+    groupBox_run->setGeometry(rect);
+
 //	vtk = new MyVTK(page_3D);
     vtk = new MyVTK(mdiArea_VTK, test_page);
 	vtk->init();
@@ -258,11 +267,11 @@ void MainWindow:: drawDistPlots()
 			median_qstr = line_TC_AVIDITY_MEDIAN->text();
 			shape_qstr = line_TC_AVIDITY_SHAPE->text();
 		} else if (j == 1) {
-			qp->setTitle("First division time (hrs)");
+            qp->setTitle("First division (hrs)");
 			median_qstr = line_DIVIDE1_MEDIAN->text();
 			shape_qstr = line_DIVIDE1_SHAPE->text();
 		} else if (j == 2) {
-			qp->setTitle("Later division time (hrs)");
+            qp->setTitle("Later division (hrs)");
 			median_qstr = line_DIVIDE2_MEDIAN->text();
 			shape_qstr = line_DIVIDE2_SHAPE->text();
 		} else if (j == 3) {

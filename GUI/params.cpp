@@ -4,7 +4,7 @@
 Params::Params()
 {
 	PARAM_SET params[] = {
-{"TC_AVIDITY_MEDIAN", 1.0, 0.1, 10.0,
+{"TC_AVIDITY_MEDIAN", 1.0, 0, 0,
 "TCR avidity median parameter",
 "TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
@@ -14,30 +14,30 @@ Params::Params()
 "TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
 The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
 
-{"TC_CD8_FRACTION", 0.33, 0.0, 1.0,
+{"TC_CD8_FRACTION", 0.33, 0, 0,
 "T cell CD8 fraction",
 "The fraction of T cells that are CD8."},
 
-{"TC_COGNATE_FRACTION_CD4", 0.0001, 0.0, 0.002,
+{"TC_COGNATE_FRACTION_CD4", 0.0001, 0, 0,
 "CD4 T cell cognate fraction",
 "The fraction of CD4 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
-{"TC_COGNATE_FRACTION_CD8", 0.0001, 0.0, 0.002,
+{"TC_COGNATE_FRACTION_CD8", 0.0001, 0, 0,
 "CD8 T cell cognate fraction",
 "The fraction of CD8 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
-{"TC_STIM_RATE_CONSTANT", 1, 0.0, 100.0,
+{"TC_STIM_RATE_CONSTANT", 1, 0, 0,
 "TCR stimulation rate constant",
 "Rate constant Ks for TCR stimulation, where:\n\
 rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 [molecules/min]"},
 	
-{"TC_STIM_HALFLIFE", 24.0, 0.0, 100.0,
+{"TC_STIM_HALFLIFE", 24.0, 0, 0,
 "TCR stimulation halflife",
 "Integrated TCR stimulation decays with a specified halflife. \n\
 [hours]"},
 
-{"DIVIDE1_MEDIAN", 6.0, 0.0, 100.0,
+{"DIVIDE1_MEDIAN", 6.0, 0, 0,
 "1st division time median parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -46,7 +46,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "1st division time shape parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters."},
 
-{"DIVIDE2_MEDIAN", 5.0, 0, 100.0,
+{"DIVIDE2_MEDIAN", 5.0, 0, 0,
 "Later division time median parameter",
 "The time taken for later T cell divisions has a lognormal distribution, described by the median and shape parameters.\n\
 [hours]"},
@@ -63,7 +63,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Motility persistence parameter",
 "T cell motility is described by speed and persistence parameters, each in the range 0 - 1. MOTILITY_RHO determines the extent to which motion is in the same direction from one time step to the next."},
 
-{"DC_ANTIGEN_MEDIAN", 150, 50.0, 1000.0,
+{"DC_ANTIGEN_MEDIAN", 150, 0, 0,
 "DC antigen density median parameter",
 "Antigen density is the number of pMHC per DC.  It has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
@@ -72,7 +72,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DC antigen density shape parameter",
 "Antigen density has a lognormal distribution, described by the median and shape parameters."},
 
-{"DC_LIFETIME_MEDIAN", 3.0, 1.0, 20.0,
+{"DC_LIFETIME_MEDIAN", 3.0, 0, 0,
 "DC lifetime median parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters.\n\
 [days]"},
@@ -81,12 +81,12 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DC lifetime shape parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters."},
 
-{"DC_BIND_DELAY", 3.0, 0.0, 20.0,
+{"DC_BIND_DELAY", 3.0, 0, 0,
 "DC binding delay",
 "After a T cell unbinds from a DC there is a delay before it can bind to a DC again.\n\
 [mins]"},
 
-{"DC_DENS_HALFLIFE", 6.01, 0.1, 100.0,
+{"DC_DENS_HALFLIFE", 6.0, 0, 0,
 "Antigen density half-life",
 "Antigen density on a DC decays with a specified half-life.\n\
 [hours]"},
@@ -99,27 +99,27 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Max cognate T cell binding/DC",
 "The maximum number of cognate T cells that can bind simultaneously to a DC."},
 
-{"IL2_THRESHOLD", 150, 10.0, 500.0,
+{"IL2_THRESHOLD", 150, 0, 0,
 "Stimulation threshold for IL-2",
 "Integrated TCR stimulation needed to initiate IL-2/CD5 production."},
 
-{"ACTIVATION_THRESHOLD", 150, 10.0, 500.0,
+{"ACTIVATION_THRESHOLD", 150, 0, 0,
 "Stimulation threshold for activation",
 "Integrated TCR stimulation level needed for full activation."},
 
-{"FIRST_DIVISION_THRESHOLD", 300, 10.0, 1000.0,
+{"FIRST_DIVISION_THRESHOLD", 300, 0, 0,
 "Stimulation threshold for first division",
 "Integrated TCR stimulation level needed for first division."},
 
-{"DIVISION_THRESHOLD", 80, 10.0, 1000.0,
+{"DIVISION_THRESHOLD", 80, 0, 0,
 "Stimulation threshold for subsequent divisions",
 "Integrated TCR stimulation level needed for subsequent divisions."},
 
-{"EXIT_THRESHOLD", 480, 10.0, 1000.0,
+{"EXIT_THRESHOLD", 480, 0, 0,
 "Stimulation threshold for exit",
 "Integrated TCR stimulation level below which exit is permitted (using Exit Rule #2)."},
 
-{"STIMULATION_LIMIT", 1000, 0.0, 0.0,
+{"STIMULATION_LIMIT", 1000, 0, 0,
 "Maximum stimulation level",
 "Maximum integrated TCR stimulation level (saturation level)."},
 
@@ -127,38 +127,38 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Lattice size",
 "Dimension of the lattice (number of sites in X, Y and Z directions).  Typically 4*BLOB_RADIUS is OK."},
 
-{"BLOB_RADIUS", 23.1, 15.0, 50.0,
+{"BLOB_RADIUS", 23.1, 0, 50,
 "Initial blob size",
 "The radius of the initial spherical blob of T cells, as number of sites.  (18.38, 23.1, 29.1, 36.7 -> 25k, 50k, 100k, 200k sites)"},
 
-{"TC_FRACTION", 0.6, 0.4, 0.8,
+{"TC_FRACTION", 0.6, 0, 0,
 "T cell fraction",
 "Fraction of the paracortical volume occupied by T cells."},
 
-{"FLUID_FRACTION", 0.1, 0.05, 0.2,
+{"FLUID_FRACTION", 0.1, 0, 0,
 "Fluid fraction",
 "Fraction of the paracortical volume occupied by fluid."},
 
-{"DC_RADIUS", 19.0, 10.0, 30.0,
+{"DC_RADIUS", 19.0, 0, 0,
 "DC radius",
 "Radius of DC sphere of influence.\n\
 [um]"},
 
-{"TC_TO_DC",2000.0, 50, 10000,
+{"TC_TO_DC",2000.0, 0, 0,
 "T cells per DC",
 "Ratio of T cell count to DC count in the paracortex initially."},
 
-{"DCrate_100k", 0.1, 0.0, 5.0,
+{"DCrate_100k", 0.1, 0, 0,
 "DC influx rate parameter",
 "DC influx rate corresponding to an initial T cell count of 100k, and an inflammation level of 1.0.\n\
 [/100k/min]"},
 
-{"T_DC1", 3.5, 0.0, 10.0,
+{"T_DC1", 3.5, 0, 0,
 "DC constant influx duration",
 "Duration of constant DC influx (T_DC1).\n\
 [days]"},
 
-{"T_DC2", 4.5, 0.0, 10.0,
+{"T_DC2", 4.5, 0, 0,
 "DC influx end time",
 "Time of cessation of DC influx (T_DC2).  Influx reduces linearly to zero between T_DC1 and T_DC2.\n\
 [days]"},
@@ -201,17 +201,17 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "CD8 T cell residence time (based on no DCs).\n\
 [hours]"},
 
-{"INFLAMM_DAYS1", 3.5, 0.0, 10.0,
+{"INFLAMM_DAYS1", 3.5, 0, 0,
 "Inflammation plateau duration",
 "Period over which the level of inflammation signal from the periphery is constant.\n\
 [days]"},
 
-{"INFLAMM_DAYS2", 4.5, 0.0, 10.0,
+{"INFLAMM_DAYS2", 4.5, 0, 0,
 "Inflammation cessation time",
 "Time at which the level of inflammation signal from the periphery goes to zero.\n\
 [days]"},
 
-{"INFLAMM_LEVEL", 0.0, 0.0, 10.0,
+{"INFLAMM_LEVEL", 0.0, 0, 0,
 "Inflammation level",
 "The plateau inflammation signal level."},
 
@@ -284,7 +284,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Radius of CCL3 conc",
 "Sites within this radius of the DC receive CCL3 concentration (+ all DC sites)"},
 
-{"NDAYS", 1.0, 0.0, 30.0,
+{"NDAYS", 1.0, 0, 0,
 "Number of days",
 "Length of the simulation.\n\
 [days]"},
