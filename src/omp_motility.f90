@@ -210,7 +210,7 @@ if (in_exit_SOI) then
 		return
 	endif
 	f = chemo_K_exit*chemo_exit*chemo_g(rad)	! Note: inserting chemo_K_exit here (was missing) will mean need to
-												! change ep_factor in portal_traffic()
+												! change ep_factor in portal_traffic() (no longer used)
     stay_prob = dirprob(0)
     c = 1
 !    c = CCR7_ligand(rad)
@@ -957,8 +957,6 @@ do kcell = 1,nlist
         write(*,'(a,6i8)') 'Error: par_mover: bad indx: ',kcell,site1,indx
         stop
     endif
-    ! TESTING ---------- to track down why case use_exit_chemotaxis + chemo_K_exit = 0
-    !                    is not the same as not use_exit_chemotaxis
 	if (use_exit_chemotaxis .or. use_DC_chemotaxis) then
 		call chemo_jumper(kcell,indx,slot,go,kpar)
 	else

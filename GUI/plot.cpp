@@ -3,6 +3,8 @@
 
 LOG_USE();
 
+#define USE_LEGEND false
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 QString getImageFile()
@@ -122,39 +124,47 @@ void Plot::setYScale(double maxval)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void Plot::redraw(double *x, double *y, int n, QString name)
+void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
 {
-	if (n == 1) { // That is, this is the first plotting instance.
+    QwtLegend *legend;
+    if (n == 1) { // That is, this is the first plotting instance.
         yscale = max(yscale,calc_yscale(y[0]));
-		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-	}
-	// Note: Number of pen colors should match ncmax
-	QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
-	QPen *pen = new QPen();
-	QwtLegend *legend = new QwtLegend();
-	for (int k=0; k<ncmax; k++) {
-		if (curve[k] == 0) continue;
-		if (name.compare(curve[k]->title().text()) == 0) {
-			// Just in case someone set ncmax > # of pen colors (currently = 6)
-			if (k < 6) {
-				pen->setColor(pencolor[k]);
-			} else {
-				pen->setColor(pencolor[0]);
-			}
-			curve[k]->setPen(*pen);
-			curve[k]->setData(x, y, n);
-			this->insertLegend(legend, QwtPlot::RightLegend);
-			double ylast = y[n-1];
-			if (ylast > yscale) {
-				yscale = max(yscale,calc_yscale(ylast));
-				setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-			}
-			replot();
-		}
-	}
-	delete pen;
+        setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+        if (USE_LEGEND){
+            legend = this->legend();
+            if (legend == NULL) {
+                legend = new QwtLegend();
+                this->insertLegend(legend, QwtPlot::RightLegend);
+            }
+        }
+    }
+    // Note: Number of pen colors should match ncmax
+    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
+    QPen *pen = new QPen();
+    for (int k=0; k<ncmax; k++) {
+        if (curve[k] == 0) continue;
+        if (name.compare(curve[k]->title().text()) == 0) {
+            // Just in case someone set ncmax > # of pen colors (currently = 6)
+            if (k < 6) {
+                pen->setColor(pencolor[k]);
+            } else {
+                pen->setColor(pencolor[0]);
+            }
+            curve[k]->setPen(*pen);
+            curve[k]->setData(x, y, n);
+//            legend = new QwtLegend();
+//            this->insertLegend(legend, QwtPlot::RightLegend);
+//            LOG_MSG("did insertLegend");
+            double ylast = y[n-1];
+            if (ylast > yscale) {
+                yscale = max(yscale,calc_yscale(ylast));
+                setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+            }
+            replot();
+        }
+    }
+    delete pen;
 }
-
 //-----------------------------------------------------------------------------------------
 // This is to plot the total number of cognate cells (y2 = ytotal), and the number of 
 // "seed" cells (y1 = yseed)

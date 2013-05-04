@@ -32,6 +32,8 @@ class QTcpServer;
 class QTcpSocket;
 QT_END_NAMESPACE
 
+#define MAX_DATA 32
+
 class SliderPlus 
 {
 	QString name;
@@ -137,8 +139,10 @@ private:
 	void initializeGraphs(RESULT_SET *);
 	void drawGraphs();
 	QString selectResultSet();
-	int selectGraphCase();
-	void showGradient2D();
+    int selectGraphCase();
+    void setupGraphSelector();
+    void setGraphsActive();
+    void showGradient2D();
 	void showGradient3D();
 
 	double erf(double z);
@@ -238,18 +242,10 @@ private:
 
 	RESULT_SET *newR;
 
-	Plot *graph_act;
-	Plot *graph_ntot_LN;
-	Plot *graph_ncog_PER;
-	Plot *graph_ncog_LN;
-//	Plot *graph_ncog;
-	Plot *graph_ncogseed;
-	Plot *graph_nDC;
-	Plot *graph_teffgen;
-	Plot *graph_nbnd;
 	Plot *graph_dummy;	// placeholder
 
-	Plot *pGraph[16];
+    Plot *pGraph[MAX_DATA];
+    QCheckBox **cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];

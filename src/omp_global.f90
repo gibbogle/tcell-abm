@@ -150,9 +150,9 @@ character*(5), parameter :: cyt_name(MAX_CYT) = (/ 'IL-2 ','IL-4 ','IL-7 ','IL-9
 integer, parameter :: NCTYPES = 4
 integer, parameter :: NONCOG_TYPE_TAG  = 1
 integer, parameter :: COG_TYPE_TAG  = 2
-integer, parameter :: COG_CD4_TAG  = 2
-integer, parameter :: COG_CD8_TAG  = 3
-integer, parameter :: COG_TREG_TAG  = 4
+!integer, parameter :: COG_CD4_TAG  = 2
+!integer, parameter :: COG_CD8_TAG  = 3
+!integer, parameter :: COG_TREG_TAG  = 4
 
 ! Revised system
 integer, parameter :: CD4 = 1
@@ -194,7 +194,7 @@ real, parameter :: exit_DCprox = 4.0    ! closest placement of DC to exit, units
 real, parameter :: exit_prox = 1.0      ! closest placement of exit to exit, units chemo_radius
 ! closest placement of exit to bdry?
 logical, parameter :: incapable_DC_dies = .false.	! don't want to remove low-antigen DCs prematurely
-logical, parameter :: reuse_DC_index = .false.	! index reuse conflicts with the GUI animation code
+logical, parameter :: reuse_DC_index = .false.		! index reuse conflicts with the GUI animation code
 
 ! Diffusion parameters
 logical, parameter :: use_cytokines = .false.       ! to use IL-2
@@ -202,17 +202,20 @@ logical, parameter :: use_diffusion = .false.		! For cytokines
 integer, parameter :: NDIFFSTEPS = 6    ! divisions of DELTA_T for diffusion computation
 
 ! T cell parameters
-integer, parameter :: traffic_mode = TRAFFIC_MODE_2
-logical, parameter :: use_blob = .true.
-logical, parameter :: use_HEV_portals = .true.
-logical, parameter :: random_cognate = .true.	! number of cognate seed cells is random or determined
+integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
+logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
+integer, parameter :: exit_rule = 1     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
+
+! Old chemotaxis method, not used now
+real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of exit chemotactic influence (at r = chemo_radius)
-integer :: exit_rule = 1                ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
-logical :: USE_S1P = .true.				! this is the default
-logical :: COMPUTE_OUTFLOW = .false.
-real :: CTYPE_FRACTION(2)
+real, parameter :: chemo_K_exit = 1.0   ! level of chemotactic influence towards exits
+real, parameter :: chemo_K_DC = 1.0     ! level of chemotactic influence towards DCs
+real :: chemo_radius					! radius of chemotactic influence (um)
+integer :: chemo_N
+real :: chemo_exp
 
 ! Chemokine/receptor parameters
 integer, parameter :: MAX_CHEMO = 1
@@ -297,11 +300,11 @@ integer, parameter :: istep_res2 = istep_res1 + 4*60*24	! 1 day of tagging
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the DC visit frequency
 ! of the tagged cells?
 ! Modify this to read the parameters from an input file.
-logical :: track_DCvisits = .true.
-logical :: TAGGED_DC_CHEMOTAXIS = .true.
+logical :: track_DCvisits = .false.
+logical :: TAGGED_DC_CHEMOTAXIS = .false.
 integer :: istep_DCvisits = 24*60*4	! 24 hours delay before counting visits (when use_traffic)
 real :: t_log_DCvisits = 2*24*60		! log DC visits of retained cells for 2 days
-logical :: USE_DC_COGNATE = .true.	! if only a fraction (0.5) of DCs bear cognate antigen, secrete chemokine
+logical :: USE_DC_COGNATE = .false.	! if only a fraction (0.5) of DCs bear cognate antigen, secrete chemokine
 real :: DC_COGNATE_FRACTION = 0.5
 logical :: retain_tagged_cells = .true.
 real :: RETAIN_TAGLIMIT_FRACTION = 0.5
@@ -464,7 +467,8 @@ type occupancy_type
     integer(2) :: DC(0:DCDIM-1)     ! DC(0) = number of near DCs, DC(k) = ID of kth near DC
     integer(2) :: cDC(0:cDCDIM-1)   ! cDC(0) = number of DCs within chemo_radius, cDC(k) = ID of kth DC
     integer :: indx(2)
-    integer :: exitnum          ! > 0 => index of closest exit, = 0 => no close exit, < 0 => an exit
+    integer :: exitnum				! > 0 => index of closest exit, = 0 => no close exit, < 0 => an exit
+    integer :: hevnum				! > 0 => HEV
     real :: chemo_conc				! DC chemokine concentration
     real :: chemo_grad(3)			! DC chemokine gradient vector
     integer :: DC_nbdry
@@ -552,9 +556,9 @@ real(DP) :: GAMMA                           ! controls crowding
 real(DP) :: BETA                            ! speed: 0 < beta < 1
 real(DP) :: RHO                             ! persistence: 0 < rho < 1
 
+real :: CTYPE_FRACTION(2)
 integer :: TC_TO_DC                     ! number of T cells for every DC
 real :: DC_FACTOR                       ! multiplying factor for DC number (initial and influx)
-!integer :: NTC_DC                      ! number of T cells that can bind to a DC
 integer :: MAX_TC_BIND                  ! number of T cells that can bind to a DC
 integer :: MAX_DC_BIND                  ! number of DC that a cell can bind to simultaneously
 integer :: MAX_COG_BIND                 ! number of cognate T cells that can bind to a DC simultaneously
@@ -563,7 +567,8 @@ real :: T_DC1                           ! Duration of constant DC influx (hours)
 real :: T_DC2                           ! Time of cessation of DC influx (hours)
 logical :: DC_INJECTION					! DCs were injected into experimental animals?
 real :: T_DC_INJECTION					! Time of DC injection
-!real :: DC_FRACTION						! Fraction of DCs that are bearing antigen
+
+logical :: use_HEV_portals = .true.
 logical :: use_traffic = .false.
 logical :: use_exit_chemotaxis
 logical :: use_DC_chemotaxis
@@ -578,9 +583,6 @@ real :: Inflammation_level = 1.0		! This is the level of inflammation (scaled la
 integer :: exit_region                   ! determines blob region for cell exits
 real :: efactor                         ! If constant_efactor = true, this is the factor for the p correction
 integer :: VEGF_MODEL                   ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
-real :: chemo_radius					! radius of chemotactic influence (um)
-real :: chemo_K_exit                    ! level of chemotactic influence towards exits
-real :: chemo_K_DC                      ! level of chemotactic influence towards DCs
 
 logical :: fix_avidity                  ! true if avidity takes discrete values, false if a distribution is used
 logical :: avidity_logscale             ! true if actual avidity = 10^(avidity_min + i*avidity_step)
@@ -682,12 +684,11 @@ integer :: nreldir2D, njumpdirs2D
 integer :: reldir2D(8,8)
 real(DP) :: dirprob2D(0:8)
 logical :: diagonal_jumps
-real :: ep_factor      ! (25k) 2.4 when K1_S1P1 = 0.01, 2.8 when K1_S1P1 = 0.001  ! based on no-DC case!
+!real :: ep_factor      ! (25k) 2.4 when K1_S1P1 = 0.01, 2.8 when K1_S1P1 = 0.001  ! based on no-DC case!
                        ! (50k) 2.3 when K1_S1P1 = 0.01, chemo_K_exit = 0.3
 
 ! Chemotaxis data
-integer :: chemo_N
-real :: chemo_exp, DC_CHEMO_DELAY	! gets set = DC_BIND_DELAY
+real :: DC_CHEMO_DELAY	! gets set = DC_BIND_DELAY
 real :: t_taglimit
 
 real, allocatable :: chemo_r(:,:,:)
@@ -710,6 +711,7 @@ integer :: DCstack(-4:4,-4:4,3)			! for 2D case
 integer :: lastID, MAX_COG, lastcogID, nlist, n2Dsites, ngaps, ntaglimit, ntagged=0, ntagged_left, ID_offset, ncogseed(2)
 integer :: lastNTcells, k_nonrandom(2)
 integer :: max_nlist, max_ngaps
+integer :: nleft, ncogleft
 integer :: nadd_sites, MAX_DC, ndeadDC, NDCtotal, ndivisions
 real :: excess_factor, lastbalancetime
 real :: scale_factor	! scaling from model to one (or more) whole LNs
@@ -818,7 +820,7 @@ real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines 
 real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
 ! PERIPHERY parameters
-logical, parameter :: SIMULATE_PERIPHERY = .true.
+logical, parameter :: SIMULATE_PERIPHERY = .false.
 integer, parameter :: PERI_GENERATION = 2
 real, parameter :: PERI_PROBFACTOR = 10
 
@@ -831,7 +833,6 @@ contains
 ! Uniform randomly generates an integer I: n1 <= I <= n2
 !---------------------------------------------------------------------
 integer function random_int(n1,n2,kpar)
-!use IFPORT
 integer :: n1,n2,kpar
 integer :: k,R
 
@@ -844,9 +845,9 @@ elseif (n1 > n2) then
     stop
 endif
 R = par_shr3(kpar)
+if (R == -2147483648) R = par_shr3(kpar)
 k = abs(R)
 random_int = n1 + mod(k,(n2-n1+1))
-
 end function
 
 !--------------------------------------------------------------------------------
@@ -949,31 +950,23 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine squeezer(force)
 logical :: force
-integer :: last, k, site(3), indx(2), i, n, region
+integer :: last, kcell, site(3), indx(2), i, j, idc, n, region
 
 !write(*,*) 'squeezer'
 if (ngaps == 0) return
 if (.not.force .and. (ngaps < max_ngaps/2)) return
 if (dbug) write(nflog,*) 'squeezer: ',ngaps,max_ngaps,nlist
 
-n = 0
-do k = 1,nlist
-    if (cellist(k)%ID == 0) then    ! a gap
-        n = n+1
-!        write(*,*) 'gap at : ',k
-    endif
-enddo
-
 last = nlist
-k = 0
+kcell = 0
 n = 0
 do
-    k = k+1
-    if (cellist(k)%ID == 0) then    ! a gap
-        if (k == last) exit
+    kcell = kcell+1
+    if (cellist(kcell)%ID == 0) then    ! a gap
+        if (kcell == last) exit
         do
             if (last == 0) then
-                write(nflog,*) 'last = 0: k: ',k
+                write(nflog,*) 'last = 0: kcell: ',kcell
                 stop
             endif
             if (cellist(last)%ID == 0) then
@@ -985,10 +978,30 @@ do
             endif
         enddo
         if (n == ngaps) exit
-        call copycell2cell(cellist(last),cellist(k),k)
-!        cellist(k) = cellist(last)
+        call copycell2cell(cellist(last),cellist(kcell),kcell)
+!        cellist(kcell) = cellist(last)
+! Note that the DCs that were in cellist(last)%DCbound(:), which are now in cellist(kcell)%DCbound(:),
+! have in the DClist(:)%cogbound(:) the old cell index (last), but should have the new index (kcell)
+! Ths is only an issue for a cognate cell
+		if (associated(cellist(kcell)%cptr)) then
+			do i = 1,MAX_DC_BIND
+				idc = cellist(kcell)%DCbound(i)
+				if (idc > 0) then
+					do j = 1,MAX_COG_BIND
+						if (DClist(idc)%cogbound(j) == last) then
+							DClist(idc)%cogbound(j) = kcell
+						endif
+					enddo
+				endif
+			enddo
+		endif
 		if (associated(cellist(last)%cptr)) then
 			call get_region(cellist(last)%cptr,region)
+			if (.not.associated(cellist(kcell)%cptr)) then
+				write(logmsg,*) 'copycell2cell error: cptr not associated: ',last,kcell
+				call logger(logmsg)
+				stop
+			endif
 		else
 			region = LYMPHNODE
 		endif
@@ -996,7 +1009,7 @@ do
 	        site = cellist(last)%site
 	        indx = occupancy(site(1),site(2),site(3))%indx
 	        do i = 1,2
-	            if (indx(i) == last) indx(i) = k
+	            if (indx(i) == last) indx(i) = kcell
 	        enddo
 	        occupancy(site(1),site(2),site(3))%indx = indx
 	    endif
@@ -1026,6 +1039,7 @@ integer :: kcell
 type(cell_type) :: cell_from, cell_to
 integer :: ctype, stype, kcog
 
+!write(*,*) 'copycell2cell: ',kcell
 ctype = cell_from%ctype
 !stype = struct_type(ctype)
 if (associated(cell_from%cptr)) then
@@ -1061,9 +1075,13 @@ cell_to%unbindtime = cell_from%unbindtime
 cell_to%visits = cell_from%visits
 cell_to%revisits = cell_from%revisits
 cell_to%ndclist = cell_from%ndclist
-allocate(cell_from%dclist(max(1,NDC)))
-cell_to%dclist = cell_from%dclist
-
+!allocate(cell_from%dclist(max(1,NDC)))
+if (track_DCvisits) then
+	if (.not.allocated(cell_to%dclist)) then
+		allocate(cell_to%dclist(max(1,NDC)))
+	endif
+	cell_to%dclist = cell_from%dclist
+endif
 if (cell_from%ctype == 0) then
     write(*,*) 'ERROR: copycell2cell: ctype = 0'
     stop
@@ -1394,37 +1412,34 @@ end function
 !-----------------------------------------------------------------------------------------
 ! The type (cognate or non-cognate) of a T cell can be random or strictly determined.
 !-----------------------------------------------------------------------------------------
-!integer function select_cell_type(kpar)
 subroutine select_cell_type(ctype,cognate,kpar)
 integer :: ctype, kpar
 logical :: cognate
-!integer, save :: k = 0
 integer :: nratio
 
 ctype = select_CD4_CD8()
-if (random_cognate) then
-!    select_cell_type = random_cell_type(kpar)
+!if (random_cognate) then
     if (par_uni(kpar) < TC_COGNATE_FRACTION(ctype)) then
 		cognate = .true.
 	else
 		cognate = .false.
 	endif
-else
-    ! Needs to be fixed to account for two cognate populations
-!	if (mod(istep,6*4*60) == 1) then	! update Fcognate every 6 hours - otherwise mod(k_nonrandom,nratio) messed up
-!		Fcognate = TC_COGNATE_FRACTION - (scale_factor*Ncogseed)/NTC_BODY
-!	endif
-!    nratio = 1./Fcognate
-    nratio = 1./TC_COGNATE_FRACTION(ctype)
-    k_nonrandom(ctype) = k_nonrandom(ctype) + 1
-    if (mod(k_nonrandom(ctype),nratio) == 0) then
-!        select_cell_type = COG_TYPE_TAG
-		cognate = .true.
-    else
-!        select_cell_type = NONCOG_TYPE_TAG
-		cognate = .false.
-    endif
-endif
+!else
+!    ! Needs to be fixed to account for two cognate populations
+!!	if (mod(istep,6*4*60) == 1) then	! update Fcognate every 6 hours - otherwise mod(k_nonrandom,nratio) messed up
+!!		Fcognate = TC_COGNATE_FRACTION - (scale_factor*Ncogseed)/NTC_BODY
+!!	endif
+!!    nratio = 1./Fcognate
+!    nratio = 1./TC_COGNATE_FRACTION(ctype)
+!    k_nonrandom(ctype) = k_nonrandom(ctype) + 1
+!    if (mod(k_nonrandom(ctype),nratio) == 0) then
+!!        select_cell_type = COG_TYPE_TAG
+!		cognate = .true.
+!    else
+!!        select_cell_type = NONCOG_TYPE_TAG
+!		cognate = .false.
+!    endif
+!endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1489,14 +1504,6 @@ real :: act, expansion, actfactor, tnow
 real :: inflow, outflow
 !real, parameter :: T1 = 8*60, T2 = 16*60, T3 = 24*60
 
-!if (.not.use_vascularity) then
-!    act = get_DCactivity()
-!    DCactivity = act
-!    InflowTotal = inflow0
-!    OutflowTotal = inflow0
-!    steadystate = .true.
-!    return
-!endif
 if (traffic_mode == TRAFFIC_MODE_1) then    ! naive
     write(*,*) 'generate_traffic: do not use TRAFFIC_MODE_1'
     stop
@@ -1513,15 +1520,7 @@ else        !traffic_mode == TRAFFIC_MODE_2 or TRAFFIC_MODE_3
 	! Note: if inflammation signal = 0 the vascularity (and inflow) should be constant
     tnow = istep*DELTA_T
     inflow = inflow0*Vascularity   ! level of vascularity (1 = steady-state)
-!    if (tnow <= T1) then
-!        outflow = ((T1-tnow)/T1)*inflow0
-!    elseif (tnow <= T2) then
-!        outflow = 0
-!    elseif (tnow <= T3) then
-!        outflow = ((tnow-T2)/(T3-T2))*NTcells*DELTA_T/(RESIDENCE_TIME*60)
-!    else
-        outflow = NTcells*DELTA_T/(ave_RESIDENCE_TIME*60)
-!    endif
+    outflow = NTcells*DELTA_T/(ave_RESIDENCE_TIME*60)
 endif
 
 if (L_selectin) then
@@ -2185,12 +2184,10 @@ do idc = 1,NDC
         endif
         if (tnow > DClist(idc)%dietime) then
             DClist(idc)%capable = .false.
-            write(*,*) 'update_DCstate: not capable: ',idc,nbound
             if (nbound /= 0) then
             elseif (nbound == 0) then
-				write(logmsg,'(a,i4,f8.2,i6)') 'DC dies: ',idc,DClist(idc)%dietime,NDCalive
-!				write(nflog,'(a,i4,f8.2)') 'DC dies: ',idc,DClist(idc)%dietime
-				call logger(logmsg)
+!				write(logmsg,'(a,i4,f8.2,i6)') 'DC dies: ',idc,DClist(idc)%dietime,NDCalive
+!				call logger(logmsg)
                 DClist(idc)%alive = .false.
                 ndeadDC = ndeadDC + 1
                 DCdeadlist(ndeadDC) = idc
@@ -2650,6 +2647,8 @@ endif
 
 if (TAGGED_LOG_PATHS) then
 	if (cell%tag == CHEMO_TAGGED_CELL) then
+		write(*,*) 'chemo_active_exit: CHEMO_K_EXIT is no longer used'
+		stop
 		chemo_active_exit = CHEMO_K_EXIT
 	else
 		chemo_active_exit = 0

@@ -1,5 +1,3 @@
-! This is the general version, for M nodes in a cuboid blob.
-
 ! Extension to general geometry: 
 ! We need to be able to handle a spherical blob, for example.
 ! Simplifying assumptions:
@@ -40,8 +38,8 @@ contains
 subroutine rng_initialisation
 !integer :: my_seed(8)
 integer, allocatable :: zig_seed(:)
-integer :: i
-!integer :: kpar = 0
+integer :: i, n, R
+integer :: kpar = 0
 integer :: npar, grainsize = 32
 
 !do i = 1,8
@@ -59,9 +57,13 @@ do i = 0,npar-1
 enddo
 call par_zigset(npar,zig_seed,grainsize)
 par_zig_init = .true.
-!do i = 1,10
-!    write(*,*) i,par_uni(kpar)
+
+!n = 0
+!do i = 1,1000000000
+!	R = par_shr3(kpar)
+!	if (R == -2147483648) n = n+1
 !enddo
+!write(*,*) 'n = ',n
 !stop
 end subroutine
 
@@ -181,7 +183,7 @@ ngaps = 0
 max_ngaps = 5*NY*NZ
 ID_offset = BIG_INT/Mnodes
 nlist = 0
-MAX_COG = 0.5*NX*NY*NZ
+MAX_COG = NX*NY*NZ
 if (TC_TO_DC > 0) then
     MAX_DC = 5*(NX*NX*NX)/TC_TO_DC
 else
@@ -1373,7 +1375,6 @@ do while (k < node_inflow)
 		call select_cell_type(ctype,cognate,kpar)
 		if (cognate) then
 			ncogseed(ctype) = ncogseed(ctype) + 1
-			write(nfout,*) 'Cognate seed T cell: type: ',ctype
 		endif
 		call add_Tcell(site,ctype,cognate,gen,tag,NAIVE,region,kcell,ok)
 		if (dbug) then
@@ -1458,7 +1459,7 @@ end subroutine
 logical function exitOK(p,ctype)
 type(cog_type), pointer :: p
 integer :: ctype
-integer :: gen, cd4_8
+integer :: gen
 real :: act
 !integer :: kpar = 0
 
@@ -1472,8 +1473,8 @@ if (exit_rule == 1) then
 elseif (exit_rule == 2) then
     if (gen > 1) then
         act = get_activation(p)
-        cd4_8 = ctype - 1
-        if (act < EXIT_THRESHOLD(cd4_8)) then
+!        cd4_8 = ctype - 1
+        if (act < EXIT_THRESHOLD(ctype)) then
             exitOK = .true.
         endif
     endif
@@ -1538,10 +1539,10 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine portal_traffic(ok)
 logical :: ok
-integer :: iexit, esite(3), esite0(3),site(3), k, slot, indx(2), kcell, ne, ipermex, ihr, nv, j, ihev
-integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs, tag
+integer :: iexit, esite(3), esite0(3),site(3), i, j, k, slot, indx(2), kcell, ne, ipermex, ihr, nv, ihev, it
+integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs, tag, site0(3)
 real(DP) :: R, df
-logical :: left, cognate
+logical :: left, cognate, isbound, hit
 logical :: central, egress_possible, use_full_neighbourhood, tagcell
 integer, allocatable :: permex(:)
 integer :: kpar = 0
@@ -1560,8 +1561,6 @@ endif
 
 if (L_selectin) then
 	node_inflow = 0
-	exit_rule = 1	! using NGEN_EXIT
-	use_S1P = .false.
 endif
 
 if (steadystate) then
@@ -1598,12 +1597,19 @@ if (exit_region == EXIT_LOWERHALF) then
 endif
 gen = 1
 k = 0
+it = 0
 do while (k < node_inflow)
+	it = it + 1
+	if (it > 10000) then
+		write(*,*) 'portal_traffic: unable to place cell'
+		ok = .false.
+		return
+	endif
 	if (use_HEV_portals) then
 		ihev = random_int(1,NHEV,kpar)
-!		write(*,*) 'k,ihev: ',k,ihev
-		site = HEVlist(ihev)%site
-		indx = occupancy(site(1),site(2),site(3))%indx
+		if (ihev < 0) write(*,*) 'k,NHEV,ihev: ',k,NHEV,ihev
+		site0 = HEVlist(ihev)%site
+		indx = occupancy(site0(1),site0(2),site0(3))%indx
 !		write(*,*) 'site,indx: ',site,indx
 	else
 		R = par_uni(kpar)
@@ -1612,68 +1618,77 @@ do while (k < node_inflow)
 		y = 1 + R*NY
 		R = par_uni(kpar)
 		z = 1 + R*NZ
-		site = (/x,y,z/)
+		site0 = (/x,y,z/)
 		indx = occupancy(x,y,z)%indx
 		if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
 		if (RELAX_INLET_EXIT_PROXIMITY) then
-			if (.not.inletOK(site)) cycle
+			if (.not.inletOK(site0)) cycle
 		else
-			if (cdistance(site) > INLET_R_FRACTION*radius) cycle
+			if (cdistance(site0) > INLET_R_FRACTION*radius) cycle
 		endif
 	endif
-	if (indx(1) == 0 .or. indx(2) == 0) then
-		cognate = .false.
-		if (evaluate_residence_time) then
-			! This is for determining the transit time distribution
-			if (TAGGED_EXIT_CHEMOTAXIS) then		! tag a fraction of incoming cells
-				R = par_uni(kpar)
-				if (istep*DELTA_T < 48*60 .and. R < TAGGED_CHEMO_FRACTION) then
-					tag = RES_TAGGED_CELL
-					ninflow_tag = ninflow_tag + 1
+	hit = .false.
+	do i = 1,27
+		site = site0 + jumpvec(:,i)
+		indx = occupancy(site(1),site(2),site(3))%indx
+		if (indx(1) < 0) cycle      ! OUTSIDE_TAG or DC
+		if (indx(1) == 0 .or. indx(2) == 0) then
+			cognate = .false.
+			if (evaluate_residence_time) then
+				! This is for determining the transit time distribution
+				if (TAGGED_EXIT_CHEMOTAXIS) then		! tag a fraction of incoming cells
+					R = par_uni(kpar)
+					if (istep*DELTA_T < 48*60 .and. R < TAGGED_CHEMO_FRACTION) then
+						tag = RES_TAGGED_CELL
+						ninflow_tag = ninflow_tag + 1
+					else
+						tag = 0
+					endif
+				else							! tag all cells entering over a specified interval
+					if (istep > istep_res1 .and. istep <= istep_res2) then
+						tag = RES_TAGGED_CELL   
+						ninflow_tag = ninflow_tag + 1
+					else
+						tag = 0
+					endif
+				endif
+			elseif (track_DCvisits .and. istep > istep_DCvisits) then	! This is the normal procedure for computing the distinct DC visit distribution
+				if (TAGGED_DC_CHEMOTAXIS) then	! This is to quantify the effect of DC chemotaxis on DC visits
+					tagcell = (par_uni(kpar) < TAGGED_CHEMO_FRACTION)
+				else
+					tagcell = .true.
+				endif
+				if (tagcell .and. ntagged < ntaglimit) then
+					tag = TAGGED_CELL
+					if (ntagged == ntaglimit-1) then	! All candidate cells will be tagged
+						t_taglimit = tnow + t_log_DCvisits
+					endif
 				else
 					tag = 0
-				endif
-			else							! tag all cells entering over a specified interval
-				if (istep > istep_res1 .and. istep <= istep_res2) then
-					tag = RES_TAGGED_CELL   
-					ninflow_tag = ninflow_tag + 1
-				else
-					tag = 0
-				endif
-			endif
-		elseif (track_DCvisits .and. istep > istep_DCvisits) then	! This is the normal procedure for computing the distinct DC visit distribution
-			if (TAGGED_DC_CHEMOTAXIS) then	! This is to quantify the effect of DC chemotaxis on DC visits
-				tagcell = (par_uni(kpar) < TAGGED_CHEMO_FRACTION)
-			else
-				tagcell = .true.
-			endif
-			if (tagcell .and. ntagged < ntaglimit) then
-				tag = TAGGED_CELL
-				if (ntagged == ntaglimit-1) then	! All candidate cells will be tagged
-					t_taglimit = tnow + t_log_DCvisits
 				endif
 			else
 				tag = 0
 			endif
-		else
-			tag = 0
-		endif
-		call select_cell_type(ctype,cognate,kpar)
-		if (cognate) then
-			ncogseed(ctype) = ncogseed(ctype) + 1
-			write(nfout,*) 'Cognate seed T cell: type: ',ctype
-		endif
-
-		call add_Tcell(site,ctype,cognate,gen,tag,NAIVE,region,kcell,ok)
-		if (.not.ok) return
-		if (debug_DCchemotaxis) then
-			if (tag == TAGGED_CELL .and. idbug == 0) then
-				idbug = kcell
-				open(nfchemo,file= 'chemo.log',status='replace')
-				write(nfchemo,*) 'Logging DC chemotaxis for tagged T cell: ',idbug
+			call select_cell_type(ctype,cognate,kpar)
+			if (cognate) then
+				ncogseed(ctype) = ncogseed(ctype) + 1
 			endif
+
+			call add_Tcell(site,ctype,cognate,gen,tag,NAIVE,region,kcell,ok)
+			if (.not.ok) return
+			if (debug_DCchemotaxis) then
+				if (tag == TAGGED_CELL .and. idbug == 0) then
+					idbug = kcell
+					open(nfchemo,file= 'chemo.log',status='replace')
+					write(nfchemo,*) 'Logging DC chemotaxis for tagged T cell: ',idbug
+				endif
+			endif
+
+			hit = .true.
+			exit
 		endif
-		
+	enddo
+	if (hit) then
 		k = k+1
 		cycle
 	endif
@@ -1750,6 +1765,11 @@ do ipermex = 1,lastexit
 		do slot = 2,1,-1
 			kcell = indx(slot)
 			if (kcell > 0) then
+				isbound = .false.
+				do i = 1,MAX_DC_BIND
+					if (cellist(kcell)%DCbound(1) /= 0) isbound = .true.
+				enddo
+				if (isbound) cycle
 				! Determine egress_possible from kcell, will depend on kcell - activated cognate cell is allowed
 				! The idea is that this is used if use_exit_chemotaxis = .false.
 !				write(*,*) kcell,cellist(kcell)%ctype
@@ -1903,6 +1923,7 @@ if (cognate) then
 		gaplist(ngaps) = kcell
 		cellist(kcell)%ID = 0
 	    cognate_list(p%cogID) = 0
+	    ncogleft = ncogleft + 1
 	endif
 else
 	ngaps = ngaps + 1
@@ -1910,6 +1931,7 @@ else
 	cellist(kcell)%ID = 0
 endif
 left = .true.
+nleft = nleft + 1
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2067,7 +2089,7 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
 		if (dbug) write(nflog,*) 'remove DCs'
         do k = 1,ndeadDC
             idc = DCdeadlist(k)
-            write(*,*) 'balancer: remove DC: ',k,ndeadDC,idc
+!            write(*,*) 'balancer: remove DC: ',k,ndeadDC,idc
             call clearDC(idc)
         enddo
         nadd_total = nadd_total - ndeadDC*NDCsites
@@ -2185,26 +2207,10 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
         do k = 1,naddex
             call AddExitPortal()
         enddo
-!		if (istep > 25900) then
-!		    write(logmsg,*) 'did AddExitPortal: exit #10: ',exitlist(10)%site,exitlist(5)%site
-!		    call logger(logmsg) 
-!		endif
     elseif (dexit < 0) then
         nremex = -dexit
 		last_portal_update_time = tnow
-!        write(nflog,*) 'balancer: dexit < 0: ',requiredExitPortals(NTcells) 
-!            write(*,*) '--------------------------'
-!            write(*,*) 'Nexits: ',Nexits
-!            write(*,*) '--------------------------'
-!	        write(nflog,*) 'removed: Nexits: ',nremex,Nexits
-!        write(logmsg,*) 'remove: Nexits: ',nremex,requiredExitPortals(NTcells),Nexits,NTcells
-!        call logger(logmsg)
         call removeExitPortals(nremex)
-!		if (istep > 25900) then
-!		    write(logmsg,*) 'did removeExitPortals: exit #10: ',exitlist(10)%site,exitlist(5)%site
-!		    call logger(logmsg) 
-!		    call checkexits("after removeExitPortals")
-!		endif
     endif
 endif
 end subroutine
@@ -2325,7 +2331,7 @@ end subroutine
 ! and back towards the centre - when the blob is shrinking.
 !-----------------------------------------------------------------------------------------
 subroutine AdjustExitPortals
-integer :: iexit, site1(3), site2(3), k, kmin, kmax
+integer :: iexit, site1(3), site2(3), site(3), k, kmin, kmax
 real :: u(3), jump(3), proj, pmin, pmax
 integer :: nin1, nin2
 logical :: ok
@@ -2344,6 +2350,8 @@ do iexit = 1,lastexit
 		do k = 1,27
 			if (k == 14) cycle
 			jump = jumpvec(:,k)
+			site = site1 + jump
+			if (.not.portalOK(site)) cycle
 			proj = dot_product(u,jump)/norm(jump)
 			if (proj < pmin) then
 				pmin = proj
@@ -2357,6 +2365,8 @@ do iexit = 1,lastexit
 		do k = 1,27
 			if (k == 14) cycle
 			jump = jumpvec(:,k)
+			site = site1 + jump
+			if (.not.portalOK(site)) cycle
 			proj = dot_product(u,jump)/norm(jump)
 			if (proj > pmax) then
 				pmax = proj
@@ -2703,7 +2713,7 @@ write(*,*) 'use_cognate: ',use_cognate
 write(*,'(a,i6,4i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
-write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
+!write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
 write(*,'(a,2i8,4x,i8)') 'Recent efferent: ',totalres%dN_EffCogTC(2:3),sum(totalres%dN_EffCogTC)
 write(*,'(a,2i8,4x,i8)') 'Total efferent:  ',totalres%N_EffCogTC(2:3),teffgen
 write(*,'(a,10i6)')   'gen dist: ',(i,i=1,10)
@@ -2874,7 +2884,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine testupdater
 real :: state(IL2_NP), statep(IL2_NP)
-integer :: ctype = COG_CD4_TAG, ID = 1
+integer :: ctype = CD4, ID = 1
 real :: t, dt, th, S_TCR, C_IL2, mrate, crate, dm, dc
 logical :: producing = .true., dbgflag = .false.
 logical :: first, ok
@@ -2982,7 +2992,7 @@ logical :: cognate
 ncog = 0
 do k = 1,n
     call select_cell_type(j,cognate,kpar)
-    if (j == COG_CD4_TAG) ncog = ncog + 1
+    if (j == CD4) ncog = ncog + 1
     if (mod(k,1000) == 0) then
         write(*,*) ncog,real(ncog)/k
     endif
@@ -3277,7 +3287,6 @@ if (TAGGED_EXIT_CHEMOTAXIS) then
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_FRACTION: ',TAGGED_CHEMO_FRACTION 
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_ACTIVITY: ',TAGGED_CHEMO_ACTIVITY
 endif
-write(nfout,'(a,f6.3)') 'chemo_K_exit:            ',chemo_K_exit
 write(nfout,'(a,f6.3)') '  K1_S1P1:               ',K1_S1P1
 write(nfout,'(a,3i8)') 'Results: noutflow_tag, ninflow_tag,kmax: ',noutflow_tag,ninflow_tag,kmax
 write(nfout,'(a,f6.1)') 'Residence time: ',Tres
@@ -3662,7 +3671,6 @@ maxg = 0
 do k = 1,lastcogID
 	kcell = cognate_list(k)
 	if (kcell > 0) then
-	write(*,*) 'SaveGenDist: ',k,lastcogID,kcell
 		if (.not.associated(cellist(kcell)%cptr)) then
 			write(*,*) 'Error: SaveGenDist: cptr not associated'
 			stop
@@ -3809,7 +3817,7 @@ write(*,'(a)') '----------------------------------------------------------------
 write(*,'(a,i6,5i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
-write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
+!write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
 write(*,'(a,2i8,4x,i8)') 'Recent efferent: ',totalres%dN_EffCogTC(2:3),sum(totalres%dN_EffCogTC)
 write(*,'(a,2i8,4x,i8)') 'Total efferent:  ',totalres%N_EffCogTC(2:3),teffgen
 write(*,'(a,10i6)')   'gen dist: ',(i,i=1,10)
@@ -3859,12 +3867,12 @@ totalres%dN_Dead = 0
 !    write(nfdcbind,'(f8.2,i6,30f7.4)') tnow,ncog,dcbind(0:MAX_COG_BIND)/real(ncog) 
 !    dcbind = 0
 !endif
-nseed = ncogseed(1) + ncogseed(2)
+nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
 !write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot,nseed,ncog,Ndead, &
 !	nbnd,int(InflowTotal),Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 nact = 100*act
 
-summaryData(1:13) = (/int(tnow/60),istep,NDCalive,nact,ntot,ncogseed(1),ncog,Ndead, &
+summaryData(1:13) = (/int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,Ndead, &
 	nbnd,int(InflowTotal),Nexits, teffgen/)
 write(nflog,*) 'ndivisions = ',ndivisions
 
@@ -4130,8 +4138,14 @@ integer(c_int) :: res
 real :: tnow
 logical :: ok
 
+!res = -2147483648
+!res = -res
+!write(*,*) res,abs(res),1+mod(res,100)
+!stop
+
 res = 0
 dbug = .false.
+!if (istep > 4*60*40) dbug = .true.
 ok = .true.
 istep = istep + 1
 tnow = istep*DELTA_T
@@ -4152,6 +4166,7 @@ if (mod(istep,240) == 0) then
 !	call checkExits("simulate_step")
 !	call checkExitSpacing("simulate_step")
     Radius = (NTcells*3/(4*PI))**0.33333
+    write(*,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, NTcells, Nexits, total_in, total_out, &
                 InflowTotal, vascularity
@@ -4161,7 +4176,7 @@ if (mod(istep,240) == 0) then
     if (TAGGED_LOG_PATHS) then
 		call add_log_paths
 	endif
-	if (USE_CHEMOKINE_GRADIENT .and. USE_GENERAL_CODE .and. use_traffic) then
+	if (use_DC_chemotaxis .and. USE_CHEMOKINE_GRADIENT .and. USE_GENERAL_CODE .and. use_traffic) then
 		call make_split(.true.)
 		call UpdateSSFields
 	endif
@@ -4498,6 +4513,8 @@ if (log_traffic) then
     open(nftraffic,file='traffic.out',status='replace')
 endif
 
+nleft = 0
+ncogleft = 0
 Nexits = 0
 NHEV = 0
 NDC = 0

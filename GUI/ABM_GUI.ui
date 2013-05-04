@@ -36,13 +36,37 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
         <property name="topMargin">
          <number>0</number>
         </property>
+        <item>
+         <widget class="QLabel" name="label_input">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Segoe UI</family>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Inputs</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
         <item>
          <widget class="QTabWidget" name="tabs">
           <property name="sizePolicy">
@@ -64,7 +88,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>4</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -903,6 +927,71 @@ padding: 8px
              </property>
             </widget>
            </widget>
+           <widget class="QCheckBox" name="cbox_USE_TRAFFIC">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>270</y>
+              <width>101</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>T cell trafficking? </string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_COMPUTED_OUTFLOW">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>330</y>
+              <width>141</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Compute T cell outflow?</string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_USE_HEV_PORTALS">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>300</y>
+              <width>141</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Use HEV influx portals?</string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_USE_EXIT_CHEMOTAXIS">
+            <property name="geometry">
+             <rect>
+              <x>220</x>
+              <y>270</y>
+              <width>131</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Use exit chemotaxis?</string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_USE_DC_CHEMOTAXIS">
+            <property name="geometry">
+             <rect>
+              <x>220</x>
+              <y>300</y>
+              <width>121</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Use DC chemotaxis?</string>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_DC">
            <attribute name="title">
@@ -1175,51 +1264,6 @@ padding: 8px
              </property>
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </widget>
-           <widget class="QGroupBox" name="groupBox_CCL3">
-            <property name="geometry">
-             <rect>
-              <x>340</x>
-              <y>220</y>
-              <width>120</width>
-              <height>71</height>
-             </rect>
-            </property>
-            <property name="title">
-             <string/>
-            </property>
-            <widget class="QRadioButton" name="rbut_DC_CCL3_0">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>10</y>
-               <width>111</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Use secretion</string>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="rbut_DC_CCL3_1">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>40</y>
-               <width>121</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Use concentration</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
              </property>
             </widget>
            </widget>
@@ -1517,7 +1561,7 @@ p, li { white-space: pre-wrap; }
              <item row="3" column="0" colspan="2">
               <widget class="QMyLabel" name="label_OXY_HALFLIFE">
                <property name="text">
-                <string>labelOXYP_HALFLIFE</string>
+                <string>label_OXY_HALFLIFE</string>
                </property>
               </widget>
              </item>
@@ -1688,7 +1732,7 @@ p, li { white-space: pre-wrap; }
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="line_EBI2_1">
+              <widget class="QLineEdit" name="line_XXXR_1">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -1715,7 +1759,7 @@ p, li { white-space: pre-wrap; }
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QLineEdit" name="line_EBI2_2">
+              <widget class="QLineEdit" name="line_XXXR_2">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -1748,7 +1792,7 @@ p, li { white-space: pre-wrap; }
               </widget>
              </item>
              <item row="3" column="1">
-              <widget class="QLineEdit" name="line_EBI2_3">
+              <widget class="QLineEdit" name="line_XXXR_3">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -1795,14 +1839,14 @@ p, li { white-space: pre-wrap; }
               <x>790</x>
               <y>260</y>
               <width>411</width>
-              <height>51</height>
+              <height>71</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_saturation">
              <property name="verticalSpacing">
               <number>2</number>
              </property>
-             <item row="0" column="0">
+             <item row="1" column="0">
               <widget class="QLineEdit" name="line_CCR1_SAT_THRESHOLD">
                <property name="maximumSize">
                 <size>
@@ -1812,7 +1856,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QLineEdit" name="line_EBI2_sat_threshold">
                <property name="enabled">
                 <bool>false</bool>
@@ -1825,14 +1869,14 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="0" column="2">
+             <item row="1" column="2">
               <widget class="QLabel" name="label_threshold">
                <property name="text">
                 <string>Saturation threshold             </string>
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="3" column="0">
               <widget class="QLineEdit" name="line_CCR1_REFRACTORY_TIME">
                <property name="maximumSize">
                 <size>
@@ -1842,7 +1886,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="3" column="1">
               <widget class="QLineEdit" name="line_EBI2_refractory_time">
                <property name="enabled">
                 <bool>false</bool>
@@ -1855,33 +1899,89 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
+             <item row="3" column="2">
               <widget class="QLabel" name="label_time">
                <property name="text">
                 <string>Refractory time (min)</string>
                </property>
               </widget>
              </item>
+             <item row="0" column="0">
+              <widget class="QLineEdit" name="line_CCR1_STRENGTH">
+               <property name="maximumSize">
+                <size>
+                 <width>40</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_strength">
+               <property name="text">
+                <string>Strength factor</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="line_XXXR_STRENGTH">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>40</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
-           <widget class="QLabel" name="label_saturation">
+           <widget class="QGroupBox" name="groupBox_CCL3">
             <property name="geometry">
              <rect>
-              <x>1050</x>
-              <y>240</y>
-              <width>121</width>
-              <height>16</height>
+              <x>440</x>
+              <y>280</y>
+              <width>120</width>
+              <height>71</height>
              </rect>
             </property>
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
+            <property name="title">
+             <string/>
             </property>
-            <property name="text">
-             <string>Receptor saturation</string>
-            </property>
+            <widget class="QRadioButton" name="rbut_DC_CCL3_0">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>111</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Use secretion</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+            <widget class="QRadioButton" name="rbut_DC_CCL3_1">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>40</y>
+               <width>121</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Use concentration</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_TCR">
@@ -2073,8 +2173,8 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>10</x>
               <y>0</y>
-              <width>431</width>
-              <height>621</height>
+              <width>271</width>
+              <height>438</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_4">
@@ -2105,7 +2205,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QSpinBox" name="spin_NX">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2144,7 +2244,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_BLOB_RADIUS">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2180,7 +2280,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_TC_FRACTION">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2206,7 +2306,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_FLUID_FRACTION">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2245,7 +2345,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_DC_RADIUS">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2317,7 +2417,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_DCrate_100k">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2356,7 +2456,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_T_DC1">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2402,7 +2502,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_T_DC2">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2418,14 +2518,14 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="10" column="0">
+             <item row="9" column="0">
               <widget class="QMyLabel" name="label_INFLAMM_DAYS1">
                <property name="text">
                 <string>label_INFLAMM_DAYS1</string>
                </property>
               </widget>
              </item>
-             <item row="10" column="1">
+             <item row="9" column="1">
               <spacer name="horizontalSpacer_22">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2438,11 +2538,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="10" column="2">
+             <item row="9" column="2">
               <widget class="QLineEdit" name="line_INFLAMM_DAYS1">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2451,14 +2551,14 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="11" column="0">
+             <item row="10" column="0">
               <widget class="QMyLabel" name="label_INFLAMM_DAYS2">
                <property name="text">
                 <string>label_INFLAMM_DAYS2</string>
                </property>
               </widget>
              </item>
-             <item row="11" column="1">
+             <item row="10" column="1">
               <spacer name="horizontalSpacer_23">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2471,11 +2571,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="11" column="2">
+             <item row="10" column="2">
               <widget class="QLineEdit" name="line_INFLAMM_DAYS2">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2484,14 +2584,14 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="12" column="0">
+             <item row="11" column="0">
               <widget class="QMyLabel" name="label_INFLAMM_LEVEL">
                <property name="text">
                 <string>label_INFLAMM_LEVEL</string>
                </property>
               </widget>
              </item>
-             <item row="12" column="1">
+             <item row="11" column="1">
               <spacer name="horizontalSpacer_24">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2504,11 +2604,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="12" column="2">
+             <item row="11" column="2">
               <widget class="QLineEdit" name="line_INFLAMM_LEVEL">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2517,144 +2617,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="13" column="0">
-              <widget class="QMyLabel" name="label_EXIT_REGION">
-               <property name="mouseTracking">
-                <bool>false</bool>
-               </property>
-               <property name="toolTip">
-                <string>determines blob region for cell exits</string>
-               </property>
-               <property name="text">
-                <string>label_EXIT_REGION</string>
-               </property>
-               <property name="wordWrap">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="13" column="1">
-              <spacer name="horizontalSpacer_26">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>13</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item row="13" column="2">
-              <widget class="QComboBox" name="comb_EXIT_REGION">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <item>
-                <property name="text">
-                 <string>everywhere</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>lower half of blob</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>blob portals</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>surface portals</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-             <item row="14" column="0">
-              <widget class="QMyLabel" name="label_CHEMO_RADIUS">
-               <property name="text">
-                <string>label_CHEMO_RADIUS</string>
-               </property>
-              </widget>
-             </item>
-             <item row="14" column="1">
-              <spacer name="horizontalSpacer_27">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>13</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item row="14" column="2">
-              <widget class="QLineEdit" name="line_CHEMO_RADIUS">
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="15" column="0">
-              <widget class="QMyLabel" name="label_CHEMO_K_EXIT">
-               <property name="mouseTracking">
-                <bool>false</bool>
-               </property>
-               <property name="toolTip">
-                <string>level of exit chemotactic influence</string>
-               </property>
-               <property name="text">
-                <string>label_CHEMO_K_EXIT</string>
-               </property>
-               <property name="wordWrap">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="15" column="1">
-              <spacer name="horizontalSpacer_28">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>13</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item row="15" column="2">
-              <widget class="QLineEdit" name="line_CHEMO_K_EXIT">
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="17" column="0">
+             <item row="12" column="0">
               <widget class="QMyLabel" name="label_NDAYS">
                <property name="mouseTracking">
                 <bool>false</bool>
@@ -2670,7 +2633,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="17" column="1">
+             <item row="12" column="1">
               <spacer name="horizontalSpacer_29">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2683,7 +2646,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="18" column="0">
+             <item row="13" column="0">
               <widget class="QMyLabel" name="label_SEED1">
                <property name="mouseTracking">
                 <bool>false</bool>
@@ -2699,7 +2662,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="18" column="1">
+             <item row="13" column="1">
               <spacer name="horizontalSpacer_30">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2712,11 +2675,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="18" column="2">
+             <item row="13" column="2">
               <widget class="QSpinBox" name="spin_SEED1">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2728,7 +2691,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="19" column="0">
+             <item row="14" column="0">
               <widget class="QMyLabel" name="label_SEED2">
                <property name="mouseTracking">
                 <bool>false</bool>
@@ -2744,7 +2707,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="19" column="1">
+             <item row="14" column="1">
               <spacer name="horizontalSpacer_31">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2757,11 +2720,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="19" column="2">
+             <item row="14" column="2">
               <widget class="QSpinBox" name="spin_SEED2">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2777,7 +2740,7 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_TC_TO_DC">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2786,11 +2749,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="17" column="2">
+             <item row="12" column="2">
               <widget class="QLineEdit" name="line_NDAYS">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2812,7 +2775,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="21" column="0">
+             <item row="16" column="0">
               <widget class="QMyLabel" name="label_NT_ANIMATION">
                <property name="toolTip">
                 <string>animation update interval</string>
@@ -2822,7 +2785,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="21" column="1">
+             <item row="16" column="1">
               <spacer name="horizontalSpacer_32">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2835,11 +2798,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="21" column="2">
+             <item row="16" column="2">
               <widget class="QSpinBox" name="spin_NT_ANIMATION">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2851,67 +2814,21 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="16" column="0">
-              <widget class="QMyLabel" name="label_CHEMO_K_DC">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="text">
-                <string>label_CHEMO_K_DC</string>
-               </property>
-              </widget>
-             </item>
-             <item row="16" column="2">
-              <widget class="QLineEdit" name="line_CHEMO_K_DC">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="16" column="1">
-              <spacer name="horizontalSpacer_33">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>13</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item row="14" column="3">
-              <widget class="QLabel" name="units_CHEMO_RADIUS">
-               <property name="text">
-                <string>µm</string>
-               </property>
-              </widget>
-             </item>
-             <item row="17" column="3">
+             <item row="12" column="3">
               <widget class="QLabel" name="units_NDAYS">
                <property name="text">
                 <string>days</string>
                </property>
               </widget>
              </item>
-             <item row="10" column="3">
+             <item row="9" column="3">
               <widget class="QLabel" name="units_INFLAMM1">
                <property name="text">
                 <string>days</string>
                </property>
               </widget>
              </item>
-             <item row="11" column="3">
+             <item row="10" column="3">
               <widget class="QLabel" name="units_INFLAMM2">
                <property name="text">
                 <string>days</string>
@@ -2925,7 +2842,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="20" column="0">
+             <item row="15" column="0">
               <widget class="QMyLabel" name="label_NCPU">
                <property name="toolTip">
                 <string>animation update interval</string>
@@ -2935,7 +2852,7 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="20" column="1">
+             <item row="15" column="1">
               <spacer name="horizontalSpacer_34">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -2948,11 +2865,11 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="20" column="2">
+             <item row="15" column="2">
               <widget class="QSpinBox" name="spin_NCPU">
                <property name="maximumSize">
                 <size>
-                 <width>120</width>
+                 <width>80</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -2964,52 +2881,13 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="9" column="0">
-              <widget class="QMyLabel" name="label_DC_INJECTION_FILE">
-               <property name="mouseTracking">
-                <bool>false</bool>
-               </property>
-               <property name="text">
-                <string>DC injection file</string>
-               </property>
-               <property name="wordWrap">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="9" column="2">
-              <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="9" column="1">
-              <spacer name="horizontalSpacer_35">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>13</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
             </layout>
            </widget>
            <widget class="QCheckBox" name="cbox_IN_VITRO">
             <property name="geometry">
              <rect>
-              <x>650</x>
-              <y>10</y>
+              <x>1080</x>
+              <y>0</y>
               <width>141</width>
               <height>18</height>
              </rect>
@@ -3021,7 +2899,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
-              <x>650</x>
+              <x>1080</x>
               <y>30</y>
               <width>371</width>
               <height>152</height>
@@ -3109,8 +2987,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_IV_SHOW_NONCOGNATE">
             <property name="geometry">
              <rect>
-              <x>650</x>
-              <y>190</y>
+              <x>290</x>
+              <y>20</y>
               <width>161</width>
               <height>18</height>
              </rect>
@@ -3122,34 +3000,21 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_DC_INJECTION">
             <property name="geometry">
              <rect>
-              <x>450</x>
-              <y>260</y>
+              <x>290</x>
+              <y>510</y>
               <width>120</width>
-              <height>18</height>
+              <height>21</height>
              </rect>
             </property>
             <property name="text">
              <string>DCs injected?</string>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_USE_TRAFFIC">
-            <property name="geometry">
-             <rect>
-              <x>450</x>
-              <y>290</y>
-              <width>101</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>T cell trafficking? </string>
-            </property>
-           </widget>
            <widget class="QRadioButton" name="rbut_SPECIES_1">
             <property name="geometry">
              <rect>
-              <x>470</x>
-              <y>30</y>
+              <x>1080</x>
+              <y>220</y>
               <width>61</width>
               <height>18</height>
              </rect>
@@ -3164,8 +3029,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QRadioButton" name="rbut_SPECIES_0">
             <property name="geometry">
              <rect>
-              <x>470</x>
-              <y>10</y>
+              <x>1080</x>
+              <y>200</y>
               <width>71</width>
               <height>18</height>
              </rect>
@@ -3180,50 +3045,11 @@ p, li { white-space: pre-wrap; }
              <string>buttonGroup_SPECIES</string>
             </attribute>
            </widget>
-           <widget class="QCheckBox" name="cbox_USE_EXIT_CHEMOTAXIS">
-            <property name="geometry">
-             <rect>
-              <x>450</x>
-              <y>450</y>
-              <width>131</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Use exit chemotaxis?</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="cbox_USE_DC_CHEMOTAXIS">
-            <property name="geometry">
-             <rect>
-              <x>450</x>
-              <y>480</y>
-              <width>121</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Use DC chemotaxis?</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="cbox_COMPUTED_OUTFLOW">
-            <property name="geometry">
-             <rect>
-              <x>450</x>
-              <y>400</y>
-              <width>141</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Compute T cell outflow?</string>
-            </property>
-           </widget>
            <widget class="QMyLabel" name="label_INPUT_FILE">
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>650</y>
+              <y>450</y>
               <width>121</width>
               <height>16</height>
              </rect>
@@ -3236,7 +3062,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>130</x>
-              <y>650</y>
+              <y>450</y>
               <width>151</width>
               <height>20</height>
              </rect>
@@ -3246,7 +3072,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>290</x>
-              <y>690</y>
+              <y>480</y>
               <width>21</width>
               <height>20</height>
              </rect>
@@ -3268,7 +3094,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>320</x>
-              <y>690</y>
+              <y>480</y>
               <width>115</width>
               <height>21</height>
              </rect>
@@ -3280,8 +3106,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_savepos">
             <property name="geometry">
              <rect>
-              <x>450</x>
-              <y>590</y>
+              <x>290</x>
+              <y>50</y>
               <width>120</width>
               <height>18</height>
              </rect>
@@ -3294,7 +3120,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>10</x>
-              <y>690</y>
+              <y>480</y>
               <width>111</width>
               <height>16</height>
              </rect>
@@ -3310,37 +3136,64 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>130</x>
-              <y>690</y>
+              <y>480</y>
               <width>151</width>
               <height>20</height>
              </rect>
             </property>
            </widget>
+           <widget class="QGroupBox" name="groupBox_graphselect">
+            <property name="geometry">
+             <rect>
+              <x>460</x>
+              <y>10</y>
+              <width>201</width>
+              <height>481</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string>Graphs</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
+            <property name="geometry">
+             <rect>
+              <x>130</x>
+              <y>510</y>
+              <width>151</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_DC_INJECTION_FILE">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>510</y>
+              <width>115</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="mouseTracking">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>DC injection file</string>
+            </property>
+            <property name="wordWrap">
+             <bool>false</bool>
+            </property>
+           </widget>
           </widget>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_input">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Segoe UI</family>
-            <pointsize>16</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Inputs</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
          </widget>
         </item>
         <item>
@@ -3802,9 +3655,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>line_INFLAMM_DAYS1</tabstop>
   <tabstop>line_INFLAMM_DAYS2</tabstop>
   <tabstop>line_INFLAMM_LEVEL</tabstop>
-  <tabstop>comb_EXIT_REGION</tabstop>
-  <tabstop>line_CHEMO_RADIUS</tabstop>
-  <tabstop>line_CHEMO_K_EXIT</tabstop>
   <tabstop>line_NDAYS</tabstop>
   <tabstop>spin_SEED1</tabstop>
   <tabstop>spin_SEED2</tabstop>

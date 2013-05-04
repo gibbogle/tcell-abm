@@ -175,6 +175,10 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell trafficking?",
 "T cell trafficking is simulated (ingress and egress)"},
 
+{"USE_HEV_PORTALS", 1, 0, 1,
+"Use HEV influx portals?",
+"T cells enter through a discrete number of HEVs"},
+
 {"USE_EXIT_CHEMOTAXIS", 0, 0, 1,
 "T cell exit chemotaxis?",
 "S1P-modulated T cell chemotaxis towards exit portals is simulated"},
@@ -215,22 +219,26 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 //"Exit rule",
 //"T cell exit rule.  1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = no restriction."},
 
-{"EXIT_REGION", 4, 1, 4,
-"Exit region",
-"Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = blob portals, 4 = surface portals."},
+//{"EXIT_REGION", 4, 1, 4,
+//"Exit region",
+//"Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = blob portals, 4 = surface portals."},
 
-{"CHEMO_RADIUS", 60.0, 10.0, 200.0,
-"Radius of chemotactic influence",
-"Range of chemotactic influence of an exit site or DC on T cell motion.  At this distance the influence is reduced to 5% of its maximum value.\n\
-[um]"},
+//{"CHEMO_RADIUS", 60.0, 10.0, 200.0,
+//"Radius of chemotactic influence",
+//"Range of chemotactic influence of an exit site or DC on T cell motion.  At this distance the influence is reduced to 5% of its maximum value.\n\
+//[um]"},
 
-{"CHEMO_K_EXIT", 0.5, 0.0, 1.0,
-"Exit chemotaxis influence parameter",
-"Strength of chemotactic influence on T cell motion towards exits."},
+//{"CHEMO_K_EXIT", 0.5, 0.0, 1.0,
+//"Exit chemotaxis influence parameter",
+//"Strength of chemotactic influence on T cell motion towards exits."},
 
-{"CHEMO_K_DC", 0.0, 0.0, 10.0,
-"DC chemotaxis influence parameter",
-"Strength of chemotactic influence on T cell motion towards DCs (CCL3-CCR1)."},
+//{"CHEMO_K_DC", 0.0, 0.0, 10.0,
+//"DC chemotaxis influence parameter",
+//"Strength of chemotactic influence on T cell motion towards DCs (CCL3-CCR1)."},
+
+{"CCR1_STRENGTH", 1.0, 0, 0,
+"CCR1_STRENGTH",
+"Strength factor for CCR1 receptor"},
 
 {"CCR1_1", 1, 0, 0,
 "CCR1_1",

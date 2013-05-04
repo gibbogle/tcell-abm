@@ -12,7 +12,7 @@ LOG_DECLARE;
 int main(int argc, char *argv[])
 {
 	//initialize file logger
-	LOG_INIT("zzz.log");
+    LOG_INIT("Tcell-abm.log");
 
 //	Q_INIT_RESOURCE(ABM_GUI);
 
