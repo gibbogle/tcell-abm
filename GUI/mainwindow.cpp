@@ -2025,6 +2025,14 @@ void MainWindow::setupGraphSelector()
         vbox->addWidget(cbox_ts[i]);
     }
     groupBox_graphselect->setLayout(vbox);
+    QRect rect;
+    rect = groupBox_graphselect->geometry();
+#ifdef __DISPLAY768
+    rect.setHeight(440);
+#else
+    rect.setHeight(600);
+#endif
+    groupBox_graphselect->setGeometry(rect);
 }
 
 //--------------------------------------------------------------------------------------------------------

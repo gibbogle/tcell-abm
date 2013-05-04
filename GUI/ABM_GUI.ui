@@ -88,7 +88,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -3145,7 +3145,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QGroupBox" name="groupBox_graphselect">
             <property name="geometry">
              <rect>
-              <x>460</x>
+              <x>610</x>
               <y>10</y>
               <width>201</width>
               <height>481</height>
@@ -3379,7 +3379,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

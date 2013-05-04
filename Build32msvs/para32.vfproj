@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject ProjectType="typeDynamicLibrary" ProjectCreator="Intel Fortran" Keyword="Dll" Version="11.0" ProjectIdGuid="{8B7F3472-1DE1-4EEF-BDD9-411D5E53145D}">
+	<Platforms>
+		<Platform Name="Win32"/></Platforms>
+	<Configurations>
+		<Configuration Name="Debug|Win32" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" Interfaces="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
+				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\para-v2.dll" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
+		<Configuration Name="Release|Win32" ConfigurationType="typeDynamicLibrary">
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/Qopenmp /Oy" SuppressStartupBanner="true" Optimization="optimizeCustom" Preprocess="preprocessYes" Traceback="true" RuntimeChecks="rtChecksNone" RuntimeLibrary="rtMultiThreadedDLL"/>
+				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\para-v2.dll" SuppressStartupBanner="true" IgnoreDefaultLibraryNames="libcmt" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="ws2_32.lib"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPostBuildEventTool" CommandLine="copy release\para-v2.dll c:\bin
+copy release\para-v2.lib c:\bin"/>
+				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
+	<Files>
+		<Filter Name="Header Files" Filter="fi;fd"/>
+		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
+		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<File RelativePath="..\src\chemokine.f90"/>
+		<File RelativePath="..\src\ode_diffuse_general.f90"/>
+		<File RelativePath="..\src\ode_diffuse_secretion.f90"/>
+		<File RelativePath="..\src\omp_behaviour.f90"/>
+		<File RelativePath="..\src\omp_diffuse.f90"/>
+		<File RelativePath="..\src\omp_fields.f90"/>
+		<File RelativePath="..\src\omp_global.f90"/>
+		<File RelativePath="..\src\omp_IL.f90"/>
+		<File RelativePath="..\src\omp_motility.f90"/>
+		<File RelativePath="..\src\omp_para.f90"/>
+		<File RelativePath="..\src\omp_rkf45.f90"/>
+		<File RelativePath="..\src\par_zig_mod.f90"/>
+		<File RelativePath="..\src\Winsock_c.f90"/></Filter>
+		<File RelativePath=".\clientc.obj"/>
+		<File RelativePath=".\tcpc.obj"/></Files>
+	<Globals/></VisualStudioProject>
