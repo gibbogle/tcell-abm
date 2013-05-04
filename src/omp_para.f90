@@ -1,4 +1,4 @@
-! Extension to general geometry: 
+! Extension to general geometry:  
 ! We need to be able to handle a spherical blob, for example.
 ! Simplifying assumptions:
 ! (1) The partitioning of the blob is always created by slice boundaries that
