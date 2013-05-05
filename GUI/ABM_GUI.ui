@@ -2482,7 +2482,7 @@ p, li { white-space: pre-wrap; }
                <x>10</x>
                <y>10</y>
                <width>278</width>
-               <height>421</height>
+               <height>438</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
@@ -3247,7 +3247,7 @@ p, li { white-space: pre-wrap; }
           <property name="minimumSize">
            <size>
             <width>451</width>
-            <height>541</height>
+            <height>500</height>
            </size>
           </property>
           <property name="sizeIncrement">
