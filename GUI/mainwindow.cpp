@@ -130,7 +130,6 @@ MainWindow::MainWindow(QWidget *parent)
 //	vtk = new MyVTK(page_3D);
     vtk = new MyVTK(mdiArea_VTK, test_page);
     vtk->init();
-    QRect rect;
     rect.setX(50);
     rect.setY(30);
 #ifdef __DISPLAY768
