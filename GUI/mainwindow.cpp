@@ -121,7 +121,7 @@ MainWindow::MainWindow(QWidget *parent)
     QRect rect;
     rect = groupBox_run->geometry();
 #ifdef __DISPLAY768
-    rect.setHeight(440);
+    rect.setHeight(480);
 #else
     rect.setHeight(600);
 #endif
@@ -129,7 +129,28 @@ MainWindow::MainWindow(QWidget *parent)
 
 //	vtk = new MyVTK(page_3D);
     vtk = new MyVTK(mdiArea_VTK, test_page);
-	vtk->init();
+    vtk->init();
+    QRect rect;
+    rect.setX(50);
+    rect.setY(30);
+#ifdef __DISPLAY768
+    rect.setHeight(600);
+    rect.setWidth(600);
+#else
+    rect.setHeight(800);
+    rect.setWidth(800);
+#endif
+    mdiArea_VTK->setGeometry(rect);
+    rect.setX(10);
+    rect.setY(0);
+#ifdef __DISPLAY768
+    rect.setHeight(500);
+    rect.setWidth(1100);
+#else
+    rect.setHeight(700);
+    rect.setWidth(1500);
+#endif
+    mdiArea->setGeometry(rect);
 	tabs->setCurrentIndex(0);
 	goToInputs();
 }
@@ -2037,7 +2058,7 @@ void MainWindow::setupGraphSelector()
     QRect rect;
     rect = groupBox_graphselect->geometry();
 #ifdef __DISPLAY768
-    rect.setHeight(440);
+    rect.setHeight(480);
 #else
     rect.setHeight(600);
 #endif
