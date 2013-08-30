@@ -931,6 +931,8 @@ end subroutine
 ! To quantify DC visits with trafficking.
 ! 3
 ! DC chemokine secretion is linked to contact with cognate CD4  cells.
+! 4
+! Discrete levels of TCR avidity and/or discrete DC antigens
 !----------------------------------------------------------------------------------------
 subroutine read_specialcase(icase,casefile,ok)
 integer :: icase

@@ -691,7 +691,7 @@ logical :: diagonal_jumps
 real :: DC_CHEMO_DELAY	! gets set = DC_BIND_DELAY
 real :: t_taglimit
 
-real, allocatable :: chemo_r(:,:,:)
+!real, allocatable :: chemo_r(:,:,:)    ! no longer used
 real, allocatable :: chemo_p(:,:,:,:)
 
 ! Cell data
@@ -2476,7 +2476,7 @@ real, allocatable :: w(:)
 
 write(logmsg,*) 'chemo_setup'
 call logger(logmsg)
-allocate(chemo_r(0:chemo_N,0:chemo_N,0:chemo_N))
+!allocate(chemo_r(0:chemo_N,0:chemo_N,0:chemo_N))
 allocate(chemo_p(-chemo_N:chemo_N,-chemo_N:chemo_N,-chemo_N:chemo_N,njumpdirs))
 allocate(w(njumpdirs))
 
@@ -2500,9 +2500,9 @@ do x = -chemo_N,chemo_N
             enddo
             w = w/sum(w)
             chemo_p(x,y,z,:) = w	! Note that these probs sum to 1
-            if (x >= 0 .and. y >= 0 .and. z >= 0) then
-                chemo_r(x,y,z) = sqrt(r2)
-            endif
+!            if (x >= 0 .and. y >= 0 .and. z >= 0) then
+!                chemo_r(x,y,z) = sqrt(r2)
+!            endif
         enddo
     enddo
 enddo
@@ -2570,7 +2570,7 @@ end subroutine
 ! On return p(:) holds the modified jump probabilities.
 ! Note: when njumpdirs = 27, jump 14 corresponds to (0,0,0) - unused.
 ! Note: code modifications now base v and f on net chemotactic attraction of 
-! multiple exits and DCs.
+! multiple attractors (exits and DCs) by summing the chemokine gradient vectors.
 !--------------------------------------------------------------------------------
 subroutine chemo_probs_pre(p,v,f)
 real(DP) :: p(:)
