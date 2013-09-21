@@ -26,7 +26,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "CD8 T cell cognate fraction",
 "The fraction of CD8 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
-{"TC_STIM_RATE_CONSTANT", 1, 0, 0,
+{"TC_STIM_RATE_CONSTANT", 4, 0, 0,
 "TCR stimulation rate constant",
 "Rate constant Ks for TCR stimulation, where:\n\
 rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
@@ -86,7 +86,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "After a T cell unbinds from a DC there is a delay before it can bind to a DC again.\n\
 [mins]"},
 
-{"DC_DENS_HALFLIFE", 6.0, 0, 0,
+{"DC_DENS_HALFLIFE", 24.0, 0, 0,
 "Antigen density half-life",
 "Antigen density on a DC decays with a specified half-life.\n\
 [hours]"},
@@ -140,7 +140,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Fraction of the paracortical volume occupied by fluid."},
 
 {"DC_RADIUS", 19.0, 0, 0,
-"DC radius",
+"DC SOI radius",
 "Radius of DC sphere of influence.\n\
 [um]"},
 
@@ -211,7 +211,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Time at which the level of inflammation signal from the periphery goes to zero.\n\
 [days]"},
 
-{"INFLAMM_LEVEL", 0.0, 0, 0,
+{"INFLAMM_LEVEL", 0.5, 0, 0,
 "Inflammation level",
 "The plateau inflammation signal level."},
 
@@ -284,7 +284,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Radius of CCL3 conc",
 "Sites within this radius of the DC receive CCL3 concentration (+ all DC sites)"},
 
-{"NDAYS", 1.0, 0, 0,
+{"NDAYS", 10.0, 0, 0,
 "Number of days",
 "Length of the simulation.\n\
 [days]"},
@@ -297,7 +297,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Second RNG seed",
 "The random number generator is seeded by a pair of integers.  Changing the seed generates a different Monte Carlo realization."},
 
-{"NCPU", 1, 1, 8,
+{"NCPU", 4, 1, 8,
 "Number of CPUs",
 "Number of CPUs to use for the simulation."},
 

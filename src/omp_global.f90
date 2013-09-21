@@ -819,9 +819,9 @@ real :: INLET_LAYER_THICKNESS = 5		! if RELAX_INLET_EXIT_PROXIMITY, inlets are w
 real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines how close an inlet point can be to an exit portal.
 real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
-! PERIPHERY parameters
-logical, parameter :: SIMULATE_PERIPHERY = .false.
-integer, parameter :: PERI_GENERATION = 2
+! PERIPHERY parameters 
+logical, parameter :: SIMULATE_PERIPHERY = .true.
+integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
 real, parameter :: PERI_PROBFACTOR = 10
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc

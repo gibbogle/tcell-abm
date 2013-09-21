@@ -3872,9 +3872,9 @@ nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
 !	nbnd,int(InflowTotal),Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 nact = 100*act
 
-summaryData(1:13) = (/int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,Ndead, &
+summaryData(1:13) = (/int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,ndead, &
 	nbnd,int(InflowTotal),Nexits, teffgen/)
-write(nflog,*) 'ndivisions = ',ndivisions
+!write(nflog,*) 'ndivisions,teffgen,ncog = ',ndivisions,teffgen,ncog
 
 if (track_DCvisits) then
 	write(logmsg,'(a,3i6,f6.0)') 'ntagged, ntaglimit, ntagged_left, t_taglimit: ', &

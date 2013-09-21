@@ -1344,8 +1344,8 @@ void MainWindow::showSummary()
 	progressBar->setValue(progress);
 	QString hourstr = QString::number(int(hour));
 	hour_display->setText(hourstr);
-//	sprintf(msg,"showSummary: step: %d summaryData[1]: %d hour: %6.1f",step,summaryData[1],hour);
-//	LOG_MSG(msg);
+//    sprintf(msg,"showSummary: step: %d summaryData[7]: %d hour: %6.1f",step,summaryData[7],hour);
+//    LOG_MSG(msg);
 
 	QString casename = newR->casename;
 	newR->tnow[step] = step;		//summaryData[0];
