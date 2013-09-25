@@ -36,7 +36,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -471,7 +471,7 @@ padding: 8px
              <rect>
               <x>20</x>
               <y>300</y>
-              <width>101</width>
+              <width>131</width>
               <height>18</height>
              </rect>
             </property>
@@ -484,7 +484,7 @@ padding: 8px
              <rect>
               <x>20</x>
               <y>360</y>
-              <width>141</width>
+              <width>161</width>
               <height>18</height>
              </rect>
             </property>
@@ -510,7 +510,7 @@ padding: 8px
              <rect>
               <x>200</x>
               <y>300</y>
-              <width>131</width>
+              <width>151</width>
               <height>18</height>
              </rect>
             </property>
@@ -523,7 +523,7 @@ padding: 8px
              <rect>
               <x>200</x>
               <y>330</y>
-              <width>121</width>
+              <width>141</width>
               <height>18</height>
              </rect>
             </property>
@@ -548,8 +548,8 @@ padding: 8px
               <rect>
                <x>10</x>
                <y>10</y>
-               <width>301</width>
-               <height>251</height>
+               <width>322</width>
+               <height>256</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_TC">
@@ -1487,7 +1487,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>440</x>
               <y>130</y>
-              <width>221</width>
+              <width>245</width>
               <height>126</height>
              </rect>
             </property>
@@ -1801,7 +1801,7 @@ p, li { white-space: pre-wrap; }
               <x>790</x>
               <y>260</y>
               <width>411</width>
-              <height>71</height>
+              <height>72</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_saturation">
@@ -1955,8 +1955,8 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>20</x>
               <y>40</y>
-              <width>315</width>
-              <height>152</height>
+              <width>352</width>
+              <height>169</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0">
@@ -2482,7 +2482,7 @@ p, li { white-space: pre-wrap; }
                <x>10</x>
                <y>10</y>
                <width>278</width>
-               <height>438</height>
+               <height>488</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
@@ -3381,7 +3381,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
