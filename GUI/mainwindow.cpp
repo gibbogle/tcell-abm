@@ -555,6 +555,8 @@ void MainWindow::loadParams()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// This really should be changed.  Note that it requires that there is only one more "_" after "rbut_"
+// In any case, it is easier to include all the radiobutton cases in the params list.
 //--------------------------------------------------------------------------------------------------------
 QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
 {
@@ -565,6 +567,7 @@ QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
 	wtag = wtag.mid(0,j);
 	bool ok;
 	*rbutton_case = suffix.toInt(&ok);
+    sprintf(msg,"parse_rbutton: case: %d\n",*rbutton_case);
 	return wtag;
 }
 
@@ -1839,19 +1842,36 @@ void MainWindow::changeParam()
 			}
 		} else if (wname.contains("rbut_")) {
 			QRadioButton *radioButton = (QRadioButton *)w;
-			if (radioButton->isChecked()) {
-				QString wtag = wname.mid(5);
-				int rbutton_case;
-				wtag = parse_rbutton(wtag,&rbutton_case);
-				for (int k=0; k<parm->nParams; k++) {
-					PARAM_SET p = parm->get_param(k);
-					if (wtag.compare(p.tag) == 0) {
-						parm->set_value(k,rbutton_case);
-						break;
-					}
-				}
-			}
-		}
+            QString wtag = wname.mid(5);
+            int rbutton_case;
+//            wtag = parse_rbutton(wtag,&rbutton_case);
+//			if (radioButton->isChecked()) {
+//                LOG_QMSG("isChecked");
+//				for (int k=0; k<parm->nParams; k++) {
+//					PARAM_SET p = parm->get_param(k);
+//					if (wtag.compare(p.tag) == 0) {
+//						parm->set_value(k,rbutton_case);
+//                        LOG_QMSG("set_value");
+//                        break;
+//                    }
+//                }
+//			}
+            for (int k=0; k<parm->nParams; k++) {
+                PARAM_SET p = parm->get_param(k);
+                if (wtag.compare(p.tag) == 0) {
+                    if (radioButton->isChecked()) {
+//                        LOG_QMSG("is Checked");
+                        parm->set_value(k,1);
+//                        LOG_QMSG("set_value");
+                    } else {
+//                        LOG_QMSG("is not Checked");
+                        parm->set_value(k,0);
+//                        LOG_QMSG("set_value");
+                    }
+                    break;
+                }
+            }
+        }
 	}
 }
 
@@ -2231,6 +2251,35 @@ void MainWindow::create_lognorm_dist(double p1, double p2,int n, double *x, doub
         x[ix] = (x1+x2)/2;
         prob[ix] = plognorm(x1,x2,mu_l,sig_l)/(x2-x1);
 	}
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_activation_mode_toggled()
+{
+    if (rbut_ACTIVATIONMODE_0->isChecked()) {
+        line_IL2_THRESHOLD->setEnabled(true);
+        line_ACTIVATION_THRESHOLD->setEnabled(true);
+        line_UNSTAGED_BIND_THRESHOLD->setEnabled(false);
+        line_UNSTAGED_HILL_N->setEnabled(false);
+        line_UNSTAGED_HILL_C->setEnabled(false);
+        line_UNSTAGED_MIN_BIND_T->setEnabled(false);
+        line_UNSTAGED_MAX_BIND_T->setEnabled(false);
+        line_UNSTAGED_MIN_DIVIDE_T->setEnabled(false);
+        line_UNSTAGED_MAX_AVIDITY->setEnabled(false);
+        line_UNSTAGED_MAX_ANTIGEN->setEnabled(false);
+    } else {
+        line_IL2_THRESHOLD->setEnabled(false);
+        line_ACTIVATION_THRESHOLD->setEnabled(false);
+        line_UNSTAGED_BIND_THRESHOLD->setEnabled(true);
+        line_UNSTAGED_HILL_N->setEnabled(true);
+        line_UNSTAGED_HILL_C->setEnabled(true);
+        line_UNSTAGED_MIN_BIND_T->setEnabled(true);
+        line_UNSTAGED_MAX_BIND_T->setEnabled(true);
+        line_UNSTAGED_MIN_DIVIDE_T->setEnabled(true);
+        line_UNSTAGED_MAX_AVIDITY->setEnabled(true);
+        line_UNSTAGED_MAX_ANTIGEN->setEnabled(true);
+    }
 }
 
 //------------------------------------------------------------------------------------------------------

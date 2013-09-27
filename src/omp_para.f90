@@ -1,5 +1,5 @@
 ! Extension to general geometry:
-! We need to be able to handle a spherical blob, for example.
+! We need to be able to handle a spherical blob, for example. 
 ! Simplifying assumptions:
 ! (1) The partitioning of the blob is always created by slice boundaries that
 !     are perpendicular to the X axis, i.e. parallel to the YZ plane.
@@ -902,13 +902,13 @@ end subroutine
 ! Any DC that has become not "alive" is unbound.
 ! We do not record a list of T cells bound to each DC, therefore it is not possible to
 ! handle unbinding by traversing the DC list.
-! NOTE: Check that non-cognate cells can bind only one DC
+! NOTE: Check that non-cognate cells can make contact with only one DC at a time.
 !-----------------------------------------------------------------------------------------
 subroutine binder(ok)
 logical :: ok
 integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc
 integer :: nadd, nsub, nu, nb, nc, nbt, nbc, nt
-real :: tnow, bindtime, pMHC, t_travel
+real :: tnow, bindtime, pMHC, stimrate, t_travel
 logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
@@ -969,6 +969,7 @@ do kcell = 1,nlist
             cell%DCbound(k) = 0
             nbnd = nbnd - 1
             unbound = .true.
+            cell%signalling = .false.
 !           nsub = nsub + 1
         endif
      enddo 
@@ -987,8 +988,7 @@ do kcell = 1,nlist
     if (nbnd < MAX_DC_BIND .and. tnow >= cell%unbindtime(2) + DC_BIND_DELAY) then
         if (cognate) then
             if (.not.bindable(cog_ptr)) cycle
-!            stage = get_stage(cog_ptr)
-			call get_stage(cog_ptr,stage,region)
+		    call get_stage(cog_ptr,stage,region)
             if (stage == NAIVE) then    ! on first binding a cognate cell is ready for next stage
                 cog_ptr%stagetime = tnow
             endif
@@ -1006,16 +1006,23 @@ do kcell = 1,nlist
 		            ok = .false.
 	                return
                 endif
+                bound = bindDC(idc,kpar)    ! This just means the all-cell limit of the DC has not been reached
+                cell%signalling = .false.
+                if (bound .and. cognate) then
+                    cell%signalling = .true.
+                    if (activation_mode == UNSTAGED_MODE) then
+                        stimrate = stimulation_rate_norm(DClist(idc)%density,cog_ptr%avidity)
+                        if (stimrate < UNSTAGED_BIND_THRESHOLD) then
+                            cell%signalling = .false.
+                            stimrate = 0
+                            cognate = .false.
+                        endif
+                    else
+                        stimrate = 0    ! not used
+                    endif
+                endif
                 if (cognate .and. DClist(idc)%ncogbound == MAX_COG_BIND) cycle
-                if (bindDC(idc,kpar)) then
-!					if (tnow > 2*60 .and. compute_travel_time .and. nbnd == 1) then
-!						t_travel = tnow - cell%unbindtime(2)
-!						ntravel = ntravel + 1
-!						i = t_travel + 0.5
-!						i = max(i,1)
-!						i = min(i,N_TRAVEL_DIST)
-!						travel_dist(k_travel_cog,k_travel_dc,i) = travel_dist(k_travel_cog,k_travel_dc,i) + 1
-!					endif
+                if (bound) then
 					if (log_firstDCcontact .and. cell%unbindtime(1) < 0) then
 						call logfirstDCcontact(cell,idc)
 					endif
@@ -1026,12 +1033,16 @@ do kcell = 1,nlist
 				        ok = .false.
 						return
                     endif
-                    bound = .true.
+!                    bound = .true.
                     cell%DCbound(nbnd) = idc
                     ctype = cell%ctype
                     pMHC = DClist(idc)%density
-                    bindtime = get_bindtime(cog_ptr,cognate,ctype,pMHC,kpar)
+                    bindtime = get_bindtime(cog_ptr,cognate,ctype,pMHC,stimrate,kpar)
                     cell%unbindtime(nbnd) = tnow + bindtime
+!                    if (cognate) then
+!                        write(logmsg,*) 'cognate and bound: ', idc,kcell,bindtime
+!	    		        call logger(logmsg)
+!	    		    endif
                     nadd = nadd + 1
                     DClist(idc)%nbound = DClist(idc)%nbound + 1
                     if (cognate) then
@@ -4138,11 +4149,6 @@ integer(c_int) :: res
 real :: tnow
 logical :: ok
 
-!res = -2147483648
-!res = -res
-!write(*,*) res,abs(res),1+mod(res,100)
-!stop
-
 res = 0
 dbug = .false.
 !if (istep > 4*60*40) dbug = .true.
@@ -4166,7 +4172,7 @@ if (mod(istep,240) == 0) then
 !	call checkExits("simulate_step")
 !	call checkExitSpacing("simulate_step")
     Radius = (NTcells*3/(4*PI))**0.33333
-    write(*,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
+    write(nflog,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, NTcells, Nexits, total_in, total_out, &
                 InflowTotal, vascularity

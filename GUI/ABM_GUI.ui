@@ -76,7 +76,7 @@ padding: 8px
            <widget class="QGroupBox" name="groupBox_avidity">
             <property name="geometry">
              <rect>
-              <x>350</x>
+              <x>360</x>
               <y>20</y>
               <width>421</width>
               <height>201</height>
@@ -101,9 +101,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_TC_AVIDITY_SHAPE">
              <property name="geometry">
               <rect>
-               <x>257</x>
+               <x>246</x>
                <y>100</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -162,9 +162,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_TC_AVIDITY_MEDIAN">
              <property name="geometry">
               <rect>
-               <x>257</x>
+               <x>246</x>
                <y>60</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -251,9 +251,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DIVIDE1_SHAPE">
              <property name="geometry">
               <rect>
-               <x>260</x>
+               <x>249</x>
                <y>100</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -289,9 +289,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DIVIDE1_MEDIAN">
              <property name="geometry">
               <rect>
-               <x>260</x>
+               <x>249</x>
                <y>60</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -402,9 +402,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DIVIDE2_MEDIAN">
              <property name="geometry">
               <rect>
-               <x>260</x>
+               <x>249</x>
                <y>60</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -427,9 +427,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DIVIDE2_SHAPE">
              <property name="geometry">
               <rect>
-               <x>260</x>
+               <x>249</x>
                <y>100</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -480,11 +480,14 @@ padding: 8px
             </property>
            </widget>
            <widget class="QCheckBox" name="cbox_COMPUTED_OUTFLOW">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="geometry">
              <rect>
               <x>20</x>
               <y>360</y>
-              <width>161</width>
+              <width>171</width>
               <height>18</height>
              </rect>
             </property>
@@ -497,7 +500,7 @@ padding: 8px
              <rect>
               <x>20</x>
               <y>330</y>
-              <width>141</width>
+              <width>161</width>
               <height>18</height>
              </rect>
             </property>
@@ -523,7 +526,7 @@ padding: 8px
              <rect>
               <x>200</x>
               <y>330</y>
-              <width>141</width>
+              <width>151</width>
               <height>18</height>
              </rect>
             </property>
@@ -536,7 +539,7 @@ padding: 8px
              <rect>
               <x>10</x>
               <y>10</y>
-              <width>321</width>
+              <width>341</width>
               <height>271</height>
              </rect>
             </property>
@@ -597,6 +600,9 @@ padding: 8px
               </item>
               <item row="3" column="0">
                <widget class="QMyLabel" name="label_TC_STIM_RATE_CONSTANT">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                   <horstretch>0</horstretch>
@@ -629,6 +635,9 @@ padding: 8px
               </item>
               <item row="3" column="2">
                <widget class="QLineEdit" name="line_TC_STIM_RATE_CONSTANT">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -1033,9 +1042,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DC_ANTIGEN_MEDIAN">
              <property name="geometry">
               <rect>
-               <x>310</x>
+               <x>299</x>
                <y>70</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -1058,9 +1067,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DC_ANTIGEN_SHAPE">
              <property name="geometry">
               <rect>
-               <x>310</x>
+               <x>299</x>
                <y>110</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -1129,9 +1138,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DC_LIFETIME_MEDIAN">
              <property name="geometry">
               <rect>
-               <x>310</x>
+               <x>299</x>
                <y>70</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -1180,9 +1189,9 @@ padding: 8px
             <widget class="QMyLabel" name="label_DC_LIFETIME_SHAPE">
              <property name="geometry">
               <rect>
-               <x>310</x>
+               <x>299</x>
                <y>110</y>
-               <width>40</width>
+               <width>51</width>
                <height>20</height>
               </rect>
              </property>
@@ -1300,11 +1309,11 @@ padding: 8px
               <item row="1" column="2">
                <widget class="QLabel" name="units_DC_DENS_HALFLIFE">
                 <property name="text">
-                 <string>hours</string>
+                 <string>hours  </string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="3" column="0">
                <widget class="QMyLabel" name="label_MAX_TC_BIND">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -1317,21 +1326,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="3" column="1">
                <widget class="QSpinBox" name="spin_MAX_TC_BIND">
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="2" column="2">
-               <widget class="QLabel" name="label">
-                <property name="text">
-                 <string>TextLabel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
+              <item row="4" column="0">
                <widget class="QMyLabel" name="label_MAX_COG_BIND">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -1344,31 +1346,28 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="4" column="1">
                <widget class="QSpinBox" name="spin_MAX_COG_BIND">
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="3" column="2">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>TextLabel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
+              <item row="5" column="0">
                <widget class="QLabel" name="label_DC_CCL3_RATE">
                 <property name="text">
                  <string>label_DC_CCL3_RATE</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="line_DC_CCL3_RATE"/>
+              <item row="5" column="1">
+               <widget class="QLineEdit" name="line_DC_CCL3_RATE">
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
               </item>
-              <item row="4" column="2">
+              <item row="5" column="2">
                <widget class="QLabel" name="units_CCL21rate">
                 <property name="text">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1379,17 +1378,21 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
-               <widget class="QLineEdit" name="line_DC_CCL3_CONC"/>
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="line_DC_CCL3_CONC">
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
               </item>
-              <item row="5" column="0">
+              <item row="6" column="0">
                <widget class="QMyLabel" name="label_DC_CCL3_CONC">
                 <property name="text">
                  <string>label_DC_CCL3_CONC</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="2">
+              <item row="6" column="2">
                <widget class="QLabel" name="units_CCL21conc">
                 <property name="text">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1400,15 +1403,40 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="7" column="0">
                <widget class="QLabel" name="label_DC_CCL3_RADIUS">
                 <property name="text">
                  <string>label_DC_CCL3_RADIUS</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
-               <widget class="QLineEdit" name="line_DC_CCL3_RADIUS"/>
+              <item row="7" column="1">
+               <widget class="QLineEdit" name="line_DC_CCL3_RADIUS">
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QMyLabel" name="label_DC_RADIUS">
+                <property name="text">
+                 <string>label_DC_RADIUS</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="line_DC_RADIUS">
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="units_DC_RADIUS">
+                <property name="text">
+                 <string>µm</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -1579,14 +1607,14 @@ p, li { white-space: pre-wrap; }
              </item>
             </layout>
            </widget>
-           <widget class="QRadioButton" name="rbut_OXY_BDRY_0">
+           <widget class="QRadioButton" name="rbut_OXYBDRY_0">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="geometry">
              <rect>
-              <x>670</x>
-              <y>130</y>
+              <x>440</x>
+              <y>270</y>
               <width>111</width>
               <height>21</height>
              </rect>
@@ -1600,7 +1628,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>270</x>
               <y>60</y>
-              <width>221</width>
+              <width>281</width>
               <height>16</height>
              </rect>
             </property>
@@ -1615,14 +1643,14 @@ p, li { white-space: pre-wrap; }
              <string>Chemokine Parameters</string>
             </property>
            </widget>
-           <widget class="QRadioButton" name="rbut_OXY_BDRY_1">
+           <widget class="QRadioButton" name="rbut_OXYBDRY_1">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="geometry">
              <rect>
-              <x>670</x>
-              <y>150</y>
+              <x>440</x>
+              <y>290</y>
               <width>121</width>
               <height>21</height>
              </rect>
@@ -1780,7 +1808,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>900</x>
               <y>60</y>
-              <width>161</width>
+              <width>201</width>
               <height>21</height>
              </rect>
             </property>
@@ -1903,16 +1931,16 @@ p, li { white-space: pre-wrap; }
            <widget class="QGroupBox" name="groupBox_CCL3">
             <property name="geometry">
              <rect>
-              <x>440</x>
-              <y>280</y>
-              <width>120</width>
+              <x>80</x>
+              <y>220</y>
+              <width>141</width>
               <height>71</height>
              </rect>
             </property>
             <property name="title">
              <string/>
             </property>
-            <widget class="QRadioButton" name="rbut_DC_CCL3_0">
+            <widget class="QRadioButton" name="rbut_DCCCL3_0">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -1928,12 +1956,12 @@ p, li { white-space: pre-wrap; }
               <bool>false</bool>
              </property>
             </widget>
-            <widget class="QRadioButton" name="rbut_DC_CCL3_1">
+            <widget class="QRadioButton" name="rbut_DCCCL3_1">
              <property name="geometry">
               <rect>
                <x>10</x>
                <y>40</y>
-               <width>121</width>
+               <width>131</width>
                <height>21</height>
               </rect>
              </property>
@@ -1948,15 +1976,15 @@ p, li { white-space: pre-wrap; }
           </widget>
           <widget class="QWidget" name="tab_TCR">
            <attribute name="title">
-            <string>TCR Activation</string>
+            <string>Activation</string>
            </attribute>
            <widget class="QWidget" name="layoutWidget_2">
             <property name="geometry">
              <rect>
               <x>20</x>
-              <y>40</y>
-              <width>352</width>
-              <height>169</height>
+              <y>80</y>
+              <width>351</width>
+              <height>198</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0">
@@ -2017,9 +2045,15 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_IL2_THRESHOLD">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2030,9 +2064,15 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_ACTIVATION_THRESHOLD">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2043,9 +2083,15 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_FIRST_DIVISION_THRESHOLD">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2056,9 +2102,15 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_DIVISION_THRESHOLD">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2067,11 +2119,20 @@ p, li { white-space: pre-wrap; }
              </item>
              <item row="4" column="1">
               <widget class="QLineEdit" name="line_EXIT_THRESHOLD">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2095,9 +2156,41 @@ p, li { white-space: pre-wrap; }
               <widget class="QLineEdit" name="line_STIMULATION_LIMIT">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>120</horstretch>
+                 <horstretch>60</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QMyLabel" name="label_THRESHOLD_FACTOR">
+               <property name="text">
+                <string>label_THRESHOLD_FACTOR</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QLineEdit" name="line_THRESHOLD_FACTOR">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2110,8 +2203,8 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>20</x>
-              <y>20</y>
-              <width>161</width>
+              <y>60</y>
+              <width>181</width>
               <height>16</height>
              </rect>
             </property>
@@ -2123,6 +2216,319 @@ p, li { white-space: pre-wrap; }
             </property>
             <property name="text">
              <string>TCR activation thresholds</string>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_activation">
+            <property name="geometry">
+             <rect>
+              <x>390</x>
+              <y>0</y>
+              <width>191</width>
+              <height>71</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QRadioButton" name="rbut_ACTIVATIONMODE_0">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>181</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Use STAGED activation</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+            <widget class="QRadioButton" name="rbut_ACTIVATIONMODE_1">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>40</y>
+               <width>181</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Use UNSTAGED activation</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QLabel" name="label">
+            <property name="geometry">
+             <rect>
+              <x>120</x>
+              <y>30</y>
+              <width>101</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>STAGED Mode</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_4">
+            <property name="geometry">
+             <rect>
+              <x>720</x>
+              <y>30</y>
+              <width>121</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>UNSTAGED Mode</string>
+            </property>
+           </widget>
+           <widget class="QWidget" name="gridLayoutWidget_3">
+            <property name="geometry">
+             <rect>
+              <x>600</x>
+              <y>80</y>
+              <width>361</width>
+              <height>227</height>
+             </rect>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <property name="sizeConstraint">
+              <enum>QLayout::SetDefaultConstraint</enum>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_BIND_THRESHOLD">
+               <property name="text">
+                <string>label_UNSTAGED_BIND_THRESHOLD</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_BIND_THRESHOLD">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_HILL_N">
+               <property name="text">
+                <string>label_UNSTAGED_HILL_N</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_HILL_N">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_HILL_C">
+               <property name="text">
+                <string>label_UNSTAGED_HILL_C</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_HILL_C">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_MIN_BIND_T">
+               <property name="text">
+                <string>label_UNSTAGED_MIN_BIND_T</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_MIN_BIND_T">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_MAX_BIND_T">
+               <property name="text">
+                <string>label_UNSTAGED_MAX_BIND_T</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_MAX_BIND_T">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_MIN_DIVIDE_T">
+               <property name="text">
+                <string>label_UNSTAGED_MIN_DIVIDE_T</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_MIN_DIVIDE_T">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_MAX_AVIDITY">
+               <property name="text">
+                <string>label_UNSTAGED_MAX_AVIDITY</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_MAX_AVIDITY">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="0">
+              <widget class="QMyLabel" name="label_UNSTAGED_MAX_ANTIGEN">
+               <property name="text">
+                <string>label_UNSTAGED_MAX_ANTIGEN</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="1">
+              <widget class="QLineEdit" name="line_UNSTAGED_MAX_ANTIGEN">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QLabel" name="label_5">
+            <property name="geometry">
+             <rect>
+              <x>630</x>
+              <y>60</y>
+              <width>231</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>T cell-DC interaction parameters</string>
             </property>
            </widget>
           </widget>
@@ -2254,7 +2660,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>1080</x>
               <y>190</y>
-              <width>161</width>
+              <width>191</width>
               <height>18</height>
              </rect>
             </property>
@@ -2265,7 +2671,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_DC_INJECTION">
             <property name="geometry">
              <rect>
-              <x>430</x>
+              <x>520</x>
               <y>120</y>
               <width>120</width>
               <height>21</height>
@@ -2283,7 +2689,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>1080</x>
               <y>240</y>
-              <width>61</width>
+              <width>71</width>
               <height>18</height>
              </rect>
             </property>
@@ -2319,9 +2725,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_INPUT_FILE">
             <property name="geometry">
              <rect>
-              <x>310</x>
+              <x>380</x>
               <y>20</y>
-              <width>121</width>
+              <width>131</width>
               <height>16</height>
              </rect>
             </property>
@@ -2332,7 +2738,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="text_INPUT_FILE">
             <property name="geometry">
              <rect>
-              <x>430</x>
+              <x>520</x>
               <y>20</y>
               <width>151</width>
               <height>20</height>
@@ -2342,7 +2748,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="line_SPECIAL_CASE">
             <property name="geometry">
              <rect>
-              <x>430</x>
+              <x>520</x>
               <y>60</y>
               <width>21</width>
               <height>20</height>
@@ -2364,9 +2770,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QLabel" name="label_SPECIAL_CASE">
             <property name="geometry">
              <rect>
-              <x>460</x>
+              <x>550</x>
               <y>60</y>
-              <width>115</width>
+              <width>141</width>
               <height>21</height>
              </rect>
             </property>
@@ -2377,8 +2783,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_savepos">
             <property name="geometry">
              <rect>
-              <x>320</x>
-              <y>430</y>
+              <x>380</x>
+              <y>450</y>
               <width>120</width>
               <height>18</height>
              </rect>
@@ -2390,9 +2796,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QLabel" name="label_SPECIAL_CASE_FILE">
             <property name="geometry">
              <rect>
-              <x>310</x>
+              <x>380</x>
               <y>80</y>
-              <width>111</width>
+              <width>131</width>
               <height>16</height>
              </rect>
             </property>
@@ -2406,7 +2812,7 @@ p, li { white-space: pre-wrap; }
             </property>
             <property name="geometry">
              <rect>
-              <x>430</x>
+              <x>520</x>
               <y>80</y>
               <width>151</width>
               <height>20</height>
@@ -2416,9 +2822,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QGroupBox" name="groupBox_graphselect">
             <property name="geometry">
              <rect>
-              <x>680</x>
+              <x>750</x>
               <y>10</y>
-              <width>201</width>
+              <width>241</width>
               <height>481</height>
              </rect>
             </property>
@@ -2429,7 +2835,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
             <property name="geometry">
              <rect>
-              <x>430</x>
+              <x>520</x>
               <y>140</y>
               <width>151</width>
               <height>20</height>
@@ -2448,7 +2854,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_DC_INJECTION_FILE">
             <property name="geometry">
              <rect>
-              <x>310</x>
+              <x>380</x>
               <y>140</y>
               <width>115</width>
               <height>20</height>
@@ -2469,9 +2875,15 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>10</x>
               <y>10</y>
-              <width>291</width>
-              <height>441</height>
+              <width>351</width>
+              <height>511</height>
              </rect>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
             <property name="title">
              <string/>
@@ -2481,13 +2893,16 @@ p, li { white-space: pre-wrap; }
               <rect>
                <x>10</x>
                <y>10</y>
-               <width>278</width>
+               <width>321</width>
                <height>488</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
               <property name="sizeConstraint">
-               <enum>QLayout::SetMaximumSize</enum>
+               <enum>QLayout::SetFixedSize</enum>
+              </property>
+              <property name="verticalSpacing">
+               <number>4</number>
               </property>
               <item row="0" column="0">
                <widget class="QMyLabel" name="label_NX">
@@ -2514,6 +2929,12 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="0" column="2">
                <widget class="QSpinBox" name="spin_NX">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2553,6 +2974,12 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="1" column="2">
                <widget class="QLineEdit" name="line_BLOB_RADIUS">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2589,6 +3016,12 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="2" column="2">
                <widget class="QLineEdit" name="line_TC_FRACTION">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2615,6 +3048,12 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="3" column="2">
                <widget class="QLineEdit" name="line_FLUID_FRACTION">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2627,52 +3066,6 @@ p, li { white-space: pre-wrap; }
                </widget>
               </item>
               <item row="4" column="0">
-               <widget class="QMyLabel" name="label_DC_RADIUS">
-                <property name="mouseTracking">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>label_DC_RADIUS</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <spacer name="horizontalSpacer_16">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>13</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="4" column="2">
-               <widget class="QLineEdit" name="line_DC_RADIUS">
-                <property name="maximumSize">
-                 <size>
-                  <width>80</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="3">
-               <widget class="QLabel" name="units_DC_RADIUS">
-                <property name="text">
-                 <string>µm</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
                <widget class="QMyLabel" name="label_TC_TO_DC">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2685,7 +3078,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="4" column="1">
                <spacer name="horizontalSpacer_17">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2698,7 +3091,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="6" column="0">
+              <item row="5" column="0">
                <widget class="QMyLabel" name="label_DCrate_100k">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2711,7 +3104,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="5" column="1">
                <spacer name="horizontalSpacer_18">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2724,8 +3117,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="6" column="2">
+              <item row="5" column="2">
                <widget class="QLineEdit" name="line_DCrate_100k">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2737,7 +3136,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
+              <item row="6" column="0">
                <widget class="QMyLabel" name="label_T_DC1">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2750,7 +3149,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
+              <item row="6" column="1">
                <spacer name="horizontalSpacer_19">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2763,8 +3162,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="7" column="2">
+              <item row="6" column="2">
                <widget class="QLineEdit" name="line_T_DC1">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2776,14 +3181,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="7" column="3">
+              <item row="6" column="3">
                <widget class="QLabel" name="units_T_DC1">
                 <property name="text">
                  <string>days</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
+              <item row="7" column="0">
                <widget class="QMyLabel" name="label_T_DC2">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2796,7 +3201,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
+              <item row="7" column="1">
                <spacer name="horizontalSpacer_20">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2809,8 +3214,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="8" column="2">
+              <item row="7" column="2">
                <widget class="QLineEdit" name="line_T_DC2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2822,21 +3233,27 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="8" column="3">
+              <item row="7" column="3">
                <widget class="QLabel" name="units_T_DC2">
                 <property name="text">
                  <string>days</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
+              <item row="8" column="0">
                <widget class="QMyLabel" name="label_INFLAMM_DAYS1">
+                <property name="minimumSize">
+                 <size>
+                  <width>150</width>
+                  <height>0</height>
+                 </size>
+                </property>
                 <property name="text">
                  <string>label_INFLAMM_DAYS1</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
+              <item row="8" column="1">
                <spacer name="horizontalSpacer_22">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2849,8 +3266,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="9" column="2">
+              <item row="8" column="2">
                <widget class="QLineEdit" name="line_INFLAMM_DAYS1">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2862,14 +3285,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
+              <item row="9" column="0">
                <widget class="QMyLabel" name="label_INFLAMM_DAYS2">
                 <property name="text">
                  <string>label_INFLAMM_DAYS2</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="1">
+              <item row="9" column="1">
                <spacer name="horizontalSpacer_23">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2882,8 +3305,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="10" column="2">
+              <item row="9" column="2">
                <widget class="QLineEdit" name="line_INFLAMM_DAYS2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2895,14 +3324,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
+              <item row="10" column="0">
                <widget class="QMyLabel" name="label_INFLAMM_LEVEL">
                 <property name="text">
                  <string>label_INFLAMM_LEVEL</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="1">
+              <item row="10" column="1">
                <spacer name="horizontalSpacer_24">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2915,8 +3344,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="11" column="2">
+              <item row="10" column="2">
                <widget class="QLineEdit" name="line_INFLAMM_LEVEL">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -2928,7 +3363,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
+              <item row="11" column="0">
                <widget class="QMyLabel" name="label_NDAYS">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2944,7 +3379,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="12" column="1">
+              <item row="11" column="1">
                <spacer name="horizontalSpacer_29">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2957,7 +3392,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="13" column="0">
+              <item row="12" column="0">
                <widget class="QMyLabel" name="label_SEED1">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2973,7 +3408,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="13" column="1">
+              <item row="12" column="1">
                <spacer name="horizontalSpacer_30">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2986,7 +3421,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="13" column="2">
+              <item row="12" column="2">
                <widget class="QSpinBox" name="spin_SEED1">
                 <property name="maximumSize">
                  <size>
@@ -3002,7 +3437,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="14" column="0">
+              <item row="13" column="0">
                <widget class="QMyLabel" name="label_SEED2">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -3018,7 +3453,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="14" column="1">
+              <item row="13" column="1">
                <spacer name="horizontalSpacer_31">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -3031,7 +3466,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="14" column="2">
+              <item row="13" column="2">
                <widget class="QSpinBox" name="spin_SEED2">
                 <property name="maximumSize">
                  <size>
@@ -3047,8 +3482,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="5" column="2">
+              <item row="4" column="2">
                <widget class="QLineEdit" name="line_TC_TO_DC">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>80</width>
@@ -3060,7 +3501,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="12" column="2">
+              <item row="11" column="2">
                <widget class="QLineEdit" name="line_NDAYS">
                 <property name="maximumSize">
                  <size>
@@ -3086,7 +3527,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="16" column="0">
+              <item row="15" column="0">
                <widget class="QMyLabel" name="label_NT_ANIMATION">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -3096,7 +3537,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="16" column="1">
+              <item row="15" column="1">
                <spacer name="horizontalSpacer_32">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -3109,7 +3550,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="16" column="2">
+              <item row="15" column="2">
                <widget class="QSpinBox" name="spin_NT_ANIMATION">
                 <property name="maximumSize">
                  <size>
@@ -3125,21 +3566,21 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="12" column="3">
+              <item row="11" column="3">
                <widget class="QLabel" name="units_NDAYS">
                 <property name="text">
                  <string>days</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="3">
+              <item row="8" column="3">
                <widget class="QLabel" name="units_INFLAMM1">
                 <property name="text">
                  <string>days</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="3">
+              <item row="9" column="3">
                <widget class="QLabel" name="units_INFLAMM2">
                 <property name="text">
                  <string>days</string>
@@ -3148,12 +3589,18 @@ p, li { white-space: pre-wrap; }
               </item>
               <item row="1" column="3">
                <widget class="QLabel" name="units_BLOB_RADIUS">
+                <property name="minimumSize">
+                 <size>
+                  <width>40</width>
+                  <height>0</height>
+                 </size>
+                </property>
                 <property name="text">
-                 <string>sites</string>
+                 <string>sites   </string>
                 </property>
                </widget>
               </item>
-              <item row="15" column="0">
+              <item row="14" column="0">
                <widget class="QMyLabel" name="label_NCPU">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -3163,7 +3610,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="15" column="1">
+              <item row="14" column="1">
                <spacer name="horizontalSpacer_34">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -3176,7 +3623,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </spacer>
               </item>
-              <item row="15" column="2">
+              <item row="14" column="2">
                <widget class="QSpinBox" name="spin_NCPU">
                 <property name="maximumSize">
                  <size>
@@ -3649,7 +4096,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>line_BLOB_RADIUS</tabstop>
   <tabstop>line_TC_FRACTION</tabstop>
   <tabstop>line_FLUID_FRACTION</tabstop>
-  <tabstop>line_DC_RADIUS</tabstop>
   <tabstop>line_TC_TO_DC</tabstop>
   <tabstop>line_DCrate_100k</tabstop>
   <tabstop>line_T_DC1</tabstop>
@@ -3672,8 +4118,8 @@ p, li { white-space: pre-wrap; }
    <slot>on_text_SPECIAL_CASE_textEdited()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>338</x>
-     <y>766</y>
+     <x>567</x>
+     <y>158</y>
     </hint>
     <hint type="destinationlabel">
      <x>0</x>
@@ -3681,9 +4127,26 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>rbut_ACTIVATIONMODE_0</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_activation_mode_toggled()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>617</x>
+     <y>98</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>658</x>
+     <y>70</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_text_SPECIAL_CASE_textEdited()</slot>
+  <slot>on_activation_mode_toggled()</slot>
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_SPECIES"/>

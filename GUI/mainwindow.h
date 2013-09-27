@@ -71,6 +71,7 @@ protected:
     void closeEvent(QCloseEvent *event);
 
 private slots:
+    void on_activation_mode_toggled();
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
 	void on_line_SPECIAL_CASE_textEdited(QString);

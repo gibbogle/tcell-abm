@@ -28,7 +28,7 @@
 !
 ! 19/10/2009
 ! Changed DC%density to represent the number of pMHC/DC.
-! The threshold level for any TCR signalling was set DC_pMHC_THRESHOLD = 30
+! The threshold level for any TCR signalling was set STIM_HILL_pMHC_THRESHOLD = 30
 ! on the basis of Henrickson2008.
 ! When TCR signalling is turned on, the rate of signalling is k.A.D
 ! where A is the TCR avidity and D is the pMHC count.
@@ -36,7 +36,7 @@
 ! constant k must be adjusted (start at 1/30).
 !
 ! 20/10/2009
-! Added density_min = DC_pMHC_THRESHOLD/2 to subroutine updater.
+! Added density_min = STIM_HILL_pMHC_THRESHOLD/2 to subroutine updater.
 ! The idea is to reduce stimulation rate as the threshold is approached
 !==========================================================================================
 
@@ -70,6 +70,8 @@ integer, parameter :: EXIT_LOWERHALF = 2
 integer, parameter :: EXIT_BLOB_PORTALS = 3
 integer, parameter :: EXIT_SURFACE_PORTALS = 4
 integer, parameter :: EXIT_NONE = 5
+integer, parameter :: STAGED_MODE = 0
+integer, parameter :: UNSTAGED_MODE = 1
 integer, parameter :: TASK_TAG = 1
 integer, parameter :: CELL_TAG = 2
 integer, parameter :: LOC_TAG  = 3
@@ -206,7 +208,7 @@ integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
 logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
-integer, parameter :: exit_rule = 1     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
+integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
 
 ! Old chemotaxis method, not used now
 real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
@@ -406,6 +408,7 @@ type cog_type
 	real :: avidity			! level of TCR avidity with DC
 	real :: stimulation		! TCR stimulation level
 !    real :: entrytime       ! time that the cell entered the paracortex (by HEV or cell division)
+    real :: firstDCtime     ! time of first contact with antigen on a DC at a level to generate TCR signalling
 	real :: dietime			! time that the cell dies
 	real :: dividetime		! time that the cell divides
 	real :: stagetime		! time that a cell can pass to next stage
@@ -435,6 +438,7 @@ type cell_type
 	integer(2) :: lastdir
     integer(2) :: DCbound(2)     ! DCbound(k) = bound DC, allow binding to MAX_DC_BIND DC, MAX_DC_BIND <= 2
     real :: entrytime       ! time that the cell entered the paracortex (by HEV or cell division)
+	logical :: signalling   ! in UNSTAGED mode, a cognate cell can be in brief non-signalling contact with a DC
 	real :: unbindtime(2)
 !    type(cog_type),    pointer :: cptr => NULL()    ! pointer to cognate cell data
     type(cog_type),    pointer :: cptr    ! because NULL is used by winsock (from ifwinty).  NULLIFY() instead.
@@ -537,10 +541,20 @@ real :: IL2_THRESHOLD			        ! TCR stimulation needed to initiate IL-2/CD25 p
 real :: ACTIVATION_THRESHOLD    		! combined stimulation needed for activation
 real :: FIRST_DIVISION_THRESHOLD(2)		! activation level needed for first division
 real :: DIVISION_THRESHOLD(2)			! activation level needed for subsequent division
-real :: EXIT_THRESHOLD(2)               ! Activation/CD69 level S below which exit is permitted
+real :: EXIT_THRESHOLD(2)               ! activation/CD69 level S below which exit is permitted
 real :: STIMULATION_LIMIT				! maximum activation level
 real :: CD25_DIVISION_THRESHOLD         ! CD25 store level needed for division of activated cell
 real :: CD25_SURVIVAL_THRESHOLD         ! CD25 store level needed for survival of activated cell
+real :: THRESHOLD_FACTOR                ! used to scale all thresholds
+integer :: ACTIVATION_MODE              ! STAGED_MODE (0) or UNSTAGED_MODE (1)
+real :: UNSTAGED_BIND_THRESHOLD         ! potential normalized stimulation rate required for a cognate DC interaction
+integer :: UNSTAGED_HILL_N              ! N parameter for Hill function that determines bind duration
+real :: UNSTAGED_HILL_C                 ! C parameter for Hill function that determines bind duration
+real :: UNSTAGED_MIN_BIND_T             ! minimum cognate bind duration, i.e. kinapse (mins)
+real :: UNSTAGED_MAX_BIND_T             ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+real :: UNSTAGED_MIN_DIVIDE_T           ! minimum time elapsed before start of 1st division (mins or hrs?)
+real :: UNSTAGED_MAX_AVIDITY            ! maximum TCR avidity, used to normalize T cell avidity levels
+real :: UNSTAGED_MAX_ANTIGEN            ! maximum DC antigen density, used to normalize DC antigen density levels
 
 type(dist_type) :: divide_dist1
 type(dist_type) :: divide_dist2
@@ -635,9 +649,9 @@ real :: R_DC_max
 ! DC parameters
 integer :: NDCsites						! Number of lattice sites occupied by the DC core (soma)
 logical :: use_DCflux = .true.
-real :: DC_pMHC_THRESHOLD = 10          ! DC pMHC limit for TCR stimulation capability
-real :: DC_STIM_THRESHOLD = 300		    ! TCR stimulation Hill function parameter
-integer :: N_STIM = 1					! TCR stimulation Hill function exponent
+real :: STIM_HILL_pMHC_THRESHOLD = 10          ! DC pMHC limit for TCR stimulation capability
+real :: STIM_HILL_C = 300		    ! TCR stimulation Hill function parameter
+integer :: STIM_HILL_N = 1					! TCR stimulation Hill function exponent
 integer :: CONTACT_RULE = CT_HENRICKSON ! rule for determining the duration of T cell - DC contact
 real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 
@@ -2153,7 +2167,7 @@ end subroutine
 ! tfactor**n = 0.1 where n = DC_ACTIV_TAPER/DELTA_T
 ! tfactor = (0.1)**(1/n)
 ! A DC loses its TCR stimulating capability when %density falls below the
-! limiting value DC_pMHC_THRESHOLD.
+! limiting value STIM_HILL_pMHC_THRESHOLD.
 ! A DC is scheduled to die when t > %dietime.  At this point %capability is set
 ! to .false., but the DC waits until %nbound = 0 before it dies.
 !--------------------------------------------------------------------------------
@@ -2205,7 +2219,7 @@ do idc = 1,NDC
             if (tnow > DClist(idc)%dietime - 60*DC_ACTIV_TAPER) then	! antigen density decays over DC_ACTIV_TAPER
                 DClist(idc)%density = DClist(idc)%density*tfactor
             endif
-            if (DClist(idc)%density < DC_pMHC_THRESHOLD) then
+            if (DClist(idc)%density < STIM_HILL_pMHC_THRESHOLD) then
                 DClist(idc)%capable = .false.
                 if (incapable_DC_dies) then
                     ! A non-capable DC might as well die - but this would eliminate low-antigen DCs

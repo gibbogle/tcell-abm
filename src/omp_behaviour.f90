@@ -382,8 +382,8 @@ subroutine old_unread_cell_params
 
 ! DC parameters
 !use_DCflux = .false.
-!DC_pMHC_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
-!DC_STIM_THRESHOLD = 300
+!STIM_HILL_pMHC_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
+!STIM_HILL_C = 300
 !CONTACT_RULE = CT_HENRICKSON
 !ABIND1 = 0.4    ! binding to a DC
 !ABIND2 = 0.8
@@ -434,9 +434,9 @@ read(nfcell,*) NLN_RESPONSE								! number of LNs in the response
 
 ! DC parameters
 read(nfcell,*) use_DCflux			!= .false.
-read(nfcell,*) DC_pMHC_THRESHOLD	!= 10   ! DC density limit for TCR stimulation capability (0.05)
-read(nfcell,*) DC_STIM_THRESHOLD	!= 300
-read(nfcell,*) N_STIM
+read(nfcell,*) STIM_HILL_pMHC_THRESHOLD	!= 10   ! DC density limit for TCR stimulation capability (0.05)
+read(nfcell,*) STIM_HILL_C	!= 300
+read(nfcell,*) STIM_HILL_N
 read(nfcell,*) CONTACT_RULE			!= CT_HENRICKSON
 read(nfcell,*) ABIND1				!= 0.4    ! binding to a DC
 read(nfcell,*) ABIND2				!= 0.8
@@ -517,7 +517,8 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow, useCCL3secretion, usehev
+integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow, useCCL3_0, useCCL3_1, usehev, mode_0, mode_1
+integer :: activationmode
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -572,6 +573,18 @@ read(nfcell,*) FIRST_DIVISION_THRESHOLD(1)	! activation level needed for first d
 read(nfcell,*) DIVISION_THRESHOLD(1)		! activation level needed for subsequent division
 read(nfcell,*) EXIT_THRESHOLD(1)			! activation level below which exit is permitted
 read(nfcell,*) STIMULATION_LIMIT			! maximum activation level
+read(nfcell,*) THRESHOLD_FACTOR             ! scales all threshold values
+read(nfcell,*) mode_0                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
+read(nfcell,*) mode_1                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
+read(nfcell,*) UNSTAGED_BIND_THRESHOLD      ! potential normalized stimulation rate required for a cognate DC interaction
+read(nfcell,*) UNSTAGED_HILL_N              ! N parameter for Hill function that determines bind duration
+read(nfcell,*) UNSTAGED_HILL_C              ! C parameter for Hill function that determines bind duration
+read(nfcell,*) UNSTAGED_MIN_BIND_T          ! minimum cognate bind duration, i.e. kinapse (mins)
+read(nfcell,*) UNSTAGED_MAX_BIND_T          ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+read(nfcell,*) UNSTAGED_MIN_DIVIDE_T        ! minimum time elapsed before start of 1st division (mins or hrs?)
+read(nfcell,*) UNSTAGED_MAX_AVIDITY         ! maximum TCR avidity, used to normalize T cell avidity levels
+read(nfcell,*) UNSTAGED_MAX_ANTIGEN         ! maximum DC antigen density, used to normalize DC antigen density levels
+
 !read(nfcell,*) CD25_DIVISION_THRESHOLD	    ! CD25 store level needed for division of activated cell (optionA = 1)
 !read(nfcell,*) CD25_SURVIVAL_THRESHOLD		! CD25 store level needed for survival of activated cell (optionC = 1)
 
@@ -600,7 +613,7 @@ read(nfcell,*) DCinjectionfile				! file with schedule of DC injection
 !read(nfcell,*) DC_FRACTION					! Fraction of DCs that are bearing antigen
 
 read(nfcell,*) usetraffic					! use T cell trafficking
-read(nfcell,*) usehev					! use HEV portals
+read(nfcell,*) usehev					    ! use HEV portals
 read(nfcell,*) useexitchemo                 ! use exit chemotaxis
 read(nfcell,*) useDCchemo					! use DC chemotaxis
 read(nfcell,*) computedoutflow				! compute outflow (with inflow)
@@ -625,7 +638,8 @@ read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
     read(nfcell,*) receptor(CCR1)%refractory_time	! Time for CCR1 receptor to recover sensitivity after desensitization
     read(nfcell,*) chemo(CCL3)%diff_coef
     read(nfcell,*) chemo(CCL3)%halflife
-    read(nfcell,*) useCCL3secretion
+    read(nfcell,*) useCCL3_0
+    read(nfcell,*) useCCL3_1
     read(nfcell,*) chemo(CCL3)%bdry_rate
     read(nfcell,*) chemo(CCL3)%bdry_conc
     read(nfcell,*) chemo(CCL3)%radius		! Sites within this radius of the DC receive CCL3 concentration (+ all DC sites)
@@ -661,7 +675,7 @@ T_DC2 = T_DC2*24
 CTYPE_FRACTION(CD8) = TC_CD8_FRACTION
 CTYPE_FRACTION(CD4) = 1 - CTYPE_FRACTION(CD8)
 ave_residence_time = CTYPE_FRACTION(CD4)*residence_time(CD4) + CTYPE_FRACTION(CD8)*residence_time(CD8)
-chemo(CCL3)%use_secretion = (useCCL3secretion == 1)
+chemo(CCL3)%use_secretion = (useCCL3_0 == 1)
 IV_SHOW_NONCOGNATE = (shownoncog == 1)
 IN_VITRO = (invitro == 1)
 if (.not.IN_VITRO) then
@@ -692,11 +706,6 @@ else
 	receptor(CCR1)%used = .false.
 	chemo(CCL3)%used = .false.
 !	chemo_K_DC = 0
-endif
-if (useCCL3secretion) then
-	chemo(CCL3)%use_secretion = .true.
-else
-	chemo(CCL3)%use_secretion = .false.
 endif
 
 if (computedoutflow == 1) then
@@ -742,6 +751,21 @@ endif
 if (DCrate_100k == 0) then
 	use_DCflux = .false.
 endif
+
+if (mode_0 == 1) then
+    ACTIVATION_MODE = STAGED_MODE
+else
+    ACTIVATION_MODE = UNSTAGED_MODE
+endif
+IL2_THRESHOLD = THRESHOLD_FACTOR*IL2_THRESHOLD
+ACTIVATION_THRESHOLD = THRESHOLD_FACTOR*ACTIVATION_THRESHOLD
+FIRST_DIVISION_THRESHOLD(1) = THRESHOLD_FACTOR*FIRST_DIVISION_THRESHOLD(1)
+DIVISION_THRESHOLD(1) = THRESHOLD_FACTOR*DIVISION_THRESHOLD(1)
+EXIT_THRESHOLD(1) = THRESHOLD_FACTOR*EXIT_THRESHOLD(1)
+STIMULATION_LIMIT = THRESHOLD_FACTOR*STIMULATION_LIMIT
+
+UNSTAGED_MAX_BIND_T = 60*UNSTAGED_MAX_BIND_T        ! hrs -> mins
+UNSTAGED_MIN_DIVIDE_T = 60*UNSTAGED_MIN_DIVIDE_T    ! hrs -> mins
 
 mean_stagetime_1(2,:) = transient_stagetime		! Note that these times are not needed for gen>1,
 mean_stagetime_1(3,:) = clusters_stagetime		! because the stages are not revisited
@@ -1050,7 +1074,7 @@ write(nfout,*) 'use_DC: ',use_DC
 write(nfout,*) 'use_DCflux: ',use_DCflux
 write(nfout,*) 'DCDIM: ',DCDIM
 write(nfout,*) 'DC_DCprox: ',DC_DCprox
-write(nfout,*) 'DC_pMHC_THRESHOLD: ',DC_pMHC_THRESHOLD
+write(nfout,*) 'STIM_HILL_pMHC_THRESHOLD: ',STIM_HILL_pMHC_THRESHOLD
 write(nfout,*) 'ABIND1: ',ABIND1
 write(nfout,*) 'ABIND2: ',ABIND2
 write(nfout,*) 'NDIFFSTEPS: ',NDIFFSTEPS
@@ -3454,14 +3478,27 @@ end subroutine
 ! with antigen concentration).
 ! Base stimulation rate r is a Hill function of a = pMHC*avidity, max value 1
 ! Actual rate of change of S is this rate scaled by TC_STIM_RATE_CONSTANT
+! THIS HAS BEEN CHANGED.  TC_STIM_RATE_CONSTANT is now effectively 1.0, and default threshold values have 
+! been scaled to give the same results as if TC_STIM_RATE_CONSTANT = 5.
 ! Duration of binding is also determined from r.  Currently the specified bind time is
 ! treated as the maximum, and the actual value depends linearly on r up to this max.
+! This formulation is used in the STAGED_MODE simulations
 !---------------------------------------------------------------------
-real function stimulation_rate(pMHC,avidity)
+real function stimulation_rate_hill(pMHC,avidity)
 real :: pMHC, avidity
 real :: a
-a = (pMHC - DC_pMHC_THRESHOLD)*avidity
-stimulation_rate = a**N_STIM/(a**N_STIM + DC_STIM_THRESHOLD**N_STIM)
+a = max(pMHC - STIM_HILL_pMHC_THRESHOLD,0.0)*avidity
+stimulation_rate_hill = a**STIM_HILL_N/(a**STIM_HILL_N + STIM_HILL_C**STIM_HILL_N)
+end function
+
+!---------------------------------------------------------------------
+!---------------------------------------------------------------------
+real function stimulation_rate_norm(pMHC,avidity)
+real :: pMHC, avidity
+real :: a, d
+a = min(1.0,avidity/UNSTAGED_MAX_AVIDITY)
+d = min(1.0,pMHC/UNSTAGED_MAX_ANTIGEN)
+stimulation_rate_norm = a*d
 end function
 
 !---------------------------------------------------------------------
@@ -3525,8 +3562,16 @@ do kcell = 1,nlist
 			idc = DC(k)
 			if (idc /= 0) then
 				if (DClist(idc)%capable) then
-	!                dstimrate = TC_STIM_RATE_CONSTANT*DClist(idc)%density*p%avidity
-					dstimrate = TC_STIM_RATE_CONSTANT*stimulation_rate(DClist(idc)%density,p%avidity)
+	!               dstimrate = TC_STIM_RATE_CONSTANT*DClist(idc)%density*p%avidity
+	!				dstimrate = TC_STIM_RATE_CONSTANT*stimulation_rate(DClist(idc)%density,p%avidity)
+	                if (activation_mode == STAGED_MODE) then
+    					dstimrate = stimulation_rate_hill(DClist(idc)%density,p%avidity) ! now use THRESHOLD_FACTOR
+    				elseif (cellist(kcell)%signalling) then
+    				    dstimrate = stimulation_rate_norm(DClist(idc)%density,p%avidity)
+    				    if (dstimrate < UNSTAGED_BIND_THRESHOLD) then
+    				        dstimrate = 0
+    				    endif
+    				endif
 					stimrate = stimrate + dstimrate
 					dstim = dstimrate*DELTA_T
 					p%stimulation = p%stimulation + dstim
@@ -3728,7 +3773,6 @@ type(cog_type), pointer :: p
 
 divide_flag = .false.
 p => cellist(kcell)%cptr
-!stage = get_stage(p)
 call get_stage(p,stage,region)
 if (stage >= CLUSTERS) then
     if (.not.cansurvive(p)) then
@@ -3827,17 +3871,23 @@ type(cog_type), pointer :: p
 
 divide_flag = .false.
 p => cellist(kcell)%cptr
-!stage = get_stage(p)
+
+! In the UNSTAGED case, cells have a simplified stage development:
+! NAIVE -> SWARMS -> ...  
+! Division depends on two conditions being met: 
+!   time since first signalling must exceed UNSTAGED_MIN_DIVIDE_T
+!   stimulation must exceed the threshold level for division at this generation 
+
 call get_stage(p,stage,region)
-if (stage >= CLUSTERS) then
-    if (.not.cansurvive(p)) then
-        write(logmsg,*) 'cell IL2 store too low: ',kcell,p%cogID
-        call logger(logmsg)
-        p%dietime = tnow
-        stage = FINISHED
-        call set_stage(p,stage)
-    endif
-endif
+!if (stage >= CLUSTERS) then
+!    if (.not.cansurvive(p)) then
+!        write(logmsg,*) 'cell IL2 store too low: ',kcell,p%cogID
+!        call logger(logmsg)
+!        p%dietime = tnow
+!        stage = FINISHED
+!        call set_stage(p,stage)
+!    endif
+!endif
 if (stage == FINISHED) return
 ctype = cellist(kcell)%ctype
 stagetime = p%stagetime
@@ -3847,12 +3897,18 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 	case (NAIVE)        ! possible transition from NAIVE to TRANSIENT
 	    if (p%stimulation > 0) then
 	        gen = get_generation(p)
-            call set_stage(p,TRANSIENT)
+            p%firstDCtime = tnow
             p%dietime = tnow + TClifetime(p)
-		    if (USE_STAGETIME(TRANSIENT)) then
-			    p%stagetime = tnow + get_stagetime(p,ctype)
-		    else
-			    p%stagetime = 0		! time is not criterion for next transition
+	        if (activation_mode == STAGED_MODE) then
+                call set_stage(p,TRANSIENT)
+		        if (USE_STAGETIME(TRANSIENT)) then
+			        p%stagetime = tnow + get_stagetime(p,ctype)
+		        else
+			        p%stagetime = 0		! time is not criterion for next transition
+                endif
+            else
+                call set_stage(p,SWARMS)
+		        p%stagetime = 0		! time is not criterion for next transition
             endif
         endif
 	case (TRANSIENT)    ! possible transition from TRANSIENT to CLUSTERS
@@ -3884,8 +3940,6 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 		if (gen == TC_MAX_GEN) then
             call set_stage(p,FINISHED)
 			p%stagetime = BIG_TIME
-!			write(logmsg,*) 'updatestage: division limit reached for cell: ',kcell
-!			call logger(logmsg)
 		elseif (candivide(p,ctype)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then
@@ -3938,7 +3992,6 @@ type(cog_type), pointer :: p
 integer :: stage, region
 
 bindable = .true.
-!if (get_stage(p) == FINISHED) then
 call get_stage(p,stage,region)
 if (stage == FINISHED) then
     bindable = .false.
@@ -3958,37 +4011,49 @@ end function
 ! HYPOTHESIS: bind time should also increase with level of stimulation rate,
 ! i.e. CT_HILL should be combined with CT_HENRICKSON - but how?
 !--------------------------------------------------------------------------------------
-real function get_bindtime(p,cognate,ctype,pMHC,kpar)
+real function get_bindtime(p,cognate,ctype,pMHC,stimrate_norm,kpar)
 type(cog_type), pointer :: p
 logical :: cognate
 integer :: ctype, kpar
-real :: pMHC
+real :: pMHC, stimrate_norm
 integer :: stage, region, i
 real(DP) :: R
-real :: stimrate, btime, p1, median
+real :: stimrate_hill, btime, p1, median, h, a, d
 real, parameter :: CT_shape = 2.0, CT_max_factor = 4.0
 real, parameter :: p2 = log(CT_shape)
 
 get_bindtime = 0
 if (cognate) then
-!    cd4_8 = ctype - 1
-!	stage = get_stage(p)
-	call get_stage(p,stage,region)
-	btime = dc_mean_bindtime_c(stage,ctype)
-	if (stage > NAIVE .and. stage < SWARMS) then
-	    select case (CONTACT_RULE)
-	    case (CT_CONSTANT)
+    if (activation_mode == STAGED_MODE) then
+	    call get_stage(p,stage,region)
+	    btime = dc_mean_bindtime_c(stage,ctype)
+	    stimrate_hill = stimulation_rate_hill(pMHC,p%avidity)
+	    write(logmsg,'(a,a,i2,a,f5.3,a,f6.1)') 'STAGED: ',' stage: ',stage,' stimrate_hill: ',stimrate_hill,' T: ',btime
+	    call logger(logmsg)
+	    if (stage > NAIVE .and. stage < SWARMS) then
+	        select case (CONTACT_RULE)
+	        case (CT_CONSTANT)
+	            get_bindtime = btime
+	        case (CT_HILL)
+	            stimrate_hill = stimulation_rate_hill(pMHC,p%avidity)
+	            get_bindtime = btime*(0.10 + stimrate_hill)
+	        case (CT_HENRICKSON)
+	            median = CT_median(p,pMHC)
+	            p1 = log(median)
+	            get_bindtime = min(CT_max_factor*median,rv_lognormal(p1,p2,kpar))
+	        end select
+	    else
 	        get_bindtime = btime
-	    case (CT_HILL)
-	        stimrate = stimulation_rate(pMHC,p%avidity)
-	        get_bindtime = btime*(0.10 + stimrate)
-	    case (CT_HENRICKSON)
-	        median = CT_median(p,pMHC)
-	        p1 = log(median)
-	        get_bindtime = min(CT_max_factor*median,rv_lognormal(p1,p2,kpar))
-	    end select
-	else
-	    get_bindtime = btime
+        endif
+    else
+        a = min(1.0,p%avidity/UNSTAGED_MAX_AVIDITY)
+        d = min(1.0,pMHC/UNSTAGED_MAX_ANTIGEN)
+        h = stimrate_norm**UNSTAGED_HILL_N/(stimrate_norm**UNSTAGED_HILL_N + UNSTAGED_HILL_C**UNSTAGED_HILL_N)
+        h = (1 + UNSTAGED_HILL_C**UNSTAGED_HILL_N)*h
+        get_bindtime = h*UNSTAGED_MAX_BIND_T
+	    write(logmsg,'(a,a,f5.3,a,f5.3,a,f5.3,a,f5.3,a,f6.1)') &
+	        'UNSTAGED: ','A: ',a,' D: ',d,' dS/dt: ',stimrate_norm,' H: ',h,' T: ',get_bindtime
+	    call logger(logmsg)
     endif
 else
     R = par_uni(kpar)
@@ -4035,20 +4100,25 @@ logical function candivide(p,ctype)
 type(cog_type), pointer :: p
 integer :: ctype
 integer :: gen
-real :: div_thresh, act, CD25signal
+real :: tnow, div_thresh, act, CD25signal
 !
 ! NOTE: Need to better account for first division time, and need to check CD4/CD8
 !
+tnow = istep*DELTA_T
 candivide = .false.
-!p => cellist(kcell)%cptr
-!cd4_8 = cellist(kcell)%ctype - 1
-!cd4_8 = ctype - 1
 gen = get_generation(p)
-if (gen == 1) then			! naive cell
+if (gen == 1) then			! undivided cell
 	div_thresh = FIRST_DIVISION_THRESHOLD(ctype)
 else											! clone, lower threshold for division
 	div_thresh = DIVISION_THRESHOLD(ctype)
 endif
+if (activation_mode == UNSTAGED_MODE) then
+    if (gen == 1 .and. tnow - p%firstDCtime < UNSTAGED_MIN_DIVIDE_T) return
+    if (p%stimulation < div_thresh) return
+    candivide = .true.
+    return 
+endif
+
 act = get_activation(p)     ! weighted sum of TCR signal and CD25/IL2 signal
 if (optionA == 1) then
     CD25signal = get_IL2store(p)

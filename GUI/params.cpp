@@ -26,7 +26,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "CD8 T cell cognate fraction",
 "The fraction of CD8 T cells that are cognate, i.e. recognize and respond to the antigen on DCs."},
 
-{"TC_STIM_RATE_CONSTANT", 4, 0, 0,
+{"TC_STIM_RATE_CONSTANT", 1, 0, 0,
 "TCR stimulation rate constant",
 "Rate constant Ks for TCR stimulation, where:\n\
 rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
@@ -55,13 +55,15 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Later division time shape parameter",
 "The time taken for later T cell divisions has a lognormal distribution, described by the median and shape parameters."},
 
-{"MOTILITY_BETA", 0.35, 0.25, 0.5,
+{"MOTILITY_BETA", 0.35, 0, 0,
 "Motility speed parameter",
-"T cell motility is described by speed and persistence parameters, each in the range 0 - 1. Median T cell speed is roughly proportional to MOTILITY_BETA."},
+"T cell motility is described by speed and persistence parameters, each in the range 0 - 1. \n\
+ Median T cell speed is roughly proportional to MOTILITY_BETA.  Range: 0.25 - 0.5."},
 
-{"MOTILITY_RHO", 0.76, 0.5, 0.9,
+{"MOTILITY_RHO", 0.76, 0, 0,
 "Motility persistence parameter",
-"T cell motility is described by speed and persistence parameters, each in the range 0 - 1. MOTILITY_RHO determines the extent to which motion is in the same direction from one time step to the next."},
+"T cell motility is described by speed and persistence parameters, each in the range 0 - 1. \n\
+ MOTILITY_RHO determines the extent to which motion is in the same direction from one time step to the next.  Range: 0.5 - 0.9"},
 
 {"DC_ANTIGEN_MEDIAN", 150, 0, 0,
 "DC antigen density median parameter",
@@ -99,29 +101,85 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Max cognate T cell binding/DC",
 "The maximum number of cognate T cells that can bind simultaneously to a DC."},
 
-{"IL2_THRESHOLD", 150, 0, 0,
+{"IL2_THRESHOLD", 30, 0, 0,
 "Stimulation threshold for IL-2",
 "Integrated TCR stimulation needed to initiate IL-2/CD5 production."},
 
-{"ACTIVATION_THRESHOLD", 150, 0, 0,
+{"ACTIVATION_THRESHOLD", 30, 0, 0,
 "Stimulation threshold for activation",
-"Integrated TCR stimulation level needed for full activation."},
+"Integrated TCR stimulation level needed for full activation.\n\
+ If after passing this threshold the cell fails to achieve sufficient activation for the first division it will die."},
 
-{"FIRST_DIVISION_THRESHOLD", 300, 0, 0,
+{"FIRST_DIVISION_THRESHOLD", 60, 0, 0,
 "Stimulation threshold for first division",
-"Integrated TCR stimulation level needed for first division."},
+"Integrated TCR stimulation level needed for first division.\n\
+ (Also used for UNSTAGED mode)"},
 
-{"DIVISION_THRESHOLD", 80, 0, 0,
+{"DIVISION_THRESHOLD", 20, 0, 0,
 "Stimulation threshold for subsequent divisions",
-"Integrated TCR stimulation level needed for subsequent divisions."},
+"Integrated TCR stimulation level needed for subsequent divisions.\n\
+(Also used for UNSTAGED mode)"},
 
-{"EXIT_THRESHOLD", 480, 0, 0,
+{"EXIT_THRESHOLD", 100, 0, 0,
 "Stimulation threshold for exit",
 "Integrated TCR stimulation level below which exit is permitted (using Exit Rule #2)."},
 
-{"STIMULATION_LIMIT", 1000, 0, 0,
+{"STIMULATION_LIMIT", 200, 0, 0,
 "Maximum stimulation level",
-"Maximum integrated TCR stimulation level (saturation level)."},
+"Maximum integrated TCR stimulation level (saturation level).\n\
+(Also used for UNSTAGED mode)"},
+
+{"THRESHOLD_FACTOR", 1, 0, 0,
+"Threshold factor",
+"All threshold values are scaled by this factor."},
+
+{"ACTIVATIONMODE_0", 1, 0, 1,
+"Staged activation mode",
+"The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
+
+{"ACTIVATIONMODE_1", 0, 0, 1,
+"Unstaged activation mode",
+"The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
+
+{"UNSTAGED_BIND_THRESHOLD", 0.05, 0, 1,
+"Signalling threshold",
+"If normalized signal strength is below this threshold there will be no binding interaction,\n\
+ effectively the cognate cell will behave like a non-cognate cell."},
+
+{"UNSTAGED_HILL_N", 10, 0, 0,
+"Bind duration Hill N",
+"The duration of the T cell-DC interaction is given by a scaled Hill function of normalized rate of TCR stimulation.\n\
+ The normalized stimulation rate dS/dt is the product of normalized TCR avidity and normalized DC antigent density.\n\
+ The Hill function is defined by two parameters, N and C: H(x) = (1 + C^N).x^N/(x^N + C^N) where x (=dS/dt) ranges 0-1.\n\
+ The binding duration lies between the specified min and max values: Bind duration = Tmin + (Tmax - Tmin).H(x)"},
+
+{"UNSTAGED_HILL_C", 0.7, 0, 1,
+"Bind duration Hill C",
+"The duration of the T cell-DC interaction is given by a scaled Hill function of normalized rate of TCR stimulation.\n\
+ The normalized stimulation rate dS/dt is the product of normalized TCR avidity and normalized DC antigent density.\n\
+ The Hill function is defined by two parameters, N and C: H(x) = (1 + C^N).x^N/(x^N + C^N) where x (=dS/dt) ranges 0-1.\n\
+ The binding duration lies between the specified min and max values: Bind duration = Tmin + (Tmax - Tmin).H(x)"},
+
+{"UNSTAGED_MIN_BIND_T", 10, 0, 0,
+"Minimum bind duration (mins)",
+"The binding duration lies between the specified min and max values.  The min value is the shortest kinapse interaction time."},
+
+{"UNSTAGED_MAX_BIND_T", 12, 0, 0,
+"Maximum bind duration (hrs)",
+"The binding duration lies between the specified min and max values.  The max value is the longest synapse interaction time."},
+
+{"UNSTAGED_MIN_DIVIDE_T", 24, 0, 0,
+"Min time to start 1st division (hrs)",
+"Regardless of the level of integrated signal, this is the minimum time that must have elapsed since the cell first encountered \n\
+ antigen for the first division to be initiated.  (Note that the first division time applies at this point.)"},
+
+{"UNSTAGED_MAX_AVIDITY", 2, 0, 0,
+"Avidity upper limit",
+"T cell TCR avidity levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
+
+{"UNSTAGED_MAX_ANTIGEN", 200, 0, 0,
+"DC antigen upper limit",
+"DC antigen density levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
 {"NX", 100, 100, 300,
 "Lattice size",
@@ -268,9 +326,13 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "CCL3 half life",
 "CCL3 half life"},
 
-{"DC_CCL3_0", 0, 0, 0,
+{"DCCCL3_0", 0, 0, 0,
 "Use CCL3 secretion?",
 "Use CCL3 secretion? (otherwise use concentration)"},
+
+{"DCCCL3_1", 1, 0, 0,
+"Use CCL3 concentration?",
+"Use CCL3 concentration? (otherwise use secretion)"},
 
 {"DC_CCL3_RATE", 1, 0, 0,
 "Rate of CCL3 secretion",
