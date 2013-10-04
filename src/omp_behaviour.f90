@@ -28,7 +28,7 @@ real :: dc_bindprob_nc(10) = (/ 6.0, 26.0, 22.0, 15.0, 9.0, 6.0, 3.5, 2.0, 1.0, 
 real :: dc_cummul_prob_nc(10), dc_initial_cummul_prob_nc(10)
 
 ! Mean bindtime for cognate cells at the different stages (CD4 and CD8)
-! (Not used for TRANSIENT and CLUSTERS when CONTACT_RULE = CT_HENRICKSON)
+! (Not used for TRANSIENT and CLUSTERS when STAGED_CONTACT_RULE = CT_HENRICKSON)
 !real :: dc_mean_bindtime_c(6,2) = reshape((/ 3.0,60.0,180.0,60.0,11.0,11.0, 3.0,60.0,180.0,60.0,11.0,11.0 /), (/6,2/))
 real :: dc_mean_bindtime_c(5,2) = reshape((/ 3.0,10.0,180.0,20.0,0.0, 3.0,10.0,180.0,20.0,0.0 /), (/5,2/))
 
@@ -382,9 +382,9 @@ subroutine old_unread_cell_params
 
 ! DC parameters
 !use_DCflux = .false.
-!STIM_HILL_pMHC_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
+!STIM_HILL_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
 !STIM_HILL_C = 300
-!CONTACT_RULE = CT_HENRICKSON
+!STAGED_CONTACT_RULE = CT_HENRICKSON
 !ABIND1 = 0.4    ! binding to a DC
 !ABIND2 = 0.8
 
@@ -434,10 +434,10 @@ read(nfcell,*) NLN_RESPONSE								! number of LNs in the response
 
 ! DC parameters
 read(nfcell,*) use_DCflux			!= .false.
-read(nfcell,*) STIM_HILL_pMHC_THRESHOLD	!= 10   ! DC density limit for TCR stimulation capability (0.05)
-read(nfcell,*) STIM_HILL_C	!= 300
-read(nfcell,*) STIM_HILL_N
-read(nfcell,*) CONTACT_RULE			!= CT_HENRICKSON
+!read(nfcell,*) STIM_HILL_THRESHOLD	!= 10   ! DC density limit for TCR stimulation capability (0.05)
+!read(nfcell,*) STIM_HILL_C	!= 300
+!read(nfcell,*) STIM_HILL_N
+!read(nfcell,*) STAGED_CONTACT_RULE			!= CT_HENRICKSON
 read(nfcell,*) ABIND1				!= 0.4    ! binding to a DC
 read(nfcell,*) ABIND2				!= 0.8
 
@@ -476,10 +476,6 @@ read(nfcell,*) avidity_nlevels              ! If fix_avidity, number of discrete
 read(nfcell,*) avidity_min                  ! minimum value
 read(nfcell,*) avidity_step                 ! step between equi-spaced values
 
-read(nfcell,*) K1_S1P1
-read(nfcell,*) K2_S1P1
-read(nfcell,*) K1_CD69
-read(nfcell,*) K2_CD69
 ! Parameters added to control HEV and DC placement
 read(nfcell,*) R_HEV_min
 read(nfcell,*) R_HEV_max
@@ -574,16 +570,24 @@ read(nfcell,*) DIVISION_THRESHOLD(1)		! activation level needed for subsequent d
 read(nfcell,*) EXIT_THRESHOLD(1)			! activation level below which exit is permitted
 read(nfcell,*) STIMULATION_LIMIT			! maximum activation level
 read(nfcell,*) THRESHOLD_FACTOR             ! scales all threshold values
+read(nfcell,*) STAGED_CONTACT_RULE			! 3 = CT_HENRICKSON
+read(nfcell,*) STIM_HILL_THRESHOLD	        ! Normalized stim rate threshold for TCR signalling
+read(nfcell,*) STIM_HILL_N                  ! Parameters of Hill function for stimulation rate
+read(nfcell,*) STIM_HILL_C                  ! as function of x = (avidity/max avidity)*(pMHC/max pMHC)
 read(nfcell,*) mode_0                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
 read(nfcell,*) mode_1                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
-read(nfcell,*) UNSTAGED_BIND_THRESHOLD      ! potential normalized stimulation rate required for a cognate DC interaction
-read(nfcell,*) UNSTAGED_HILL_N              ! N parameter for Hill function that determines bind duration
-read(nfcell,*) UNSTAGED_HILL_C              ! C parameter for Hill function that determines bind duration
-read(nfcell,*) UNSTAGED_MIN_BIND_T          ! minimum cognate bind duration, i.e. kinapse (mins)
-read(nfcell,*) UNSTAGED_MAX_BIND_T          ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+read(nfcell,*) BINDTIME_HILL_THRESHOLD      ! potential normalized stimulation rate required for a cognate DC interaction
+read(nfcell,*) BINDTIME_HILL_N              ! N parameter for Hill function that determines bind duration
+read(nfcell,*) BINDTIME_HILL_C              ! C parameter for Hill function that determines bind duration
+read(nfcell,*) BINDTIME_MIN                 ! minimum cognate bind duration, i.e. kinapse (mins)
+read(nfcell,*) BINDTIME_MAX                 ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
 read(nfcell,*) UNSTAGED_MIN_DIVIDE_T        ! minimum time elapsed before start of 1st division (mins or hrs?)
-read(nfcell,*) UNSTAGED_MAX_AVIDITY         ! maximum TCR avidity, used to normalize T cell avidity levels
-read(nfcell,*) UNSTAGED_MAX_ANTIGEN         ! maximum DC antigen density, used to normalize DC antigen density levels
+read(nfcell,*) MAXIMUM_AVIDITY              ! maximum TCR avidity, used to normalize T cell avidity levels
+read(nfcell,*) MAXIMUM_ANTIGEN              ! maximum DC antigen density, used to normalize DC antigen density levels
+read(nfcell,*) K1_CD69
+read(nfcell,*) K2_CD69
+read(nfcell,*) K1_S1PR1
+read(nfcell,*) K2_S1PR1
 
 !read(nfcell,*) CD25_DIVISION_THRESHOLD	    ! CD25 store level needed for division of activated cell (optionA = 1)
 !read(nfcell,*) CD25_SURVIVAL_THRESHOLD		! CD25 store level needed for survival of activated cell (optionC = 1)
@@ -764,7 +768,7 @@ DIVISION_THRESHOLD(1) = THRESHOLD_FACTOR*DIVISION_THRESHOLD(1)
 EXIT_THRESHOLD(1) = THRESHOLD_FACTOR*EXIT_THRESHOLD(1)
 STIMULATION_LIMIT = THRESHOLD_FACTOR*STIMULATION_LIMIT
 
-UNSTAGED_MAX_BIND_T = 60*UNSTAGED_MAX_BIND_T        ! hrs -> mins
+BINDTIME_MAX = 60*BINDTIME_MAX        ! hrs -> mins
 UNSTAGED_MIN_DIVIDE_T = 60*UNSTAGED_MIN_DIVIDE_T    ! hrs -> mins
 
 mean_stagetime_1(2,:) = transient_stagetime		! Note that these times are not needed for gen>1,
@@ -1074,7 +1078,7 @@ write(nfout,*) 'use_DC: ',use_DC
 write(nfout,*) 'use_DCflux: ',use_DCflux
 write(nfout,*) 'DCDIM: ',DCDIM
 write(nfout,*) 'DC_DCprox: ',DC_DCprox
-write(nfout,*) 'STIM_HILL_pMHC_THRESHOLD: ',STIM_HILL_pMHC_THRESHOLD
+write(nfout,*) 'STIM_HILL_THRESHOLD: ',STIM_HILL_THRESHOLD
 write(nfout,*) 'ABIND1: ',ABIND1
 write(nfout,*) 'ABIND2: ',ABIND2
 write(nfout,*) 'NDIFFSTEPS: ',NDIFFSTEPS
@@ -1360,8 +1364,8 @@ if (use_cytokines) then
     enddo
     !p2%IL_state = p1%IL_state
 endif
-p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1P1 expression
-p2%S1P1 = p1%S1P1
+p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1PR1 expression
+p2%S1PR1 = p1%S1PR1
 
 ndivisions = ndivisions + 1
 if (region /= LYMPHNODE) then
@@ -1950,7 +1954,7 @@ else
     ! cognate T cells, but otherwise if CD69 is initially 0, a cell will be susceptible
     ! to chemotaxis and exit until it has received enough TCR signal to drive CD69 high.
     cell%cptr%CD69 = 0
-    cell%cptr%S1P1 = 0
+    cell%cptr%S1PR1 = 0
 !	cell%cptr%DCchemo = BASE_DCchemo
     cell%cptr%dietime = tnow + TClifetime(cell%cptr)
     cell%cptr%dividetime = tnow
@@ -3476,6 +3480,7 @@ end subroutine
 ! Since 100 pM of M-peptide induced only about 10% proliferation, while 200 pM induced about 80%, it seems
 ! that the threshold for TCR signalling is about 30 pMHC (assuming that the initial pMHC count is linear
 ! with antigen concentration).
+! THRESHOLD CHANGED.  It is now a stimulation rate threshold, i.e. on level of pMHC*avidity
 ! Base stimulation rate r is a Hill function of a = pMHC*avidity, max value 1
 ! Actual rate of change of S is this rate scaled by TC_STIM_RATE_CONSTANT
 ! THIS HAS BEEN CHANGED.  TC_STIM_RATE_CONSTANT is now effectively 1.0, and default threshold values have 
@@ -3483,12 +3488,23 @@ end subroutine
 ! Duration of binding is also determined from r.  Currently the specified bind time is
 ! treated as the maximum, and the actual value depends linearly on r up to this max.
 ! This formulation is used in the STAGED_MODE simulations
-!---------------------------------------------------------------------
+! NOTE:
+! It makes sense to work with normalized pMHC and avidity in this case too 
+! (as in UNSTAGED case with stimulation_rate_norm).  This will make it easier to maintain consistency
+! with the activation threshold values.
+!----------------------------------------------------------------------------------------------------------
 real function stimulation_rate_hill(pMHC,avidity)
 real :: pMHC, avidity
-real :: a
-a = max(pMHC - STIM_HILL_pMHC_THRESHOLD,0.0)*avidity
-stimulation_rate_hill = a**STIM_HILL_N/(a**STIM_HILL_N + STIM_HILL_C**STIM_HILL_N)
+real :: a, d, x
+!a = max(pMHC - STIM_HILL_THRESHOLD,0.0)*avidity
+a = min(1.0,avidity/MAXIMUM_AVIDITY)
+d = min(1.0,pMHC/MAXIMUM_ANTIGEN)
+x = a*d
+if (x > STIM_HILL_THRESHOLD) then
+    stimulation_rate_hill = (1 + STIM_HILL_C**STIM_HILL_N)*x**STIM_HILL_N/(x**STIM_HILL_N + STIM_HILL_C**STIM_HILL_N)
+else
+    stimulation_rate_hill = 0
+endif
 end function
 
 !---------------------------------------------------------------------
@@ -3496,8 +3512,8 @@ end function
 real function stimulation_rate_norm(pMHC,avidity)
 real :: pMHC, avidity
 real :: a, d
-a = min(1.0,avidity/UNSTAGED_MAX_AVIDITY)
-d = min(1.0,pMHC/UNSTAGED_MAX_ANTIGEN)
+a = min(1.0,avidity/MAXIMUM_AVIDITY)
+d = min(1.0,pMHC/MAXIMUM_ANTIGEN)
 stimulation_rate_norm = a*d
 end function
 
@@ -3568,13 +3584,17 @@ do kcell = 1,nlist
     					dstimrate = stimulation_rate_hill(DClist(idc)%density,p%avidity) ! now use THRESHOLD_FACTOR
     				elseif (cellist(kcell)%signalling) then
     				    dstimrate = stimulation_rate_norm(DClist(idc)%density,p%avidity)
-    				    if (dstimrate < UNSTAGED_BIND_THRESHOLD) then
+    				    if (dstimrate < BINDTIME_HILL_THRESHOLD) then
     				        dstimrate = 0
     				    endif
     				endif
 					stimrate = stimrate + dstimrate
 					dstim = dstimrate*DELTA_T
 					p%stimulation = p%stimulation + dstim
+!					if (p%stimulation > FIRST_DIVISION_THRESHOLD(1)) then
+!					    write(logmsg,*) 'Reached FIRST_DIVISION_THRESHOLD: ',kcell,tnow
+!					    call logger(logmsg)
+!					endif
 					p%stimulation = min(p%stimulation, STIMULATION_LIMIT)
 					DClist(idc)%stimulation = DClist(idc)%stimulation + dstim
 				else    ! unbind T cell from incapable DC
@@ -3663,10 +3683,10 @@ do kcell = 1,nlist
 
 		if (.not.L_selectin) then
 			! Note that stimrate is normalized with TC_STIM_RATE_CONSTANT for consistency
-			! with the calibration of S1P1/CD69 dynamics, which was carried out with
+			! with the calibration of S1PR1/CD69 dynamics, which was carried out with
 			! normalized stimulation of approx. 1  This is easier than adjusting K1_CD69
-			call S1P1_update(p%CD69,p%S1P1,p%stimrate/TC_STIM_RATE_CONSTANT,DELTA_T)
-	!        call S1P1_update(p%CD69,p%S1P1,p%stimrate,DELTA_T)
+			call S1PR1_update(p%CD69,p%S1PR1,p%stimrate/TC_STIM_RATE_CONSTANT,DELTA_T)
+	!        call S1PR1_update(p%CD69,p%S1PR1,p%stimrate,DELTA_T)
 		endif
 	endif
 
@@ -4028,10 +4048,10 @@ if (cognate) then
 	    call get_stage(p,stage,region)
 	    btime = dc_mean_bindtime_c(stage,ctype)
 	    stimrate_hill = stimulation_rate_hill(pMHC,p%avidity)
-	    write(logmsg,'(a,a,i2,a,f5.3,a,f6.1)') 'STAGED: ',' stage: ',stage,' stimrate_hill: ',stimrate_hill,' T: ',btime
-	    call logger(logmsg)
+!	    write(logmsg,'(a,a,i2,a,f5.3,a,f6.1)') 'STAGED: ',' stage: ',stage,' stimrate_hill: ',stimrate_hill,' T: ',btime
+!	    call logger(logmsg)
 	    if (stage > NAIVE .and. stage < SWARMS) then
-	        select case (CONTACT_RULE)
+	        select case (STAGED_CONTACT_RULE)
 	        case (CT_CONSTANT)
 	            get_bindtime = btime
 	        case (CT_HILL)
@@ -4046,11 +4066,11 @@ if (cognate) then
 	        get_bindtime = btime
         endif
     else
-        a = min(1.0,p%avidity/UNSTAGED_MAX_AVIDITY)
-        d = min(1.0,pMHC/UNSTAGED_MAX_ANTIGEN)
-        h = stimrate_norm**UNSTAGED_HILL_N/(stimrate_norm**UNSTAGED_HILL_N + UNSTAGED_HILL_C**UNSTAGED_HILL_N)
-        h = (1 + UNSTAGED_HILL_C**UNSTAGED_HILL_N)*h
-        get_bindtime = h*UNSTAGED_MAX_BIND_T
+        a = min(1.0,p%avidity/MAXIMUM_AVIDITY)
+        d = min(1.0,pMHC/MAXIMUM_ANTIGEN)
+        h = stimrate_norm**BINDTIME_HILL_N/(stimrate_norm**BINDTIME_HILL_N + BINDTIME_HILL_C**BINDTIME_HILL_N)
+        h = (1 + BINDTIME_HILL_C**BINDTIME_HILL_N)*h
+        get_bindtime = h*BINDTIME_MAX
 	    write(logmsg,'(a,a,f5.3,a,f5.3,a,f5.3,a,f5.3,a,f6.1)') &
 	        'UNSTAGED: ','A: ',a,' D: ',d,' dS/dt: ',stimrate_norm,' H: ',h,' T: ',get_bindtime
 	    call logger(logmsg)

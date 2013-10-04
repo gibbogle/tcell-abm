@@ -28,7 +28,7 @@
 !
 ! 19/10/2009
 ! Changed DC%density to represent the number of pMHC/DC.
-! The threshold level for any TCR signalling was set STIM_HILL_pMHC_THRESHOLD = 30
+! The threshold level for any TCR signalling was set STIM_HILL_THRESHOLD = 30
 ! on the basis of Henrickson2008.
 ! When TCR signalling is turned on, the rate of signalling is k.A.D
 ! where A is the TCR avidity and D is the pMHC count.
@@ -36,7 +36,7 @@
 ! constant k must be adjusted (start at 1/30).
 !
 ! 20/10/2009
-! Added density_min = STIM_HILL_pMHC_THRESHOLD/2 to subroutine updater.
+! Added density_min = STIM_HILL_THRESHOLD/2 to subroutine updater.
 ! The idea is to reduce stimulation rate as the threshold is approached
 !==========================================================================================
 
@@ -208,7 +208,7 @@ integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
 logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
-integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1P1
+integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1PR1
 
 ! Old chemotaxis method, not used now
 real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
@@ -414,7 +414,7 @@ type cog_type
 	real :: stagetime		! time that a cell can pass to next stage
 	real :: stimrate        ! rate of TCR stimulation
 	real :: CD69            ! level of CD69 expression
-	real :: S1P1            ! level of S1P1 expression
+	real :: S1PR1            ! level of S1PR1 expression
 	real :: CCR7            ! level of CCR7 expression
     real :: IL_state(CYT_NP)    ! receptor model state variable values
     real :: IL_statep(CYT_NP)   ! receptor model state variable time derivative values
@@ -530,7 +530,7 @@ real :: DC_ACTIV_TAPER = 12				! time (hours) over which DC activity decays to z
 real :: DC_BIND_DELAY = 2.5				! delay after unbinding before next binding (mins)
 !real :: DC_BIND_ALFA = 0.95				! binding prob parameter
 real :: DC_MULTIBIND_PROB = 0.0			! reducing factor to bind prob for each current DC binding
-real :: DC_DENS_BY_STIM = 0.0002        ! rate of reduction of density by TCR stimulation
+real :: DC_DENS_BY_STIM = 0.000        ! rate of reduction of density by TCR stimulation
 real :: DC_DENS_HALFLIFE                ! half-life of DC activity (hours)
 
 integer :: optionA
@@ -547,14 +547,14 @@ real :: CD25_DIVISION_THRESHOLD         ! CD25 store level needed for division o
 real :: CD25_SURVIVAL_THRESHOLD         ! CD25 store level needed for survival of activated cell
 real :: THRESHOLD_FACTOR                ! used to scale all thresholds
 integer :: ACTIVATION_MODE              ! STAGED_MODE (0) or UNSTAGED_MODE (1)
-real :: UNSTAGED_BIND_THRESHOLD         ! potential normalized stimulation rate required for a cognate DC interaction
-integer :: UNSTAGED_HILL_N              ! N parameter for Hill function that determines bind duration
-real :: UNSTAGED_HILL_C                 ! C parameter for Hill function that determines bind duration
-real :: UNSTAGED_MIN_BIND_T             ! minimum cognate bind duration, i.e. kinapse (mins)
-real :: UNSTAGED_MAX_BIND_T             ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+real :: BINDTIME_HILL_THRESHOLD         ! potential normalized stimulation rate required for a cognate DC interaction
+integer :: BINDTIME_HILL_N              ! N parameter for Hill function that determines bind duration
+real :: BINDTIME_HILL_C                 ! C parameter for Hill function that determines bind duration
+real :: BINDTIME_MIN             ! minimum cognate bind duration, i.e. kinapse (mins)
+real :: BINDTIME_MAX             ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
 real :: UNSTAGED_MIN_DIVIDE_T           ! minimum time elapsed before start of 1st division (mins or hrs?)
-real :: UNSTAGED_MAX_AVIDITY            ! maximum TCR avidity, used to normalize T cell avidity levels
-real :: UNSTAGED_MAX_ANTIGEN            ! maximum DC antigen density, used to normalize DC antigen density levels
+real :: MAXIMUM_AVIDITY            ! maximum TCR avidity, used to normalize T cell avidity levels
+real :: MAXIMUM_ANTIGEN            ! maximum DC antigen density, used to normalize DC antigen density levels
 
 type(dist_type) :: divide_dist1
 type(dist_type) :: divide_dist2
@@ -636,10 +636,10 @@ real :: TC_life_shape					! shape parameter for lifetime of T cells
 integer :: NTC_LN = 3.0e07				! number of T cells in a LN
 integer :: NTC_BODY = 1.6e09			! number of circulating T cells in the whole body
 integer :: NLN_RESPONSE					! number of LNs in the response
-real :: K1_S1P1 = 0.005					! S1P1/CD69 system parameters
-real :: K2_S1P1 = 0.05
-real :: K1_CD69 = 0.04
-real :: K2_CD69 = 0.01
+real :: K1_S1PR1 != 0.005					! S1PR1/CD69 system parameters
+real :: K2_S1PR1 != 0.05
+real :: K1_CD69 != 0.04
+real :: K2_CD69 != 0.01
 ! Parameters added to control HEV and DC placement (for DCvisits simulations)
 real :: R_HEV_min
 real :: R_HEV_max
@@ -649,10 +649,10 @@ real :: R_DC_max
 ! DC parameters
 integer :: NDCsites						! Number of lattice sites occupied by the DC core (soma)
 logical :: use_DCflux = .true.
-real :: STIM_HILL_pMHC_THRESHOLD = 10          ! DC pMHC limit for TCR stimulation capability
+real :: STIM_HILL_THRESHOLD = 10          ! DC pMHC limit for TCR stimulation capability
 real :: STIM_HILL_C = 300		    ! TCR stimulation Hill function parameter
 integer :: STIM_HILL_N = 1					! TCR stimulation Hill function exponent
-integer :: CONTACT_RULE = CT_HENRICKSON ! rule for determining the duration of T cell - DC contact
+integer :: STAGED_CONTACT_RULE = CT_HENRICKSON ! rule for determining the duration of T cell - DC contact
 real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 
 ! Egress parameters
@@ -698,8 +698,8 @@ integer :: nreldir2D, njumpdirs2D
 integer :: reldir2D(8,8)
 real(DP) :: dirprob2D(0:8)
 logical :: diagonal_jumps
-!real :: ep_factor      ! (25k) 2.4 when K1_S1P1 = 0.01, 2.8 when K1_S1P1 = 0.001  ! based on no-DC case!
-                       ! (50k) 2.3 when K1_S1P1 = 0.01, chemo_K_exit = 0.3
+!real :: ep_factor      ! (25k) 2.4 when K1_S1PR1 = 0.01, 2.8 when K1_S1PR1 = 0.001  ! based on no-DC case!
+                       ! (50k) 2.3 when K1_S1PR1 = 0.01, chemo_K_exit = 0.3
 
 ! Chemotaxis data
 real :: DC_CHEMO_DELAY	! gets set = DC_BIND_DELAY
@@ -834,7 +834,7 @@ real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines 
 real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
 ! PERIPHERY parameters 
-logical, parameter :: SIMULATE_PERIPHERY = .true.
+logical, parameter :: SIMULATE_PERIPHERY = .false.
 integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
 real, parameter :: PERI_PROBFACTOR = 10
 
@@ -2167,7 +2167,7 @@ end subroutine
 ! tfactor**n = 0.1 where n = DC_ACTIV_TAPER/DELTA_T
 ! tfactor = (0.1)**(1/n)
 ! A DC loses its TCR stimulating capability when %density falls below the
-! limiting value STIM_HILL_pMHC_THRESHOLD.
+! limiting value STIM_HILL_THRESHOLD.
 ! A DC is scheduled to die when t > %dietime.  At this point %capability is set
 ! to .false., but the DC waits until %nbound = 0 before it dies.
 !--------------------------------------------------------------------------------
@@ -2219,14 +2219,15 @@ do idc = 1,NDC
             if (tnow > DClist(idc)%dietime - 60*DC_ACTIV_TAPER) then	! antigen density decays over DC_ACTIV_TAPER
                 DClist(idc)%density = DClist(idc)%density*tfactor
             endif
-            if (DClist(idc)%density < STIM_HILL_pMHC_THRESHOLD) then
-                DClist(idc)%capable = .false.
-                if (incapable_DC_dies) then
-                    ! A non-capable DC might as well die - but this would eliminate low-antigen DCs
-                    DClist(idc)%dietime = tnow + 60     ! give it 1 hour to die
-                endif
-!                write(*,*) 'DC incapable: ',idc
-            endif
+            ! Do not make DCs die when the antigen level drops to zero (Philippe)
+!            if (DClist(idc)%density < STIM_HILL_THRESHOLD) then
+!                DClist(idc)%capable = .false.
+!                if (incapable_DC_dies) then
+!                    ! A non-capable DC might as well die - but this would eliminate low-antigen DCs
+!                    DClist(idc)%dietime = tnow + 60     ! give it 1 hour to die
+!                endif
+!!                write(*,*) 'DC incapable: ',idc
+!            endif
         endif
     endif
     if (DClist(idc)%alive) nalive = nalive + 1
@@ -2535,7 +2536,7 @@ end subroutine
 !   f is the amount of chemotactic influence
 !   c is the amount of CCR7 ligand influence (Cyster).
 ! Note that f incorporates both the distance from the exit (or DC) and the cell's
-! susceptibility to chemotaxis, which may be the S1P1 level of the T cell.
+! susceptibility to chemotaxis, which may be the S1PR1 level of the T cell.
 ! On return p(:) holds the modified jump probabilities.
 ! Note: should have p remaining unchanged as chemo_K -> 0
 ! Note: when njumpdirs = 27, jump 14 corresponds to (0,0,0) - unused.
@@ -2622,7 +2623,7 @@ end function
 
 !--------------------------------------------------------------------------------
 ! Determines the degree to which a cell is subject to chemotaxis.
-! (Determined by CD69 level, or S1P1 level.)
+! (Determined by CD69 level, or S1PR1 level.)
 ! If use_exit_chemotaxis is true, i.e. chemotaxis is used to control cell exit, any cell
 ! that gets close enough to the exit will leave the paracortex.  Is this
 ! acceptable?
@@ -2651,8 +2652,8 @@ endif
 if (TAGGED_EXIT_CHEMOTAXIS) then
     tnow = istep*DELTA_T
     t = tnow - cell%entrytime
-    if (cell%tag == RES_TAGGED_CELL) then     ! testing effect of S1P1
-        chemo_active_exit = (1 - exp(-K1_S1P1*t))*TAGGED_CHEMO_ACTIVITY
+    if (cell%tag == RES_TAGGED_CELL) then     ! testing effect of S1PR1
+        chemo_active_exit = (1 - exp(-K1_S1PR1*t))*TAGGED_CHEMO_ACTIVITY
     else
 		chemo_active_exit = 0
 	endif
@@ -2671,7 +2672,7 @@ if (TAGGED_LOG_PATHS) then
 endif
 
 if (associated(cell%cptr)) then     ! cognate cell
-    chemo_active_exit = cell%cptr%S1P1
+    chemo_active_exit = cell%cptr%S1PR1
 !    if (CD69 < CD69_threshold) then
 !        chemo_active = 1 - CD69/CD69_threshold
 !    else
@@ -2680,11 +2681,11 @@ if (associated(cell%cptr)) then     ! cognate cell
 else
     tnow = istep*DELTA_T
     t = tnow - cell%entrytime
-!    if (cell%tag == RES_TAGGED_CELL) then     ! testing effect of S1P1
-!        chemo_active = 1 - exp(-K1_S1P1*0.1*t)
+!    if (cell%tag == RES_TAGGED_CELL) then     ! testing effect of S1PR1
+!        chemo_active = 1 - exp(-K1_S1PR1*0.1*t)
 !        chemo_active = 0
 !    else
-        chemo_active_exit = 1 - exp(-K1_S1P1*t)
+        chemo_active_exit = 1 - exp(-K1_S1PR1*t)
 !    endif
 endif
 end function

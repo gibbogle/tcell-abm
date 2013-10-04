@@ -1012,7 +1012,7 @@ do kcell = 1,nlist
                     cell%signalling = .true.
                     if (activation_mode == UNSTAGED_MODE) then
                         stimrate = stimulation_rate_norm(DClist(idc)%density,cog_ptr%avidity)
-                        if (stimrate < UNSTAGED_BIND_THRESHOLD) then
+                        if (stimrate < BINDTIME_HILL_THRESHOLD) then
                             cell%signalling = .false.
                             stimrate = 0
                             cognate = .false.
@@ -3298,7 +3298,7 @@ if (TAGGED_EXIT_CHEMOTAXIS) then
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_FRACTION: ',TAGGED_CHEMO_FRACTION 
 	write(nfout,'(a,f6.3)') '  TAGGED_CHEMO_ACTIVITY: ',TAGGED_CHEMO_ACTIVITY
 endif
-write(nfout,'(a,f6.3)') '  K1_S1P1:               ',K1_S1P1
+write(nfout,'(a,f6.3)') '  K1_S1PR1:               ',K1_S1PR1
 write(nfout,'(a,3i8)') 'Results: noutflow_tag, ninflow_tag,kmax: ',noutflow_tag,ninflow_tag,kmax
 write(nfout,'(a,f6.1)') 'Residence time: ',Tres
 !write(nfout,'(a,f6.1)') 'Residence time from restime_tot: ',restime_tot/60.
@@ -3722,8 +3722,8 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
 integer :: kcell, ctype, stype, ncog(2), noncog, ntot, nbnd, stage, region, i, iseq, error
-integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact, nseed
-real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
+integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact, nseed, navestim, navestimrate
+real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim, totstimrate
 type (cog_type), pointer :: p
 integer :: nst(FINISHED)
 integer, allocatable :: gendist(:)
@@ -3745,6 +3745,8 @@ ntot = 0
 nbnd = 0
 nst = 0
 stim = 0
+totstim = 0
+totstimrate = 0
 IL2sig = 0
 gendist = 0
 div_gendist = 0
@@ -3771,6 +3773,8 @@ do kcell = 1,nlist
 		endif
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
+        totstim = totstim + p%stimulation
+        totstimrate = totstimrate + p%stimrate
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
         gen = get_generation(p)
         if (gen < 0 .or. gen > TC_MAX_GEN) then
@@ -3882,9 +3886,13 @@ nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
 !write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot,nseed,ncog,Ndead, &
 !	nbnd,int(InflowTotal),Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 nact = 100*act
+navestim = 100*totstim/(STIMULATION_LIMIT*(ncog(1) + ncog(2)))
+navestimrate = 100*totstimrate/(ncog(1) + ncog(2))
+!write(logmsg,'(a,e12.3,i6,f6.0,i4)') 'stim: ',totstim,(ncog(1) + ncog(2)),STIMULATION_LIMIT,navestim
+!call logger(logmsg)
 
-summaryData(1:13) = (/int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,ndead, &
-	nbnd,int(InflowTotal),Nexits, teffgen/)
+summaryData(1:15) = (/ int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,ndead, &
+	nbnd,int(InflowTotal),Nexits, teffgen, navestim, navestimrate /)
 !write(nflog,*) 'ndivisions,teffgen,ncog = ',ndivisions,teffgen,ncog
 
 if (track_DCvisits) then
@@ -3895,6 +3903,143 @@ endif
 check_inflow = 0
 check_egress = 0
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_CD69(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_cd69
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx
+
+!call logger('get_profile_cd69')
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    i = min(int(p%CD69/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+!write(logmsg,*) 'Cognate cells: ',nc, lastcogID
+!call logger(logmsg)
+!write(logmsg,'(10f6.3)') x(1:n)
+!call logger(logmsg)
+!write(logmsg,'(10f6.3)') y(1:n)
+!call logger(logmsg)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_S1PR1(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_s1pr1
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx
+
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    i = min(int(p%S1PR1/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_stim(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_stim
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx, stim
+
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    stim = p%stimulation/STIMULATION_LIMIT
+    i = min(int(stim/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_stimrate(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_stimrate
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx
+
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    i = min(int(p%stimrate/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
 !-------------------------------------------------------------------------------- 
 !--------------------------------------------------------------------------------
 subroutine get_scene(nTC_list,TC_list,nDC_list,DC_list,nbond_list,bond_list) BIND(C)
@@ -4504,7 +4649,7 @@ call logger("did read_cell_params")
 !Fcognate = TC_COGNATE_FRACTION
 
 ndivisions = 0
-call CD69_setparameters(K1_S1P1,K2_S1P1,K1_CD69,K2_CD69)
+call CD69_setparameters(K1_S1PR1,K2_S1PR1,K1_CD69,K2_CD69)
 call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')

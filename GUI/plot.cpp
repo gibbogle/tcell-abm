@@ -26,7 +26,7 @@ Plot::Plot(QString aname, QString acasename, QWidget *parent)
 	}
 	ncurves = 0;
 	yscale = 0;
-	setAxisTitle(QwtPlot::xBottom, "Time (hours)");
+//	setAxisTitle(QwtPlot::xBottom, "Time (hours)");
 	if (name.compare("") != 0) {
 		curve[0] = new QwtPlotCurve(acasename);
 		curve[0]->attach(this);
@@ -118,18 +118,22 @@ void Plot::removeAllCurves()
 //-----------------------------------------------------------------------------------------
 void Plot::setYScale(double maxval)
 {
-	yscale = calc_yscale(maxval);
+    yscale = calc_yscale_ts(maxval);
 	setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
+void Plot::redraw(double *x, double *y, int n, QString name, QString tag, double fixed_yscale, bool profile)
 {
     QwtLegend *legend;
-    if (n == 1) { // That is, this is the first plotting instance.
-        yscale = max(yscale,calc_yscale(y[0]));
-        setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+//    if (n == 1) { // That is, this is the first plotting instance.
+//        if (fixed_yscale == 0) {
+//            yscale = max(yscale,calc_yscale_ts(y[0]));
+//        } else {
+//            yscale = fixed_yscale;
+//        }
+//        setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
         if (USE_LEGEND){
             legend = this->legend();
             if (legend == NULL) {
@@ -137,13 +141,15 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
                 this->insertLegend(legend, QwtPlot::RightLegend);
             }
         }
-    }
+//    }
     // Note: Number of pen colors should match ncmax
     QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
     QPen *pen = new QPen();
     for (int k=0; k<ncmax; k++) {
         if (curve[k] == 0) continue;
+//        if (profile) LOG_QMSG("profile redraw "+name);
         if (name.compare(curve[k]->title().text()) == 0) {
+//            LOG_QMSG("redraw " + tag);
             // Just in case someone set ncmax > # of pen colors (currently = 6)
             if (k < 6) {
                 pen->setColor(pencolor[k]);
@@ -155,11 +161,19 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
 //            legend = new QwtLegend();
 //            this->insertLegend(legend, QwtPlot::RightLegend);
 //            LOG_MSG("did insertLegend");
-            double ylast = y[n-1];
-            if (ylast > yscale) {
-                yscale = max(yscale,calc_yscale(ylast));
+//            if (!profile) {
+                if (fixed_yscale == 0) {
+                    double ylast = y[n-1];
+                    if (ylast > yscale) {
+                        yscale = max(yscale,calc_yscale_ts(ylast));
+//                        sprintf(msg,"ylast: %f yscale: %f",ylast,yscale);
+//                        LOG_MSG(msg);
+                    }
+                } else {
+                    yscale = fixed_yscale;
+                }
                 setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-            }
+//            }
             replot();
         }
     }
@@ -173,8 +187,8 @@ void Plot::redraw2(double *x1, double *y1, double *x2, double *y2, int n1, int n
 {
 	LOG_MSG("redraw2");
 	if (n1 == 1) { // That is, this is the first plotting instance.
-		yscale = max(yscale,calc_yscale(y1[0]));
-		yscale = max(yscale,calc_yscale(y2[0]));
+        yscale = max(yscale,calc_yscale_ts(y1[0]));
+        yscale = max(yscale,calc_yscale_ts(y2[0]));
 		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
 	}
     curve[0]->setData(x1, y1, n1);
@@ -190,7 +204,7 @@ void Plot::redraw2(double *x1, double *y1, double *x2, double *y2, int n1, int n
 		ylast = ylast2;
 	}
 	if (ylast > yscale) {
-        yscale = calc_yscale(ylast);
+        yscale = calc_yscale_ts(ylast);
 		setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
 	}
     replot();
@@ -216,14 +230,14 @@ void Plot::draw2(double *x1, double *y1, double *x2, double *y2, int n1, int n2)
 		ylast = max(ylast,y1[i]);
 	for (int i=0; i<n2; i++)
 		ylast = max(ylast,y2[i]);
-    yscale = calc_yscale(ylast);
+    yscale = calc_yscale_ts(ylast);
 	setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
     replot();
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-double Plot::calc_yscale(double yval)
+double Plot::calc_yscale_ts(double yval)
 {
 	int v = int(1.3*yval);
     return double(v);

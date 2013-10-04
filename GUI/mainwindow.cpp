@@ -45,6 +45,10 @@ int NX, NY, NZ, NBY;
 int nt_vtk;
 bool leftb;
 
+double *profile_x[10];
+double *profile_y[10];
+int profile_n[10];
+
 //#define NO_USE_PGRAPH true
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
@@ -65,7 +69,7 @@ void QMyLabel::mousePressEvent (QMouseEvent *event) {
 			text = param.text;
 	}
     emit labelClicked(text);
-};	
+}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -93,6 +97,10 @@ MainWindow::MainWindow(QWidget *parent)
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
 	}
+    for (int i=0; i<10; i++) {
+        profile_x[i] = (double *)malloc(100*sizeof(double));
+        profile_y[i] = (double *)malloc(100*sizeof(double));
+    }
 	vtkfile = "basecase.pos";
 	savepos_start = 0;
 	ntimes = 0;
@@ -111,12 +119,15 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i=0; i<MAX_DATA; i++)
         pGraph[i] = NULL;
     LOG_QMSG("did Graphs");
-
 	createLists();
-	createActions();
-	drawDistPlots();
-	loadParams();
-	writeout();
+    LOG_QMSG("did createLists");
+    createActions();
+    LOG_QMSG("did createActions");
+    initDistPlots();
+    LOG_QMSG("did initDistPlots");
+    loadParams();
+    LOG_QMSG("did loadParams");
+    writeout();
     timer = new QTimer(this);
     QRect rect;
     rect = groupBox_run->geometry();
@@ -262,69 +273,13 @@ void MainWindow::createLists()
 	distplot_list[3] = qp;
 	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_LIFETIME");
 	distplot_list[4] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_STIM_HILL");
+    distplot_list[5] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_BINDTIME_HILL");
+    distplot_list[6] = qp;
 }
 
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: drawDistPlots()
-{
-	double *x, *prob;
-	x = new double[nDistPts];
-	prob = new double[nDistPts];
-	QwtPlot *qp;
-	string name_str;
-	QString median_qstr, shape_qstr;
-	double median, shape;
-	for (int j=0; j<5; j++) {
-		qp = distplot_list[j];
-        QString name = qp->objectName();
-		if (name.contains("TC_AVIDITY")) {
-			name_str = name.toStdString();
-			LOG_QMSG(name);
-		}
-		if (j == 0) {
-			qp->setTitle("TCR Avidity");
-			median_qstr = line_TC_AVIDITY_MEDIAN->text();
-			shape_qstr = line_TC_AVIDITY_SHAPE->text();
-		} else if (j == 1) {
-            qp->setTitle("First division (hrs)");
-			median_qstr = line_DIVIDE1_MEDIAN->text();
-			shape_qstr = line_DIVIDE1_SHAPE->text();
-		} else if (j == 2) {
-            qp->setTitle("Later division (hrs)");
-			median_qstr = line_DIVIDE2_MEDIAN->text();
-			shape_qstr = line_DIVIDE2_SHAPE->text();
-		} else if (j == 3) {
-			qp->setTitle("DC antigen density");
-			median_qstr = line_DC_ANTIGEN_MEDIAN->text();
-			shape_qstr = line_DC_ANTIGEN_SHAPE->text();
-		} else if (j == 4) {
-			qp->setTitle("DC lifetime (days)");
-			median_qstr = line_DC_LIFETIME_MEDIAN->text();
-			shape_qstr = line_DC_LIFETIME_SHAPE->text();
-		}
-		median = median_qstr.toDouble();
-		shape = shape_qstr.toDouble();
-        create_lognorm_dist(median,shape,nDistPts,x,prob);
 
-        int n = dist_limit(prob,nDistPts);
-        double xmax = x[n];
-		sprintf(msg,"%f %f %d",median,shape,n);
-		for (int i=0;i<40;i++) {
-			sprintf(msg,"%d %f %f",i,x[i],prob[i]);
-		}
-        qp->setAxisScale(QwtPlot::xBottom, 0.0, xmax, 0.0);
-        QwtPlotCurve *curve = new QwtPlotCurve("title");
-        curve->attach(qp);
-        curve->setData(x, prob, n);
-        curve_list[j] = curve;
-		qp->replot();
-	}
-	delete [] x;
-	x = NULL;
-	delete [] prob;
-	prob = NULL;
-}
 
 //-------------------------------------------------------------
 // Loops through the workingParameterList and fills in the GUI.
@@ -332,6 +287,7 @@ void MainWindow:: drawDistPlots()
 void MainWindow::loadParams()
 {
 	sprintf(msg,"nParams: %d nSliders: %d",nParams,nSliders);
+    LOG_QMSG(msg);
 	for (int k=0; k<nSliders; k++) {		// there must be a neater way to do this
 		SliderPlus *splus = 0;
 		sliderplus_list.append(splus);
@@ -349,7 +305,7 @@ void MainWindow::loadParams()
 		if (qsname.startsWith("line_") || qsname.startsWith("spin_")
 			|| qsname.startsWith("comb_") || qsname.startsWith("cbox_")
 			|| qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
-//			LOG_QMSG(qsname);
+//            LOG_QMSG(qsname);
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
@@ -514,8 +470,9 @@ void MainWindow::loadParams()
 
 					if (is_slider) {
                         // If there is a slider corresponding to wtag, then just use the label.
-						if (foundLabel)
+                        if (foundLabel) {
 	                        label->setText(labelText);
+                        }
 					} else {
 						if (!(vmin == 0 && vmax == 0)) {
                             // If there is no slider, then add min and max values to the label text.
@@ -874,11 +831,12 @@ void MainWindow::loadResultFile()
 
 	// Compute the maxima
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-        double maxval = getMaximum(R,R->pData[i]);
-        grph->set_maxValue(i,maxval);
-        R->maxValue[i] = maxval;
+        if (grph->isTimeseries(i)) {
+            double maxval = getMaximum(R,R->pData[i]);
+            grph->set_maxValue(i,maxval);
+            R->maxValue[i] = maxval;
+        }
     }
 	// Now add the result set to the list
 	result_list.append(R);
@@ -1166,7 +1124,7 @@ void MainWindow::preConnection()
 {
 	LOG_MSG("preConnection");
 
-        double hours = 0;
+    double hours = 0;
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET p = parm->get_param(k);
 		if (p.tag.compare("NDAYS") == 0) {
@@ -1182,14 +1140,16 @@ void MainWindow::preConnection()
 	int nsteps = int(hours+1.5);
 	newR->nsteps = nsteps;
 	newR->tnow = new double[nsteps];
-    sprintf(msg,"allocate pData: nGraphs: %d",grph->nGraphs);
+    sprintf(msg,"allocate pData: nGraphs: %d nsteps: %d",grph->nGraphs,nsteps);
     LOG_MSG(msg);
     for (int i=0; i<grph->nGraphs; i++) {
-//		if (!grph->isActive(i)) continue;
-		newR->pData[i] = new double[nsteps];
-		newR->pData[i][0] = 0;
+ //       if (!grph->isActive(i)) continue;
+ //       if (grph->isTimeseries(i)) {
+            newR->pData[i] = new double[nsteps];
+            newR->pData[i][0] = 0;
+ //       }
 	}
-//	LOG_MSG("preconnection: Allocated result set arrays");
+    LOG_MSG("preconnection: Allocated result set arrays");
 
 	newR->tnow[0] = 0;	// These are not the right initial values
 	step = -1;
@@ -1225,42 +1185,49 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
     setGraphsActive();
-    int non_ts = 0;
+//    int non_ts = 0;
 //    if (field->isConcPlot()) non_ts++;
 //    if (field->isVolPlot()) non_ts++;
 //    if (field->isOxyPlot()) non_ts++;
-    grph->makeGraphList(non_ts);
+//    grph->makeGraphList(non_ts);
+    grph->makeGraphList();
+    LOG_QMSG("did makeGraphList");
     nGraphs = grph->nGraphs;
     if (nGraphCases > 0) {
         clearAllGraphs();
+        LOG_QMSG("did clearAllGraphs");
     }
 
     QString tag;
     QString title;
     QString yAxisTitle;
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
-        tag = grph->get_tag(i);
-        title = grph->get_title(i);
-        yAxisTitle = grph->get_yAxisTitle(i);
-        if (pGraph[i] != NULL) {
-            pGraph[i]->deleteLater();
-            pGraph[i] = NULL;
-        }
-        if (pGraph[i] == NULL) {
-            pGraph[i] = new Plot(tag,R->casename);
-            pGraph[i]->setTitle(title);
-            pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+//        if (grph->isTimeseries(i)) {
+          if (grph->isActive(i)) {
+            tag = grph->get_tag(i);
+            title = grph->get_title(i);
+            yAxisTitle = grph->get_yAxisTitle(i);
+            if (pGraph[i] != NULL) {
+                pGraph[i]->deleteLater();
+                pGraph[i] = NULL;
+            }
+            if (pGraph[i] == NULL) {
+                pGraph[i] = new Plot(tag,R->casename);
+                pGraph[i]->setTitle(title);
+                pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+            }
         }
     }
+    LOG_QMSG("did setTitles");
 
-	nGraphCases = 1;
-	graphResultSet[0] = R;
+//	nGraphCases = 1;
+//	graphResultSet[0] = R;
 
 	for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
-        mdiArea->addSubWindow(pGraph[i]);
-        pGraph[i]->show();
+//        if (grph->isTimeseries(i)) {
+            mdiArea->addSubWindow(pGraph[i]);
+            pGraph[i]->show();
+//        }
 	}
 
 	if (show_outputdata) {
@@ -1271,8 +1238,13 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     mdiArea->tileSubWindows();
 
 	for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
-        pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+        if (!grph->isActive(i)) continue;
+        sprintf(msg,"i: %d isActive",i);
+        LOG_MSG(msg);
+        if (grph->isTimeseries(i)) {
+            pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Time (hours)");
+        }
 	}
 }
 
@@ -1285,18 +1257,20 @@ void MainWindow::drawGraphs()
         R = graphResultSet[kres];
         if (R != 0) {
             for (int i=0; i<nGraphs; i++) {
-                if (!grph->isTimeseries(i)) continue;
                 if (!grph->isActive(i)) continue;
-                int k = grph->get_dataIndex(i);
-                QString tag = grph->get_tag(i);
-                pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag);
-                if (k == 0) {
-                    grph->set_maxValue(i,R->maxValue[i]);
-                } else {
-                    double maxval = grph->get_maxValue(i);
-                    double newmax = R->maxValue[i];
-                    if (newmax > maxval) {
-                        grph->set_maxValue(i,newmax);
+                if (grph->isTimeseries(i)) {
+                    int k = grph->get_dataIndex(i);
+                    QString tag = grph->get_tag(i);
+                    double yscale = grph->get_yscale(i);
+                    pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag, yscale, false);
+                    if (k == 0) {
+                        grph->set_maxValue(i,R->maxValue[i]);
+                    } else {
+                        double maxval = grph->get_maxValue(i);
+                        double newmax = R->maxValue[i];
+                        if (newmax > maxval) {
+                            grph->set_maxValue(i,newmax);
+                        }
                     }
                 }
             }
@@ -1332,6 +1306,7 @@ void MainWindow::displayScene()
 void MainWindow::showSummary()
 {
 	char msg[128];
+    double yscale;
 //    LOG_MSG("showSummary");
 	step++;
 	if (step >= newR->nsteps) {
@@ -1341,7 +1316,6 @@ void MainWindow::showSummary()
 
 	mutex1.lock();
 
-//	hour = summaryData[0]*DELTA_T/60;
 	hour = summaryData[1]*DELTA_T/60;
 	progress = int(100.*hour/hours);
 	progressBar->setValue(progress);
@@ -1354,19 +1328,59 @@ void MainWindow::showSummary()
 	newR->tnow[step] = step;		//summaryData[0];
 
 	for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-		int k = grph->get_dataIndex(i);
-		newR->pData[i][step] = summaryData[k]*grph->get_scaling(i);
+        if (grph->isTimeseries(i)) {
+            QString tag = grph->get_tag(i);
+            int k = grph->get_dataIndex(i);
+            double scale = grph->get_scaling(i);
+            newR->pData[i][step] = summaryData[k]*scale;
+//            LOG_QMSG(tag);
+//            sprintf(msg,"scale: %f data: %d pt: %f",scale, summaryData[k], newR->pData[i][step]);
+//            LOG_MSG(msg);
+        }
 	}
-
 	for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-        QString tag = grph->get_tag(i);
-        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
+        if (grph->isTimeseries(i)) {
+            QString tag = grph->get_tag(i);
+            yscale = grph->get_yscale(i);
+            pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, false);
+        }
 	}
-	mutex1.unlock();
+//    LOG_QMSG("did ts graphs");
+
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isActive(i)) continue;
+        if (grph->isProfile(i)) {
+            double *x, *y;
+            int n;
+            QString tag = grph->get_tag(i);
+            int k = grph->get_dataIndex(i);
+                x = profile_x[k];
+                y = profile_y[k];
+                n = profile_n[k];
+                yscale = grph->get_yscale(i);
+//                if (yscale == 0) {
+//                    for (int j=0; j<n; j++) {
+//                        if (yscale < y[j])
+//                            yscale = y[j];
+//                    }
+//                    int v = int(12*yscale);
+//                    yscale = double(v/10.);
+//                }
+//                sprintf(msg,"yscale: %f",yscale);
+//                LOG_MSG(msg);
+//                pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+//                if (k == PROFILE_CD69 || k == PROFILE_S1PR1) {
+                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 1.0, 0);
+                pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
+                pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
+            pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
+        }
+    }
+//    LOG_QMSG("did profile graphs");
+
+    mutex1.unlock();
 }
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -1422,10 +1436,12 @@ void MainWindow::outputData(QString qdata)
 	}
 
 	for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-        QString tag = grph->get_tag(i);
-        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
+        if (grph->isTimeseries(i)) {
+            QString tag = grph->get_tag(i);
+            double yscale = grph->get_yscale(i);
+            pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, true);
+        }
 	}
 
 }
@@ -1610,10 +1626,11 @@ void MainWindow::addGraph()
 	nGraphCases++;
 	// First add the curves
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-		pGraph[i]->addCurve(R->casename);
-		pGraph[i]->setAxisAutoScale(QwtPlot::xBottom);
+        if (grph->isTimeseries(i)) {
+            pGraph[i]->addCurve(R->casename);
+            pGraph[i]->setAxisAutoScale(QwtPlot::xBottom);
+        }
 	}
 	// Now redraw with the data
 	drawGraphs();
@@ -2098,17 +2115,66 @@ void MainWindow::setGraphsActive()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow:: initDistPlots()
+{
+    QwtPlot *qp;
+//    string name_str;
+
+    for (int j=0; j<7; j++) {
+        qp = distplot_list[j];
+//        QString name = qp->objectName();
+//        if (name.contains("TC_AVIDITY")) {
+//            name_str = name.toStdString();
+//			LOG_QMSG(name);
+//        }
+        if (j == 0) {
+            qp->setTitle("TCR Avidity");
+        } else if (j == 1) {
+            qp->setTitle("First division (hrs)");
+        } else if (j == 2) {
+            qp->setTitle("Later division (hrs)");
+        } else if (j == 3) {
+            qp->setTitle("DC antigen density");
+        } else if (j == 4) {
+            qp->setTitle("DC lifetime (days)");
+        } else if (j == 5) {
+            qp->setTitle("Stimulation");
+        } else if (j == 6) {
+            qp->setTitle("Binding time");
+        }
+
+        QwtPlotCurve *curve = new QwtPlotCurve("title");
+        curve->attach(qp);
+        curve_list[j] = curve;
+        qp->replot();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Redraws a probability distribution or Hill function plot when one of the parameters is changed.
+// In the case of the distribution the change can be provided by a slider.
+// If the name of the qwpplot object is qwtPlot_XXXX:
+//   names of lineEdit objects with the median and shape must end with XXXX_median and XXXX_shape
+//   names of lineEdit objects with the N and C must end with XXXX_N and XXXX_C
+// The inital plotting is done when the lineEdit fields are initialized by loadParams()
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::redrawDistPlot()
 {
-    int i_m = 0, i_s = 0;
     QString sname = sender()->objectName();
-	for (int k=0; k<5; k++) {
+//    LOG_QMSG(sname);
+    for (int k=0; k<7; k++) {
 		QwtPlot *qp = distplot_list[k];
         QString tag = qp->objectName().mid(8);
         QString tag_m = tag + "_MEDIAN";
         QString tag_s = tag + "_SHAPE";
-		if (sname.endsWith(tag_m) || sname.endsWith(tag_s)) {   
-			for (int i=0; i<nWidgets; i++) {
+        QString tag_thresh = tag + "_THRESHOLD";
+        QString tag_N = tag + "_N";
+        QString tag_C = tag + "_C";
+        QString tag_min = tag + "_MIN";
+        QString tag_max = tag + "_MAX";
+        if (sname.endsWith(tag_m) || sname.endsWith(tag_s)) {
+            int i_m = 0, i_s = 0;
+            for (int i=0; i<nWidgets; i++) {
 				QString wname = widget_list[i]->objectName();
                 if (wname.endsWith(tag_m))
                     i_m = i;
@@ -2123,7 +2189,7 @@ void MainWindow::redrawDistPlot()
             double median = median_str.toDouble();
             median = max(0.001, median);
             double shape = shape_str.toDouble();
-            shape = max(1.001, shape);
+            shape = max(1.0001, shape);
 			
 			double *x = new double[nDistPts];
 			double *prob = new double[nDistPts];
@@ -2135,10 +2201,83 @@ void MainWindow::redrawDistPlot()
             qp->replot();
 			delete [] x;
 			delete [] prob;
-			x = 0;
-			prob = 0;
 		}
-	}
+        if (sname.endsWith(tag_N) || sname.endsWith(tag_C) ||
+                sname.endsWith(tag_thresh) || sname.endsWith(tag_min) || sname.endsWith(tag_max)) {
+            int i_N = -1, i_C = -1, i_thresh = -1, i_min = -1, i_max = -1;
+            for (int i=0; i<nWidgets; i++) {
+                QString wname = widget_list[i]->objectName();
+                if (wname.endsWith(tag_N))
+                    i_N = i;
+                else if (wname.endsWith(tag_C))
+                    i_C = i;
+                else if (wname.endsWith(tag_thresh))
+                    i_thresh = i;
+                else if (wname.endsWith(tag_min))
+                    i_min = i;
+                else if (wname.endsWith(tag_max))
+                    i_max = i;
+            }
+            int hill_N;
+            double hill_C, hill_thresh, hill_min, hill_max;
+            if (i_N >= 0) {
+                QString hill_N_str = ((QLineEdit *)widget_list[i_N])->text();
+                hill_N = hill_N_str.toInt();
+                hill_N = max(1, hill_N);
+            } else {
+                return;
+            }
+            if (i_C >= 0) {
+                QString hill_C_str = ((QLineEdit *)widget_list[i_C])->text() ;
+                hill_C = hill_C_str.toDouble();
+                hill_C = max(0.01, hill_C);
+                hill_C = min(1.0, hill_C);
+            } else {
+                return;
+            }
+            if (i_thresh >= 0) {
+                QString hill_thresh_str = ((QLineEdit *)widget_list[i_thresh])->text() ;
+                hill_thresh = hill_thresh_str.toDouble();
+                hill_thresh = max(0.0, hill_thresh);
+                hill_thresh = min(1.0, hill_thresh);
+            } else {
+                hill_thresh = 0;
+            }
+            if (i_min >= 0) {
+                QString hill_min_str = ((QLineEdit *)widget_list[i_min])->text() ;
+                hill_min = hill_min_str.toDouble();
+                hill_min = max(0.0, hill_min);
+                hill_min /= 60;     // convert mins to hrs
+            } else {
+                hill_min = 0.0;
+            }
+            if (i_max >= 0) {
+                QString hill_max_str = ((QLineEdit *)widget_list[i_max])->text() ;
+                hill_max = hill_max_str.toDouble();
+                hill_max = max(1.0, hill_max);
+            } else {
+                hill_max = 1.0;
+            }
+
+            double *x = new double[nDistPts];
+            double *hill = new double[nDistPts];
+            create_hill_function(hill_N,hill_C,nDistPts,x,hill);
+            if (i_thresh >= 0 || i_min >= 0 || i_max >= 0) {    // scale
+                for (int i=0; i<nDistPts; i++) {
+                    if (x[i] < hill_thresh) {
+                        hill[i] = 0;
+                    } else {
+                        hill[i] = hill_min + (hill_max - hill_min)*hill[i];
+                    }
+                }
+            }
+            curve_list[k]->setData(x, hill, nDistPts);
+            qp->setAxisScale(QwtPlot::xBottom, 0.0, 1.0, 0.0);
+            qp->replot();
+            delete [] x;
+            delete [] hill;
+        }
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -2253,6 +2392,19 @@ void MainWindow::create_lognorm_dist(double p1, double p2,int n, double *x, doub
 	}
 }
 
+void MainWindow::create_hill_function(int N, double C, int n, double *x, double *hill)
+{
+    double dx, cn;
+    int i;
+
+    dx = 1.0/(n-1);
+    cn = pow(C,N);
+    for (i=0; i<n; i++) {
+        x[i] = i*dx;
+        hill[i] = (1 + cn)*pow(x[i],N)/(pow(x[i],N) + cn);
+    }
+}
+
 //------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------
 void MainWindow::on_activation_mode_toggled()
@@ -2260,25 +2412,25 @@ void MainWindow::on_activation_mode_toggled()
     if (rbut_ACTIVATIONMODE_0->isChecked()) {
         line_IL2_THRESHOLD->setEnabled(true);
         line_ACTIVATION_THRESHOLD->setEnabled(true);
-        line_UNSTAGED_BIND_THRESHOLD->setEnabled(false);
-        line_UNSTAGED_HILL_N->setEnabled(false);
-        line_UNSTAGED_HILL_C->setEnabled(false);
-        line_UNSTAGED_MIN_BIND_T->setEnabled(false);
-        line_UNSTAGED_MAX_BIND_T->setEnabled(false);
+        line_BINDTIME_HILL_THRESHOLD->setEnabled(false);
+        line_BINDTIME_HILL_N->setEnabled(false);
+        line_BINDTIME_HILL_C->setEnabled(false);
+        line_BINDTIME_HILL_MIN->setEnabled(false);
+        line_BINDTIME_HILL_MAX->setEnabled(false);
         line_UNSTAGED_MIN_DIVIDE_T->setEnabled(false);
-        line_UNSTAGED_MAX_AVIDITY->setEnabled(false);
-        line_UNSTAGED_MAX_ANTIGEN->setEnabled(false);
+//        line_MAXIMUM_AVIDITY->setEnabled(true);
+//        line_MAXIMUM_ANTIGEN->setEnabled(true);
     } else {
         line_IL2_THRESHOLD->setEnabled(false);
         line_ACTIVATION_THRESHOLD->setEnabled(false);
-        line_UNSTAGED_BIND_THRESHOLD->setEnabled(true);
-        line_UNSTAGED_HILL_N->setEnabled(true);
-        line_UNSTAGED_HILL_C->setEnabled(true);
-        line_UNSTAGED_MIN_BIND_T->setEnabled(true);
-        line_UNSTAGED_MAX_BIND_T->setEnabled(true);
+        line_BINDTIME_HILL_THRESHOLD->setEnabled(true);
+        line_BINDTIME_HILL_N->setEnabled(true);
+        line_BINDTIME_HILL_C->setEnabled(true);
+        line_BINDTIME_HILL_MIN->setEnabled(true);
+        line_BINDTIME_HILL_MAX->setEnabled(true);
         line_UNSTAGED_MIN_DIVIDE_T->setEnabled(true);
-        line_UNSTAGED_MAX_AVIDITY->setEnabled(true);
-        line_UNSTAGED_MAX_ANTIGEN->setEnabled(true);
+//        line_MAXIMUM_AVIDITY->setEnabled(true);
+//        line_MAXIMUM_ANTIGEN->setEnabled(true);
     }
 }
 

@@ -544,12 +544,12 @@ module omp_CD69
 implicit none
 
 private
-real :: K1_S1P1 = 0.01
-real :: K2_S1P1 = 0.05
-real :: K1_CD69 = 0.04
-real :: K2_CD69 = 0.01
+real :: K1_S1PR1 != 0.01
+real :: K2_S1PR1 != 0.05
+real :: K1_CD69 != 0.04
+real :: K2_CD69 != 0.01
 
-public :: CD69_setparameters, S1P1_update
+public :: CD69_setparameters, S1PR1_update
 
 contains
 
@@ -558,8 +558,8 @@ contains
 subroutine CD69_setparameters(ks1,ks2,kc1,kc2)
 real :: ks1, ks2, kc1, kc2
 
-K1_S1P1 = ks1
-K2_S1P1 = ks2
+K1_S1PR1 = ks1
+K2_S1PR1 = ks2
 K1_CD69 = kc1
 K2_CD69 = kc2
 end subroutine
@@ -567,15 +567,15 @@ end subroutine
 !---------------------------------------------------------------------
 ! TCR stimulation (stimrate) drives CD69 expression (by K1_CD69, limited
 ! by (1-CD69) factor), which also decays (by K2_CD69).
-! The S1P1 (S1P receptor level) tends to grow (at K1_S1P1, limited by
-! (1-S1P1) factor), and is held down by CD69 (rate constant K2_S1P1).
-! When a T cell enters the LN from the blood the S1P1 level is low
+! The S1PR1 (S1P receptor level) tends to grow (at K1_S1PR1, limited by
+! (1-S1PR1) factor), and is held down by CD69 (rate constant K2_S1PR1).
+! When a T cell enters the LN from the blood the S1PR1 level is low
 ! (because of high S1P in the blood) and CD69 is low.
-! In the case of a non-cognate cell, CD69 stays low, but S1P1 rises over
+! In the case of a non-cognate cell, CD69 stays low, but S1PR1 rises over
 ! a period of hours, making the cell susceptible to chemotaxis towards
 ! the exits.
 ! In the case of cognate cells, TCR stimulation drives CD69 up, and
-! the high CD69 level keeps S1P1 expression low, making the cell
+! the high CD69 level keeps S1PR1 expression low, making the cell
 ! insensitive to the chemotactic influence of S1P, and thus reducing
 ! the probability of cell exit.
 ! NEEDED:
@@ -583,18 +583,18 @@ end subroutine
 ! number of divisions.  How does continuing TCR signalling combine
 ! with that?
 !---------------------------------------------------------------------
-subroutine S1P1_update(CD69,S1P1,stimrate,dt)
-real :: CD69, S1P1, stimrate, dt
+subroutine S1PR1_update(CD69,S1PR1,stimrate,dt)
+real :: CD69, S1PR1, stimrate, dt
 
 !zp(1) = KC1*(1-CD69)*TCR - KC2*CD69;
-!zp(2) = KS1*(1-S1P1) - KS2*CD69*S1P1;
+!zp(2) = KS1*(1-S1PR1) - KS2*CD69*S1PR1;
 
 CD69 = CD69 + (K1_CD69*(1-CD69)*stimrate - K2_CD69*CD69)*dt
 CD69 = max(CD69,0.0)
 CD69 = min(CD69,1.0)
-S1P1 = S1P1 + (K1_S1P1*(1-S1P1) - K2_S1P1*CD69*S1P1)*dt
-S1P1 = max(S1P1,0.0)
-S1P1 = min(S1P1,1.0)
+S1PR1 = S1PR1 + (K1_S1PR1*(1-S1PR1) - K2_S1PR1*CD69*S1PR1)*dt
+S1PR1 = max(S1PR1,0.0)
+S1PR1 = min(S1PR1,1.0)
 end subroutine
 
 !---------------------------------------------------------------------

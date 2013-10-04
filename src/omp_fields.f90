@@ -197,7 +197,7 @@ end subroutine
 ! In the latter case the concentration in some number of sites in the neighbourhood of the
 ! added/removed site is averaged in a way that ensures mass conservation.
 ! This all works, but there is some doubt as to whether there is such a thing as
-! S1P chemotaxis.  According to Irina Grigorova, S1P1 on a T cell enables it to cross
+! S1P chemotaxis.  According to Irina Grigorova, S1PR1 on a T cell enables it to cross
 ! the endothelial boundary into a sinus (high-S1P), but the cell must reach the sinus
 ! by random motion.
 !----------------------------------------------------------------------------------------

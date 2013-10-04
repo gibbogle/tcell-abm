@@ -116,7 +116,7 @@ public slots:
 private:
     void createActions();
 	void createLists();
-	void drawDistPlots();
+    void initDistPlots();
 	void setupParamList();
 	void loadParams();
 	void reloadParams();
@@ -150,7 +150,8 @@ private:
     double pnorm(double x1, double x2, double mu, double sig);
     double plognorm(double x1, double x2, double mu, double sig);
     void create_lognorm_dist(double p1, double p2,int n, double *x, double *prob);
-	int dist_limit(double *p, int n);
+    void create_hill_function(int hill_N, double hill_C, int n, double *x, double *hill);
+    int dist_limit(double *p, int n);
 	QString parse_rbutton(QString wtag, int *rbutton_case);
 
 	PARAM_SET get_param(int);
@@ -196,8 +197,8 @@ private:
 	QList<QWidget *> sliderParam;
 	QList<RESULT_SET *> result_list;
 
-	QwtPlot *distplot_list[5];
-	QwtPlotCurve *curve_list[5];
+    QwtPlot *distplot_list[7];
+    QwtPlotCurve *curve_list[7];
 
 	QList<QWidget *> widget_list;
 

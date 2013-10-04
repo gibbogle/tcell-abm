@@ -133,6 +133,25 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Threshold factor",
 "All threshold values are scaled by this factor."},
 
+{"STAGED_CONTACT_RULE", 1, 1, 3,
+"Contact rule",
+"Rule for contact durations: \n\
+    1 = fixed (specified median values) \n\
+    2 = linear variation with stimulation rate \n\
+    3 = Henrickson: lognormal distn., median depends linearly on total stimulation."},
+
+{"STIM_HILL_THRESHOLD", 0.01, 0, 1,
+"Stimulation rate threshold",
+"If (normalized avidity)*(normalized pMHC) < this threshold there is no TCR signal."},
+
+{"STIM_HILL_N", 1, 0, 0,
+"Stimulation rate Hill N",
+"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), parameters N and C."},
+
+{"STIM_HILL_C", 0.3, 0, 0,
+"Stimulation rate Hill C",
+"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), parameters N and C."},
+
 {"ACTIVATIONMODE_0", 1, 0, 1,
 "Staged activation mode",
 "The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
@@ -141,30 +160,30 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Unstaged activation mode",
 "The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
 
-{"UNSTAGED_BIND_THRESHOLD", 0.05, 0, 1,
+{"BINDTIME_HILL_THRESHOLD", 0.05, 0, 1,
 "Signalling threshold",
 "If normalized signal strength is below this threshold there will be no binding interaction,\n\
  effectively the cognate cell will behave like a non-cognate cell."},
 
-{"UNSTAGED_HILL_N", 10, 0, 0,
+{"BINDTIME_HILL_N", 3, 0, 0,
 "Bind duration Hill N",
 "The duration of the T cell-DC interaction is given by a scaled Hill function of normalized rate of TCR stimulation.\n\
  The normalized stimulation rate dS/dt is the product of normalized TCR avidity and normalized DC antigent density.\n\
  The Hill function is defined by two parameters, N and C: H(x) = (1 + C^N).x^N/(x^N + C^N) where x (=dS/dt) ranges 0-1.\n\
  The binding duration lies between the specified min and max values: Bind duration = Tmin + (Tmax - Tmin).H(x)"},
 
-{"UNSTAGED_HILL_C", 0.7, 0, 1,
+{"BINDTIME_HILL_C", 0.5, 0, 1,
 "Bind duration Hill C",
 "The duration of the T cell-DC interaction is given by a scaled Hill function of normalized rate of TCR stimulation.\n\
  The normalized stimulation rate dS/dt is the product of normalized TCR avidity and normalized DC antigent density.\n\
  The Hill function is defined by two parameters, N and C: H(x) = (1 + C^N).x^N/(x^N + C^N) where x (=dS/dt) ranges 0-1.\n\
  The binding duration lies between the specified min and max values: Bind duration = Tmin + (Tmax - Tmin).H(x)"},
 
-{"UNSTAGED_MIN_BIND_T", 10, 0, 0,
+{"BINDTIME_HILL_MIN", 10, 0, 0,
 "Minimum bind duration (mins)",
 "The binding duration lies between the specified min and max values.  The min value is the shortest kinapse interaction time."},
 
-{"UNSTAGED_MAX_BIND_T", 12, 0, 0,
+{"BINDTIME_HILL_MAX", 12, 0, 0,
 "Maximum bind duration (hrs)",
 "The binding duration lies between the specified min and max values.  The max value is the longest synapse interaction time."},
 
@@ -173,13 +192,29 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Regardless of the level of integrated signal, this is the minimum time that must have elapsed since the cell first encountered \n\
  antigen for the first division to be initiated.  (Note that the first division time applies at this point.)"},
 
-{"UNSTAGED_MAX_AVIDITY", 2, 0, 0,
+{"MAXIMUM_AVIDITY", 1, 0, 0,
 "Avidity upper limit",
 "T cell TCR avidity levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
-{"UNSTAGED_MAX_ANTIGEN", 200, 0, 0,
+{"MAXIMUM_ANTIGEN", 200, 0, 0,
 "DC antigen upper limit",
 "DC antigen density levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
+
+{"K1_CD69", 0.04, 0, 0,
+"CD69 K1 parameter",
+"K1 parameter of the CD69 ODE"},
+
+{"K2_CD69", 0.01, 0, 0,
+"CD69 K2 parameter",
+"K2 parameter of the CD69 ODE"},
+
+{"K1_S1PR1", 0.01, 0, 0,
+"S1PR1 K1 parameter",
+"K1 parameter of the S1PR1 ODE"},
+
+{"K2_S1PR1", 0.05, 0, 0,
+"S1PR1 K2 parameter",
+"K2 parameter of the S1PR1 ODE"},
 
 {"NX", 100, 100, 300,
 "Lattice size",

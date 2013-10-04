@@ -1,7 +1,12 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#define maxGraphs 9
+#define maxGraphs 9     // This is the number of graphs that can be displayed (tiled)
+
+#define PROFILE_CD69 0
+#define PROFILE_S1PR1 1
+#define PROFILE_STIM 2
+#define PROFILE_STIMRATE 3
 
 struct graph_set {
 	QString tag;
@@ -11,6 +16,7 @@ struct graph_set {
 	bool active;		// false for dummy graphs
 	double maxValue;
 	double scaling;		// multiplying factor for scaling of summary_data
+    double yscale;      // if != 0, this is the yscale for the plot
     bool ts;
 };
 
@@ -34,10 +40,13 @@ public:
 	QString get_yAxisTitle(int);
 	double get_maxValue(int);
 	double get_scaling(int);
-	bool isActive(int);
+    double get_yscale(int);
+    bool isActive(int);
     bool isTimeseries(int);
+    bool isProfile(int);
     void set_maxValue(int, double);
-    void makeGraphList(int);
+//    void makeGraphList(int);
+    void makeGraphList();
 
 };
 

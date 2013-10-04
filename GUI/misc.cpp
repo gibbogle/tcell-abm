@@ -135,7 +135,7 @@ void ExecThread::run()
     int res = 0;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
-	int len_infile, len_outfile;
+    int len_infile, len_outfile, k;
 
     LOG_MSG("Invoking DLL...");
     infile_path = inputFile;
@@ -158,7 +158,12 @@ void ExecThread::run()
 //	LOG_MSG(msg);
 	mutex1.lock();
 	get_summary(summaryData);
-	mutex1.unlock();
+//    LOG_QMSG("did get_summary");
+    k = PROFILE_CD69;
+    get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_S1PR1;
+    get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+    mutex1.unlock();
 	emit summary();		// Emit signal to update summary plots
 	for (int i=1; i<= nsteps; i++) {
 		bool updated = false;
@@ -176,7 +181,15 @@ void ExecThread::run()
 		if (i%240 == 0) {
 			mutex1.lock();
 			get_summary(summaryData);
-			mutex1.unlock();
+            k = PROFILE_CD69;
+            get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
+            k = PROFILE_S1PR1;
+            get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+            k = PROFILE_STIM;
+            get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
+            k = PROFILE_STIMRATE;
+            get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
+            mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals
 		}
 		if (stopped) break;
