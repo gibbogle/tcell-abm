@@ -513,7 +513,7 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, computedoutflow, useCCL3_0, useCCL3_1, usehev, mode_0, mode_1
+integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, mode_0, mode_1
 integer :: activationmode
 character(64) :: specialfile
 character(4) :: logstr
@@ -588,6 +588,7 @@ read(nfcell,*) K1_CD69
 read(nfcell,*) K2_CD69
 read(nfcell,*) K1_S1PR1
 read(nfcell,*) K2_S1PR1
+read(nfcell,*) S1PR1_EXIT_THRESHOLD
 
 !read(nfcell,*) CD25_DIVISION_THRESHOLD	    ! CD25 store level needed for division of activated cell (optionA = 1)
 !read(nfcell,*) CD25_SURVIVAL_THRESHOLD		! CD25 store level needed for survival of activated cell (optionC = 1)
@@ -620,7 +621,7 @@ read(nfcell,*) usetraffic					! use T cell trafficking
 read(nfcell,*) usehev					    ! use HEV portals
 read(nfcell,*) useexitchemo                 ! use exit chemotaxis
 read(nfcell,*) useDCchemo					! use DC chemotaxis
-read(nfcell,*) computedoutflow				! compute outflow (with inflow)
+read(nfcell,*) cognateonly				    ! simulate only cognate cells
 read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours -> inflow rate
 read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
 ! Vascularity parameters
@@ -712,14 +713,8 @@ else
 !	chemo_K_DC = 0
 endif
 
-if (computedoutflow == 1) then
-	computed_outflow = .true.
-else
-	computed_outflow = .false.
-endif
-if (track_DCvisits) then
-	TC_COGNATE_FRACTION = 0
-endif
+FAST = (cognateonly == 1)
+computed_outflow = .false.
 BLOB_PORTALS = .false.
 SURFACE_PORTALS = .false.
 exit_region = EXIT_SURFACE_PORTALS
@@ -2189,7 +2184,7 @@ end subroutine
 subroutine PlaceCells(ok)
 logical :: ok
 integer :: id, cogid, x, y, z, site(3), ctype
-integer :: idc, kdc, k, x2, y2, z2, gen, tag, stage, region, ncogDC
+integer :: idc, kdc, k, x2, y2, z2, gen, tag, stage, region, ncogDC, ncog
 integer :: xdc, ydc, zdc, xmin, xmax, ymin, ymax, zmin, zmax, nzlim, nassigned, NDCrequired
 integer :: cnt(2)
 real(DP) :: R
@@ -2198,7 +2193,7 @@ integer, allocatable :: permc(:)
 logical :: added, done, cognate
 integer :: kpar = 0
 
-!write(logmsg,*) 'PlaceCells: Radius: ',Radius
+write(logmsg,*) 'PlaceCells: Radius: ',Radius
 !call logger(logmsg)
 ok = .false.
 
@@ -2387,6 +2382,46 @@ if (USE_DC_COGNATE) then
 	write(logmsg,*) 'Number of DCs bearing cognate antigen: ',ncogDC
 	call logger(logmsg)
 endif
+istep = 0
+ntagged  = 0
+ntagged_left = 0
+id = 0
+cogid = 0
+NTcells = 0
+if (FAST) then
+    ! create initial population of cognate cells distributed randomly in the blob
+    NTcells = nlist
+!    nlist = 0
+    k = 0
+    ncog = nlist*(TC_COGNATE_FRACTION(CD4)*CTYPE_FRACTION(CD4) + TC_COGNATE_FRACTION(CD8)*CTYPE_FRACTION(CD8))
+    do
+        R = par_uni(kpar)
+        x = 1 + R*NX
+        R = par_uni(kpar)
+        y = 1 + R*NY
+        R = par_uni(kpar)
+        z = 1 + R*NZ
+	    if (occupancy(x,y,z)%indx(1) /= 0) cycle ! OUTSIDE_TAG or DC
+        id = id+1
+        lastID = id
+        site = (/x,y,z/)
+        gen = 1
+        stage = NAIVE
+        region = LYMPHNODE
+        ctype = select_CD4_CD8()
+        cnt(ctype) = cnt(ctype) + 1
+        cognate = .true.
+        ncogseed(ctype) = ncogseed(ctype) + 1
+        tag = 0
+        k = id
+        call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,ok)
+        if (.not.ok) return
+        occupancy(x,y,z)%indx(1) = k
+        if (id == ncog) exit
+    enddo
+    nlist = k
+else
+
 if (IN_VITRO) then
 	nzlim = 1
 	n2Dsites = n2Dsites - NDC*NDCsites
@@ -2398,11 +2433,6 @@ else
 	enddo
 	call permute(permc,nlist,kpar)
 endif
-istep = 0
-ntagged  = 0
-ntagged_left = 0
-id = 0
-cogid = 0
 done = .false.
 do while (.not.done)
 do x = 1,NX
@@ -2475,19 +2505,24 @@ enddo
 if (.not.IN_VITRO) then
 	deallocate(permc)
 endif
+nlist = id	! this is already the case for 3D blob
+NTcells = nlist
+
+endif
+
 call make_cognate_list(ok)
 if (.not.ok) return
 
 !write(*,*) 'nlist,id,RESIDENCE_TIME: ',nlist,id,RESIDENCE_TIME
 write(nfout,*) 'nlist,RESIDENCE_TIME: ',nlist,RESIDENCE_TIME
-nlist = id	! this is already the case for 3D blob
-NTcells = nlist
 Nsites = NTcells + NDC*NDCsites	! not relevant for IN_VITRO
 NTcells0 = NTcells
 Radius0 = Radius
 scale_factor = real(NTC_LN)*NLN_RESPONSE/NTcells0
 !write(*,*) 'scale_factor: ',scale_factor
 
+write(logmsg,*) 'NTcells, nlist, NDC, Nsites: ',NTcells, nlist, NDC, Nsites
+call logger(logmsg)
 if (use_DC .and. .not.IN_VITRO) call initial_binding
 end subroutine
 

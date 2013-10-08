@@ -1465,7 +1465,8 @@ end subroutine
 ! Possible exit rules:
 ! (1) gen >= NGEN_EXIT
 ! (2) gen > 1 and act < EXIT_THRESHOLD
-! (3) Allow exit to any cognate cell that gets there (was gen > 1 and CD69 < CD69_threshold)
+! (3) S1PR1 > S1PR1_EXIT_THRESHOLD
+! (4) Allow exit to any cognate cell that gets there 
 !-----------------------------------------------------------------------------------------
 logical function exitOK(p,ctype)
 type(cog_type), pointer :: p
@@ -1490,15 +1491,13 @@ elseif (exit_rule == 2) then
         endif
     endif
 elseif (exit_rule == 3) then
-!    if (p%CD69 == 0) then
-!        exitOK = .true.
-!    else
-!    if (p%CD69 < CD69_threshold) then
-!        R = par_uni(kpar)
-!        if (R < 1 - p%CD69/CD69_threshold) then
-            exitOK = .true.
-!        endif
-!    endif
+    if (p%S1PR1 > S1PR1_EXIT_THRESHOLD) then
+        exitOK = .true.
+    else
+        exitOK = .false.
+    endif
+elseif (exit_rule == 4) then
+    exitOK = .true.
 endif
 end function
 
@@ -1552,7 +1551,8 @@ subroutine portal_traffic(ok)
 logical :: ok
 integer :: iexit, esite(3), esite0(3),site(3), i, j, k, slot, indx(2), kcell, ne, ipermex, ihr, nv, ihev, it
 integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs, tag, site0(3)
-real(DP) :: R, df
+integer :: ncogin, noncogin
+real(DP) :: R, df, cogin, p_CD4
 logical :: left, cognate, isbound, hit
 logical :: central, egress_possible, use_full_neighbourhood, tagcell
 integer, allocatable :: permex(:)
@@ -1568,6 +1568,20 @@ df = InflowTotal - node_inflow
 R = par_uni(kpar)
 if (R < df) then
 	node_inflow = node_inflow + 1
+endif
+
+ncogin = 0
+noncogin = 0
+if (FAST) then     !inflow of cognate cells is accounted for explicitly, noncognate inflow just increases NTcells
+    cogin = InflowTotal*(CTYPE_FRACTION(CD4)*TC_COGNATE_FRACTION(CD4) + CTYPE_FRACTION(CD8)*TC_COGNATE_FRACTION(CD8))
+    ncogin = cogin
+    df = cogin - ncogin
+    R = par_uni(kpar)
+    if (R < df) then
+	    ncogin = ncogin + 1
+    endif
+    noncogin = node_inflow - ncogin
+    node_inflow = ncogin
 endif
 
 if (L_selectin) then
@@ -1680,7 +1694,23 @@ do while (k < node_inflow)
 			else
 				tag = 0
 			endif
-			call select_cell_type(ctype,cognate,kpar)
+			if (FAST) then
+			    cognate = .true.
+			    p_CD4 = CTYPE_FRACTION(CD4)*TC_COGNATE_FRACTION(CD4)/(CTYPE_FRACTION(CD4)*TC_COGNATE_FRACTION(CD4) + CTYPE_FRACTION(CD8)*TC_COGNATE_FRACTION(CD8))
+                if (par_uni(kpar) < p_CD4) then
+                    ctype = CD4
+                else
+                    ctype = CD8
+                endif
+!			    ctype = select_CD4_CD8()
+            else
+    			call select_cell_type(ctype,cognate,kpar)
+    			if (cognate) then
+    			    ncogin = ncogin + 1
+    			else
+    			    noncogin = noncogin + 1
+    			endif
+            endif
 			if (cognate) then
 				ncogseed(ctype) = ncogseed(ctype) + 1
 			endif
@@ -1842,6 +1872,15 @@ if (ne == node_outflow .and. computed_outflow) exit
 enddo
 deallocate(permex)
 
+!write(logmsg,*) 'portal_traffic: ',InflowTotal,noncogin,ncogin,node_outflow 
+!call logger(logmsg)
+
+if (FAST) then
+    NTcells = NTcells + noncogin - node_outflow
+    Radius = (NTcells*3/(4*PI))**0.33333
+    return
+endif
+   
 net_inflow = node_inflow - ne
 nadd_sites = nadd_sites + net_inflow
 total_in = total_in + node_inflow
@@ -2074,7 +2113,14 @@ integer :: kpar = 0
 logical :: blob_changed
 
 ok = .true.
-!write(*,*) 'balancer: ',istep
+!dbug = .false.
+if (FAST) then
+    nadd_sites = NTcells + NDCalive*NDCsites - Nsites
+!    write(logmsg,'(a,5i10)') 'balancer: ', &
+!		NTcells,NDCalive,NTcells+NDCalive*NDCsites,Nsites,nadd_sites
+!    call logger(logmsg)
+endif
+
 if (IN_VITRO) then
 	if (ndeadDC > 0) then
 		do k = 1,ndeadDC
@@ -2091,6 +2137,7 @@ nadd_limit = 0.01*NTcells0
 nadd_total = nadd_sites
 
 if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTERVAL)) then
+!    write(*,*) 'balancer: ',istep
     if (dbug) write(nflog,*) 'balancer: nadd_total: ',nadd_total,nadd_limit,lastbalancetime,BALANCER_INTERVAL
     if (dbug) write(nflog,*) 'call squeezer'
 	call squeezer(.false.)
@@ -2116,17 +2163,20 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
 			if (dbug) write(nflog,*) 'balancer: added DCs: NDCtotal: ',NDCtotal
 		endif
     endif
+    if (FAST) then
+        nadd_total = NTcells + (NDCalive+naddDC)*NDCsites - Nsites
+    endif
     if (dbug) write(nflog,*) 'nadd_total: ',nadd_total
     if (nadd_total > 0) then
         n = nadd_total
-	    if (dbug) write(nflog,*) 'call add_sites'
+	    if (dbug) write(nflog,*) 'call add_sites: ',n
         call addSites(n,ok)
         if (.not.ok) return
 	    if (dbug) write(nflog,*) 'did add_sites'
         blob_changed = .true.
     elseif (nadd_total < 0) then
         n = -nadd_total
-	    if (dbug) write(nflog,*) 'call removeSites'
+	    if (dbug) write(nflog,*) 'call removeSites: ',n
         call removeSites(n,ok)
         if (.not.ok) return
 	    if (dbug) write(nflog,*) 'did removeSites'
@@ -2142,6 +2192,7 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
 			NTcells,NDCalive,Nsites
 		call logger(logmsg)
         ok = .false.
+    stop
         return
     endif
 !    if (DC_motion) then
@@ -2156,9 +2207,9 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     call growDC
 ! The cognate list is maintained at the time that a cell arrives or leaves
     if (NTcells+NDCalive*NDCsites /= Nsites) then
-	    write(logmsg,'(a,3i10)') 'Error: balancer: cells /= sites: ', &
-			NTcells,NDCalive,Nsites
-	    call logger(logmsg)
+!	    write(logmsg,'(a,4i10)') 'Error: balancer: cells /= sites: ', &
+!			NTcells,NDCalive,NTcells+NDCalive*NDCsites,Nsites
+!	    call logger(logmsg)
 	    ok = .false.
 	    return
 	endif
@@ -2417,7 +2468,7 @@ logical :: moved
 integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
-!write(logmsg,'(a,i6)') 'removeSites: ',n
+!write(logmag,'(a,i6)') 'removeSites: ',n
 !call logger(logmsg)
 ok = .true.
 r2 = Radius*Radius
@@ -2489,6 +2540,13 @@ do i = nb,1,-1
         ok = .false.
         return
     endif
+    if (indx(1) == 0 .and. indx(2) ==  0) then
+        occupancy(site0(1),site0(2),site0(3))%indx = OUTSIDE_TAG
+        occupancy(site0(1),site0(2),site0(3))%DC = 0
+        Nsites = Nsites - 1
+        count = count + 1
+        cycle
+    endif
     moved = .false.
     do k = 1,2
         kcell = indx(k)
@@ -2502,8 +2560,8 @@ do i = nb,1,-1
             occupancy(site0(1),site0(2),site0(3))%DC = 0
             if (occupancy(site0(1),site0(2),site0(3))%exitnum < 0) then
             ! This is an exit site that must be moved
-!				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
-!				call logger(logmsg)
+				write(logmsg,*) 'removeSites:  need to move exit: ',occupancy(site0(1),site0(2),site0(3))%exitnum,site0
+				call logger(logmsg)
 !                call removeExitPortal(site0)	! Let the balancer add an exit portal back again (if needed) 
                 call moveExitPortalInwards(site0)
 !                write(logmsg,'(a,4i6)') 'removeSites: did moveExitPortalInwards: ',site0
@@ -3890,6 +3948,9 @@ navestim = 100*totstim/(STIMULATION_LIMIT*(ncog(1) + ncog(2)))
 navestimrate = 100*totstimrate/(ncog(1) + ncog(2))
 !write(logmsg,'(a,e12.3,i6,f6.0,i4)') 'stim: ',totstim,(ncog(1) + ncog(2)),STIMULATION_LIMIT,navestim
 !call logger(logmsg)
+if (FAST) then
+    ntot = NTcells
+endif
 
 summaryData(1:15) = (/ int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,ndead, &
 	nbnd,int(InflowTotal),Nexits, teffgen, navestim, navestimrate /)

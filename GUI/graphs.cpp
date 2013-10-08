@@ -24,11 +24,6 @@ Graphs::Graphs()
 "No. of cells",
 6, true, 0, 1, 0, true},
 
-{"ncog_PER",
-"Activated T Cells in Periphery",
-"No. of cells",
-7, true, 0, 1, 0, true},
-
 {"ncogseed",
 "Seed Cognate Cells",
 "No. of cells",
@@ -53,11 +48,6 @@ Graphs::Graphs()
 "Total DC Antigen Activity",
 "",
 3, true, 0, .01, 0, true},
-
-{"nexits",
-"Exit Portals",
-"No. of portals",
-11, true, 0, 1, 0, true},
 
 {"stim",
 "Average Stimulation",
@@ -87,7 +77,17 @@ PROFILE_STIM, true, 0, 1, 1.0, false},
 {"Stimulation Rate",
 "Stimulation Rate Profile",
 "Fraction",
-PROFILE_STIMRATE, true, 0, 1, 1.0, false}
+PROFILE_STIMRATE, true, 0, 1, 1.0, false},
+
+{"ncog_PER",
+"Activated T Cells in Periphery",
+"No. of cells",
+7, false, 0, 1, 0, true},
+
+{"nexits",
+"Exit Portals",
+"No. of portals",
+11, false, 0, 1, 0, true}
 
 };
     // Note: tsGraphs[] is constant = tsGraphSet[]

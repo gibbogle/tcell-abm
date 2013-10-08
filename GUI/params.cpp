@@ -4,7 +4,7 @@
 Params::Params()
 {
 	PARAM_SET params[] = {
-{"TC_AVIDITY_MEDIAN", 1.0, 0, 0,
+{"TC_AVIDITY_MEDIAN", 1.0, 0.1, 10.0,
 "TCR avidity median parameter",
 "TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
@@ -37,7 +37,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Integrated TCR stimulation decays with a specified halflife. \n\
 [hours]"},
 
-{"DIVIDE1_MEDIAN", 6.0, 0, 0,
+{"DIVIDE1_MEDIAN", 6.0, 1, 10,
 "1st division time median parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -46,7 +46,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "1st division time shape parameter",
 "The time taken for the first T cell division, after full activation, has a lognormal distribution, described by the median and shape parameters."},
 
-{"DIVIDE2_MEDIAN", 5.0, 0, 0,
+{"DIVIDE2_MEDIAN", 5.0, 1, 10,
 "Later division time median parameter",
 "The time taken for later T cell divisions has a lognormal distribution, described by the median and shape parameters.\n\
 [hours]"},
@@ -65,7 +65,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell motility is described by speed and persistence parameters, each in the range 0 - 1. \n\
  MOTILITY_RHO determines the extent to which motion is in the same direction from one time step to the next.  Range: 0.5 - 0.9"},
 
-{"DC_ANTIGEN_MEDIAN", 150, 0, 0,
+{"DC_ANTIGEN_MEDIAN", 150, 1, 1000,
 "DC antigen density median parameter",
 "Antigen density is the number of pMHC per DC.  It has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
@@ -74,7 +74,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DC antigen density shape parameter",
 "Antigen density has a lognormal distribution, described by the median and shape parameters."},
 
-{"DC_LIFETIME_MEDIAN", 3.0, 0, 0,
+{"DC_LIFETIME_MEDIAN", 3.0, 0.1, 100,
 "DC lifetime median parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters.\n\
 [days]"},
@@ -216,6 +216,10 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "S1PR1 K2 parameter",
 "K2 parameter of the S1PR1 ODE"},
 
+{"S1PR1_EXIT_THRESHOLD", 0.5, 0, 0,
+"S1PR1 exit threshold",
+"S1PR1 level required for egress permission with EXIT_RULE 3"},
+
 {"NX", 100, 100, 300,
 "Lattice size",
 "Dimension of the lattice (number of sites in X, Y and Z directions).  Typically 4*BLOB_RADIUS is OK."},
@@ -280,9 +284,9 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell DC chemotaxis?",
 "T cell chemotaxis towards DCs is simulated"},
 
-{"COMPUTED_OUTFLOW", 0, 0, 1,
-"Compute T cell outflow limit?",
-"The upper bound on T cell outflow is computed together with inflow.  The alternative is to permit (probabilistic) egress of any cell at a portal."},
+{"COGNATE_ONLY", 0, 0, 1,
+"Simulate only cognate cells?",
+"For fast simulation, no non-cognate cells are simulated."},
 
 {"RESIDENCE_TIME_CD4", 12.0, 0, 0,
 "CD4 T cell residence time",

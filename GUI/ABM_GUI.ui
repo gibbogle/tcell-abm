@@ -479,9 +479,9 @@ padding: 8px
              <string>T cell trafficking? </string>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_COMPUTED_OUTFLOW">
+           <widget class="QCheckBox" name="cbox_COGNATE_ONLY">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="geometry">
              <rect>
@@ -492,7 +492,7 @@ padding: 8px
              </rect>
             </property>
             <property name="text">
-             <string>Compute T cell outflow?</string>
+             <string>Simulate only cognate cells?</string>
             </property>
            </widget>
            <widget class="QCheckBox" name="cbox_USE_HEV_PORTALS">
@@ -2133,6 +2133,36 @@ p, li { white-space: pre-wrap; }
              </item>
              <item row="3" column="1">
               <spacer name="horizontalSpacer_27">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="label_S1PR1_EXIT_THRESHOLD">
+               <property name="text">
+                <string>label_S1PR1_EXIT_THRESHOLD</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <widget class="QLineEdit" name="line_S1PR1_EXIT_THRESHOLD">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <spacer name="horizontalSpacer_52">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>

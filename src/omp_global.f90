@@ -208,7 +208,7 @@ integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
 logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
-integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1PR1
+integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1PR1_EXIT_THRESHOLD, 4 = all OK
 
 ! Old chemotaxis method, not used now
 real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
@@ -586,7 +586,7 @@ logical :: use_HEV_portals = .true.
 logical :: use_traffic = .false.
 logical :: use_exit_chemotaxis
 logical :: use_DC_chemotaxis
-logical :: computed_outflow
+logical :: FAST
 logical :: use_single_DC = .false.		! To evaluate chemokine field from a single DC
 
 real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> inflow rate
@@ -640,6 +640,8 @@ real :: K1_S1PR1 != 0.005					! S1PR1/CD69 system parameters
 real :: K2_S1PR1 != 0.05
 real :: K1_CD69 != 0.04
 real :: K2_CD69 != 0.01
+real :: S1PR1_EXIT_THRESHOLD
+
 ! Parameters added to control HEV and DC placement (for DCvisits simulations)
 real :: R_HEV_min
 real :: R_HEV_max
@@ -731,6 +733,7 @@ real :: excess_factor, lastbalancetime
 real :: scale_factor	! scaling from model to one (or more) whole LNs
 real :: Fcognate		! fraction of T cells in circulation that are cognate
 logical :: use_DC, use_cognate
+logical :: computed_outflow
 
 ! Result data
 type(result_type) :: localres, totalres
@@ -837,6 +840,7 @@ real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the t
 logical, parameter :: SIMULATE_PERIPHERY = .false.
 integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
 real, parameter :: PERI_PROBFACTOR = 10
+
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
@@ -1137,6 +1141,7 @@ do kcell = 1,nlist
     tcell = cellist(kcell)
     cognate = (associated(tcell%cptr))
     site = tcell%site
+!    write(*,*) 'initial_binding: ',kcell,nlist,' ',cognate,' ',site
     dc = occupancy(site(1),site(2),site(3))%DC
     if (dc(0) > 0) then
         do k = 1,dc(0)
@@ -1425,6 +1430,9 @@ end function
 
 !-----------------------------------------------------------------------------------------
 ! The type (cognate or non-cognate) of a T cell can be random or strictly determined.
+! Is TC_COGNATE_FRACTION(CD4) the fraction of all T cells that are cognate CD4 cells,
+! or is it the fraction of CD4 cells that are cognate?
+! I think it should be the latter.
 !-----------------------------------------------------------------------------------------
 subroutine select_cell_type(ctype,cognate,kpar)
 integer :: ctype, kpar
