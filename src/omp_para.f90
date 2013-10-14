@@ -605,8 +605,6 @@ logical :: ok
 !    allocate(pathlen(ntmax))
 !    allocate(totdisp(ntmax))
 
-write(*,*) 'rho,beta: ',rho,beta
-
 ntime2 = time2
 nvar0 = time1
 nvar = time2    ! number of minutes to simulate
@@ -912,6 +910,7 @@ real :: tnow, bindtime, pMHC, stimrate, t_travel
 logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
+real, parameter :: fast_bind_prob = 0.25	! TESTING THIS -------------------------------
 integer :: kpar = 0
 
 nu = 0
@@ -1008,6 +1007,9 @@ do kcell = 1,nlist
                 endif
                 bound = bindDC(idc,kpar)    ! This just means the all-cell limit of the DC has not been reached
                 cell%signalling = .false.
+                if (FAST .and. (par_uni(kpar) > fast_bind_prob)) then
+					bound = .false.
+				endif
                 if (bound .and. cognate) then
                     cell%signalling = .true.
                     if (activation_mode == UNSTAGED_MODE) then
@@ -1463,10 +1465,10 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Determine whether a cognate T cell is licensed to exit the DCU.
 ! Possible exit rules:
-! (1) gen >= NGEN_EXIT
-! (2) gen > 1 and act < EXIT_THRESHOLD
-! (3) S1PR1 > S1PR1_EXIT_THRESHOLD
-! (4) Allow exit to any cognate cell that gets there 
+! (0) gen >= NGEN_EXIT
+! (1) gen > 1 and act < EXIT_THRESHOLD
+! (2) S1PR1 > S1PR1_EXIT_THRESHOLD
+! (3) Allow exit to any cognate cell that gets there 
 !-----------------------------------------------------------------------------------------
 logical function exitOK(p,ctype)
 type(cog_type), pointer :: p
@@ -1478,11 +1480,11 @@ real :: act
 gen = get_generation(p)
 
 exitOK = .false.
-if (exit_rule == 1) then
+if (exit_rule == EXIT_GEN_THRESHOLD) then
     if (gen >= NGEN_EXIT) then
         exitOK = .true.
     endif
-elseif (exit_rule == 2) then
+elseif (exit_rule == EXIT_STIM_THRESHOLD) then
     if (gen > 1) then
         act = get_activation(p)
 !        cd4_8 = ctype - 1
@@ -1490,13 +1492,13 @@ elseif (exit_rule == 2) then
             exitOK = .true.
         endif
     endif
-elseif (exit_rule == 3) then
+elseif (exit_rule == EXIT_S1PR1_THRESHOLD) then
     if (p%S1PR1 > S1PR1_EXIT_THRESHOLD) then
         exitOK = .true.
     else
         exitOK = .false.
     endif
-elseif (exit_rule == 4) then
+elseif (exit_rule == EXIT_UNLIMITED) then
     exitOK = .true.
 endif
 end function
@@ -1951,12 +1953,13 @@ else
     endif
 endif
 if (cognate) then
-	if (stage > CLUSTERS) then
-		activated = .true.
-	else
-		activated = .false.
-	endif
-    if (.not.evaluate_residence_time .and. activated) then
+!	if (stage > CLUSTERS) then
+!		activated = .true.
+!	else
+!		activated = .false.
+!	endif
+!    if (.not.evaluate_residence_time .and. activated) then
+    if (.not.evaluate_residence_time) then
 		call efferent(p,ctype)
 	endif
 !	if (activated) then
@@ -1965,7 +1968,8 @@ if (cognate) then
 !	else 
 !		call logger("non-activated cognate cell left") 
 !    endif
-	if (SIMULATE_PERIPHERY .and. activated) then 
+!	if (SIMULATE_PERIPHERY .and. activated) then 
+	if (SIMULATE_PERIPHERY) then 
 		region = PERIPHERY
 		call set_stage_region(p,stage,region)
 	else
@@ -2642,10 +2646,15 @@ end subroutine
 !--------------------------------------------------------------------------------
 subroutine efferent(p,ctype)
 type (cog_type), pointer :: p
-integer :: ctype, gen, i
+integer :: ctype, gen, stage, region, i
 real :: avid
 
-gen = get_generation(p)
+call get_stage(p,stage,region)
+if (stage < CLUSTERS) then
+	gen = 0
+else
+	gen = get_generation(p)
+endif
 if (ctype > NCTYPES) then
     write(*,*) 'efferent: bad cell type:', ctype
     stop
@@ -2658,6 +2667,7 @@ totalres%dN_EffCogTC(ctype)  = totalres%dN_EffCogTC(ctype) + 1
 totalres%dN_EffCogTCGen(gen) = totalres%dN_EffCogTCGen(gen) + 1
 totalres%N_EffCogTC(ctype)   = totalres%N_EffCogTC(ctype) + 1
 totalres%N_EffCogTCGen(gen)  = totalres%N_EffCogTCGen(gen) + 1
+!write(*,'(a,2i3,a,2i6)') 'Cognate egress: ctype, gen :',ctype,gen,' totals: ',totalres%N_EffCogTCGen(0),totalres%N_EffCogTCGen(1)
 
 if (log_results) then
     ! Record avidity statistics for exiting cells
@@ -3377,9 +3387,17 @@ write(nfout,'(a)') '1 = HI_CHEMO, 2 = LO_CHEMO'
 do iDCchemo = 1,2
 	if (iDCchemo == 1) then
 		write(nfout,'(a)') 'With cognate (attracting) DC'
+		if (DC_COGNATE_FRACTION == 0) then
+			write(nfout,*) 'No cognate DCs'
+			cycle
+		endif
 	else
 		if (.not.USE_DC_COGNATE) exit
 		write(nfout,'(a)') 'With non-cognate (non-attracting) DC'
+		if (DC_COGNATE_FRACTION == 1) then
+			write(nfout,*) 'No non-cognate DCs'
+			cycle
+		endif
 	endif
 	write(nfout,'(a,2i8)') 'Number: ',firstDC_n(:,iDCchemo)
 	write(nfout,'(a,2f6.1)') 'Mean time: ',firstDC_tot(1,iDCchemo)/firstDC_n(1,iDCchemo), &
@@ -3779,11 +3797,11 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog(2), noncog, ntot, nbnd, stage, region, i, iseq, error
-integer :: gen, ngens, neffgens, teffgen, dNdead, Ndead, nact, nseed, navestim, navestimrate
-real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim, totstimrate
+integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), error
+integer :: gen, ngens, neffgens, teffgen, teffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCtime, naveDCtime, nDCSOI
+real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim(2), totstimrate(2), totDCtime, t
 type (cog_type), pointer :: p
-integer :: nst(FINISHED)
+integer :: nst(FINISHED), nearDC
 integer, allocatable :: gendist(:)
 integer, allocatable :: div_gendist(:)  ! cells that are capable of dividing
 character*(6) :: numstr
@@ -3799,15 +3817,18 @@ allocate(div_gendist(TC_MAX_GEN))
 tnow = istep*DELTA_T
 noncog = 0
 ncog = 0
-ntot = 0
+ntot_LN = 0
 nbnd = 0
 nst = 0
 stim = 0
 totstim = 0
 totstimrate = 0
+nDCtime = 0
+totDCtime = 0
 IL2sig = 0
 gendist = 0
 div_gendist = 0
+nDCSOI = 0
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
     p => cellist(kcell)%cptr
@@ -3820,19 +3841,21 @@ do kcell = 1,nlist
 		region = LYMPHNODE
 	endif
 	if (region == LYMPHNODE) then
-	    ntot = ntot + 1
+	    ntot_LN = ntot_LN + 1
 	endif
     ctype = cellist(kcell)%ctype
 !    stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
-        ncog(region) = ncog(region) + 1
+		if (region == LYMPHNODE .or. stage > CLUSTERS) then	! count all cognate cells in the LN, but only activated cells in the periphery
+			ncog(region) = ncog(region) + 1
+		endif
 		if (cellist(kcell)%DCbound(1) > 0 .or. cellist(kcell)%DCbound(2) > 0) then
 			nbnd = nbnd + 1
 		endif
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
-        totstim = totstim + p%stimulation
-        totstimrate = totstimrate + p%stimrate
+        totstim(region) = totstim(region) + p%stimulation
+        totstimrate(region) = totstimrate(region) + p%stimrate
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
         gen = get_generation(p)
         if (gen < 0 .or. gen > TC_MAX_GEN) then
@@ -3847,12 +3870,20 @@ do kcell = 1,nlist
 			div_gendist(gen) = div_gendist(gen) + 1
         endif
         max_TCR = max(p%stimulation,max_TCR)
+		if (p%firstDCtime > 0) then
+			nDCtime = nDCtime + 1
+			t = p%firstDCtime - cellist(kcell)%entrytime
+			totDCtime = totDCtime + t
+		endif
     elseif (stype == NONCOG_TYPE_TAG) then
         noncog = noncog + 1
     else
         write(*,*) 'ERROR: show_snapshot: bad stype: ',ctype,stype
         stop
     endif
+    site = cellist(kcell)%site
+    neardc = occupancy(site(1),site(2),site(3))%DC(0)      ! list of DC near this site
+	nDCSOI = nDCSOI + nearDC
 enddo
 do i = 1,FINISHED
     if (nst(i) > 0) then
@@ -3869,6 +3900,7 @@ do i = TC_MAX_GEN,1,-1
 enddo
 ngens = i
 
+teffgen0 = totalres%N_EffCogTCGen(0)
 teffgen = sum(totalres%N_EffCogTCGen(1:TC_MAX_GEN))
 do i = TC_MAX_GEN,1,-1
     if (totalres%N_EffCogTCGen(i) /= 0) exit
@@ -3887,7 +3919,7 @@ else
 endif
 if (.not.use_TCP .and. use_cognate) then
 write(*,'(a)') '----------------------------------------------------------------------'
-write(*,'(a,i6,5i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
+write(*,'(a,i6,5i8,a,2i8)') 'snapshot: ',istep,ntot_LN,ncogseed,ncog,'     dead: ',dNdead,Ndead
 write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
 !write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
@@ -3941,20 +3973,33 @@ totalres%dN_Dead = 0
 !    dcbind = 0
 !endif
 nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
-!write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot,nseed,ncog,Ndead, &
+!write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot_LN,nseed,ncog,Ndead, &
 !	nbnd,int(InflowTotal),Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
 nact = 100*act
-navestim = 100*totstim/(STIMULATION_LIMIT*(ncog(1) + ncog(2)))
-navestimrate = 100*totstimrate/(ncog(1) + ncog(2))
+do i = 1,2
+	if (ncog(i) > 0) then
+		navestim(i) = 100*totstim(i)/(STIMULATION_LIMIT*ncog(i))
+		navestimrate(i) = 100*totstimrate(i)/ncog(i)
+	else
+		navestim(i) = 0
+		navestimrate(i) = 0
+	endif
+enddo
+if (nDCtime > 0) then
+	naveDCtime = (100*totDCtime)/nDCtime
+else
+	naveDCtime = 0
+endif
+write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
 !write(logmsg,'(a,e12.3,i6,f6.0,i4)') 'stim: ',totstim,(ncog(1) + ncog(2)),STIMULATION_LIMIT,navestim
 !call logger(logmsg)
 if (FAST) then
-    ntot = NTcells
+    ntot_LN = NTcells
 endif
+nDCSOI = (10*nDCSOI)/NDCalive
 
-summaryData(1:15) = (/ int(tnow/60),istep,NDCalive,nact,ntot,nseed,ncog,ndead, &
-	nbnd,int(InflowTotal),Nexits, teffgen, navestim, navestimrate /)
-!write(nflog,*) 'ndivisions,teffgen,ncog = ',ndivisions,teffgen,ncog
+summaryData(1:19) = (/ int(tnow/60),istep,NDCalive,nact,ntot_LN,nseed,ncog(1),ncog(2),ndead, &
+	nbnd,int(InflowTotal),Nexits, teffgen, navestim(1), navestim(2), navestimrate(1), navestimrate(2), naveDCtime, nDCSOI /)
 
 if (track_DCvisits) then
 	write(logmsg,'(a,3i6,f6.0)') 'ntagged, ntaglimit, ntagged_left, t_taglimit: ', &
@@ -4095,6 +4140,42 @@ do k = 1,lastcogID
     cnt(i) = cnt(i) + 1
 enddo
 nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_firstDCcontacttime(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_firstdccontacttime
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx, t
+
+n = 20
+dx = 2.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    if (p%firstDCtime == 0) cycle
+    t = p%firstDCtime - cellist(kcell)%entrytime
+    i = min(int(t/2 + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+write(nflog,*) 'get_profile_firstDCcontacttime: ',nc
+write(nflog,'(20i4)') cnt
 do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)

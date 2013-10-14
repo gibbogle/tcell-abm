@@ -286,6 +286,8 @@ do irel = 1,nreldir
                 cycle
             elseif (fullslots2 /= 0) then
                 nrest = nrest + 1
+                ! Try this!
+                if (FAST) cycle
                 p(dir1) = dirprob(irel)*GAMMA
             else
                 nrest = nrest + 1

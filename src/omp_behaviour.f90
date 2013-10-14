@@ -404,7 +404,6 @@ end subroutine
 subroutine read_fixed_params(ok)
 logical :: ok
 logical :: ext
-real :: TC_CD8_FRACTIONzzz
 logical :: use_DCvisits_params
 character*(128) :: DCparamfile
 
@@ -455,7 +454,6 @@ read(nfcell,*) CD25_SURVIVAL_THRESHOLD		! CD25 store level needed for survival o
 read(nfcell,*) TC_RADIUS					! radius of T cell (um)
 read(nfcell,*) TC_STIM_WEIGHT				! contribution of stimulation to act level
 read(nfcell,*) TC_MAX_GEN				    ! maximum T cell generation
-read(nfcell,*) TC_CD8_FRACTIONzzz			! fraction of all T cells that are CD8 (now in the GUI)
 read(nfcell,*) CD8_DIVTIME_FACTOR			! CD8 divide time as multiple of CD4 divide time
 read(nfcell,*) DC_MULTIBIND_PROB			! reducing factor to bind prob for each current DC binding
 read(nfcell,*) MAX_DC_BIND					! number of DC that a cell can bind to simultaneously
@@ -500,7 +498,6 @@ read(nfcell,*) R_DC_max
 !	read(nfcell,*) HI_CHEMO 				! chemotactic susceptibility of the HI_CHEMO_FRACTION cells
 !	read(nfcell,*) LO_CHEMO 				! chemotactic susceptibility of the other tagged cells
 !endif
-MAX_DC_BIND = 1
 close(nfcell)
 return
 99	continue
@@ -513,8 +510,7 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, mode_0, mode_1
-integer :: activationmode
+integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -570,12 +566,11 @@ read(nfcell,*) DIVISION_THRESHOLD(1)		! activation level needed for subsequent d
 read(nfcell,*) EXIT_THRESHOLD(1)			! activation level below which exit is permitted
 read(nfcell,*) STIMULATION_LIMIT			! maximum activation level
 read(nfcell,*) THRESHOLD_FACTOR             ! scales all threshold values
-read(nfcell,*) STAGED_CONTACT_RULE			! 3 = CT_HENRICKSON
+read(nfcell,*) STAGED_CONTACT_RULE			! 2 = CT_HENRICKSON
 read(nfcell,*) STIM_HILL_THRESHOLD	        ! Normalized stim rate threshold for TCR signalling
 read(nfcell,*) STIM_HILL_N                  ! Parameters of Hill function for stimulation rate
 read(nfcell,*) STIM_HILL_C                  ! as function of x = (avidity/max avidity)*(pMHC/max pMHC)
-read(nfcell,*) mode_0                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
-read(nfcell,*) mode_1                       ! indicates selection of STAGED_MODE or UNSTAGED_MODE
+read(nfcell,*) ACTIVATION_MODE              ! indicates selection of STAGED_MODE or UNSTAGED_MODE
 read(nfcell,*) BINDTIME_HILL_THRESHOLD      ! potential normalized stimulation rate required for a cognate DC interaction
 read(nfcell,*) BINDTIME_HILL_N              ! N parameter for Hill function that determines bind duration
 read(nfcell,*) BINDTIME_HILL_C              ! C parameter for Hill function that determines bind duration
@@ -622,6 +617,7 @@ read(nfcell,*) usehev					    ! use HEV portals
 read(nfcell,*) useexitchemo                 ! use exit chemotaxis
 read(nfcell,*) useDCchemo					! use DC chemotaxis
 read(nfcell,*) cognateonly				    ! simulate only cognate cells
+read(nfcell,*) EXIT_RULE					! rule controlling egress of cognate cells
 read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours -> inflow rate
 read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
 ! Vascularity parameters
@@ -751,11 +747,6 @@ if (DCrate_100k == 0) then
 	use_DCflux = .false.
 endif
 
-if (mode_0 == 1) then
-    ACTIVATION_MODE = STAGED_MODE
-else
-    ACTIVATION_MODE = UNSTAGED_MODE
-endif
 IL2_THRESHOLD = THRESHOLD_FACTOR*IL2_THRESHOLD
 ACTIVATION_THRESHOLD = THRESHOLD_FACTOR*ACTIVATION_THRESHOLD
 FIRST_DIVISION_THRESHOLD(1) = THRESHOLD_FACTOR*FIRST_DIVISION_THRESHOLD(1)
@@ -837,16 +828,6 @@ else
     use_cognate = .true.
 endif
 
-!if (exit_region == EXIT_CHEMOTAXIS) then
-!    use_chemotaxis = .true.
-!    if (exit_rule /= 3) then
-!        call logger('EXIT_CHEMOTAXIS needs exit_rule = 3')
-!        stop
-!    endif
-!else
-!    use_chemotaxis = .false.
-!endif
-
 !if (chemo_K_exit == 0.0) then
 !    ep_factor = 2.4
 !elseif (chemo_K_exit <= 0.2) then
@@ -889,11 +870,6 @@ if (.not.vary_vascularity .and. .not.use_cognate) then
 else
     steadystate = .false.
 endif
-
-!if (exit_rule == 3) then
-!    CD69_threshold = EXIT_THRESHOLD(1)
-!endif
-
 
 Ve = DELTA_X*DELTA_X*DELTA_X
 Vc = FLUID_FRACTION*Ve
@@ -1277,12 +1253,6 @@ if (gen == TC_MAX_GEN) then
 	call logger(logmsg)
     return
 endif
-if (gen == 1) then
-    write(logmsg,*) 'First division at hour: ',tnow/60
-    call logger(logmsg)
-else
-!    write(*,*) 'Time for next division: ',kcell,gen,(tnow-cellist(kcell)%entrytime)/60
-endif
 ndivided(gen) = ndivided(gen) + 1
 tdivided(gen) = tdivided(gen) + (tnow - p1%dividetime)
 
@@ -1329,6 +1299,7 @@ p2 => cellist(icnew)%cptr
 !endif
 
 p2%stimulation = p1%stimulation
+p2%stimrate = p1%stimrate
 p2%status = p1%status
 cellist(icnew)%entrytime = tnow
 if (revised_staging) then
@@ -1361,6 +1332,10 @@ if (use_cytokines) then
 endif
 p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1PR1 expression
 p2%S1PR1 = p1%S1PR1
+if (gen == 1) then
+    write(logmsg,'(a,2i7,a,2e12.3)') 'First division cell: ',kcell,icnew,' at hour: ',tnow/60, p2%stimrate
+    call logger(logmsg)
+endif
 
 ndivisions = ndivisions + 1
 if (region /= LYMPHNODE) then
@@ -1939,6 +1914,7 @@ else
         cell%cptr%avidity = rv_lognormal(param1,param2,kpar)
     endif
     cell%cptr%stimulation = 0
+    cell%cptr%stimrate = 0
 !    cell%cptr%IL_state = 0
 !    cell%cptr%IL_statep = 0
     if (use_cytokines) then
@@ -1951,6 +1927,7 @@ else
     cell%cptr%CD69 = 0
     cell%cptr%S1PR1 = 0
 !	cell%cptr%DCchemo = BASE_DCchemo
+	cell%cptr%firstDCtime = 0
     cell%cptr%dietime = tnow + TClifetime(cell%cptr)
     cell%cptr%dividetime = tnow
     cell%cptr%stagetime = BIG_TIME
@@ -4044,7 +4021,7 @@ end function
 !--------------------------------------------------------------------------------
 logical function bindable(p)
 type(cog_type), pointer :: p
-integer :: stage, region
+integer :: stage, region, kpar=0
 
 bindable = .true.
 call get_stage(p,stage,region)

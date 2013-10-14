@@ -45,6 +45,9 @@ padding: 8px
         </property>
         <item>
          <widget class="QTabWidget" name="tabs">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -64,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>3</number>
+           <number>5</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1260,11 +1263,11 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
+              <item row="0" column="2">
                <widget class="QLineEdit" name="line_DC_BIND_DELAY">
                 <property name="maximumSize">
                  <size>
-                  <width>90</width>
+                  <width>60</width>
                   <height>16777215</height>
                  </size>
                 </property>
@@ -1273,7 +1276,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="0" column="2">
+              <item row="0" column="3">
                <widget class="QLabel" name="units_DC_BIND_DELAY">
                 <property name="text">
                  <string>min</string>
@@ -1293,11 +1296,11 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
+              <item row="1" column="2">
                <widget class="QLineEdit" name="line_DC_DENS_HALFLIFE">
                 <property name="maximumSize">
                  <size>
-                  <width>90</width>
+                  <width>60</width>
                   <height>16777215</height>
                  </size>
                 </property>
@@ -1306,7 +1309,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="1" column="2">
+              <item row="1" column="3">
                <widget class="QLabel" name="units_DC_DENS_HALFLIFE">
                 <property name="text">
                  <string>hours  </string>
@@ -1326,10 +1329,19 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="3" column="2">
                <widget class="QSpinBox" name="spin_MAX_TC_BIND">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>500</number>
                 </property>
                </widget>
               </item>
@@ -1346,10 +1358,19 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="4" column="2">
                <widget class="QSpinBox" name="spin_MAX_COG_BIND">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+                <property name="maximum">
+                 <number>100</number>
                 </property>
                </widget>
               </item>
@@ -1360,14 +1381,20 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="5" column="2">
                <widget class="QLineEdit" name="line_DC_CCL3_RATE">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="5" column="2">
+              <item row="5" column="3">
                <widget class="QLabel" name="units_CCL21rate">
                 <property name="text">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1378,8 +1405,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="6" column="2">
                <widget class="QLineEdit" name="line_DC_CCL3_CONC">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
@@ -1392,7 +1425,7 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="6" column="2">
+              <item row="6" column="3">
                <widget class="QLabel" name="units_CCL21conc">
                 <property name="text">
                  <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -1410,8 +1443,14 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
+              <item row="7" column="2">
                <widget class="QLineEdit" name="line_DC_CCL3_RADIUS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
@@ -1424,19 +1463,129 @@ p, li { white-space: pre-wrap; }
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="2" column="2">
                <widget class="QLineEdit" name="line_DC_RADIUS">
+                <property name="maximumSize">
+                 <size>
+                  <width>60</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="2" column="2">
+              <item row="2" column="3">
                <widget class="QLabel" name="units_DC_RADIUS">
                 <property name="text">
                  <string>µm</string>
                 </property>
                </widget>
+              </item>
+              <item row="0" column="1">
+               <spacer name="horizontalSpacer_53">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="1" column="1">
+               <spacer name="horizontalSpacer_54">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="2" column="1">
+               <spacer name="horizontalSpacer_55">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="3" column="1">
+               <spacer name="horizontalSpacer_56">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="4" column="1">
+               <spacer name="horizontalSpacer_57">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="5" column="1">
+               <spacer name="horizontalSpacer_58">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="6" column="1">
+               <spacer name="horizontalSpacer_59">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="7" column="1">
+               <spacer name="horizontalSpacer_60">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
              </layout>
             </widget>
@@ -2159,6 +2308,9 @@ p, li { white-space: pre-wrap; }
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
               </widget>
              </item>
              <item row="4" column="1">
@@ -2175,6 +2327,115 @@ p, li { white-space: pre-wrap; }
               </spacer>
              </item>
             </layout>
+           </widget>
+           <widget class="QLabel" name="label_CD69S1PR1">
+            <property name="geometry">
+             <rect>
+              <x>50</x>
+              <y>20</y>
+              <width>171</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>CD69  - S1PR1 ODE parameters</string>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_TEST">
+            <property name="geometry">
+             <rect>
+              <x>350</x>
+              <y>40</y>
+              <width>191</width>
+              <height>81</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QRadioButton" name="rbut_EXIT_RULE_0">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>0</y>
+               <width>171</width>
+               <height>18</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Generation number threshold</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_EXIT_RULE</string>
+             </attribute>
+            </widget>
+            <widget class="QRadioButton" name="rbut_EXIT_RULE_1">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>20</y>
+               <width>151</width>
+               <height>18</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Stimulation level threshold</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_EXIT_RULE</string>
+             </attribute>
+            </widget>
+            <widget class="QRadioButton" name="rbut_EXIT_RULE_2">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>40</y>
+               <width>141</width>
+               <height>18</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>S1PR1 level threshold</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_EXIT_RULE</string>
+             </attribute>
+            </widget>
+            <widget class="QRadioButton" name="rbut_EXIT_RULE_3">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>60</y>
+               <width>82</width>
+               <height>18</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Unlimited</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_EXIT_RULE</string>
+             </attribute>
+            </widget>
+           </widget>
+           <widget class="QMyLabel" name="label_EXIT_RULE">
+            <property name="geometry">
+             <rect>
+              <x>350</x>
+              <y>20</y>
+              <width>121</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>label_EXIT_RULE</string>
+            </property>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_TCR">
@@ -2342,20 +2603,20 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>390</x>
-              <y>0</y>
-              <width>341</width>
+              <y>50</y>
+              <width>181</width>
               <height>41</height>
              </rect>
             </property>
             <property name="title">
              <string/>
             </property>
-            <widget class="QRadioButton" name="rbut_ACTIVATIONMODE_0">
+            <widget class="QRadioButton" name="rbut_ACTIVATION_MODE_0">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>10</y>
-               <width>181</width>
+               <y>0</y>
+               <width>161</width>
                <height>21</height>
               </rect>
              </property>
@@ -2365,12 +2626,15 @@ p, li { white-space: pre-wrap; }
              <property name="checked">
               <bool>true</bool>
              </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_ACTIVATION_MODE</string>
+             </attribute>
             </widget>
-            <widget class="QRadioButton" name="rbut_ACTIVATIONMODE_1">
+            <widget class="QRadioButton" name="rbut_ACTIVATION_MODE_1">
              <property name="geometry">
               <rect>
-               <x>170</x>
-               <y>10</y>
+               <x>10</x>
+               <y>20</y>
                <width>161</width>
                <height>21</height>
               </rect>
@@ -2381,6 +2645,9 @@ p, li { white-space: pre-wrap; }
              <property name="checked">
               <bool>false</bool>
              </property>
+             <attribute name="buttonGroup">
+              <string>buttonGroup_ACTIVATION_MODE</string>
+             </attribute>
             </widget>
            </widget>
            <widget class="QLabel" name="label">
@@ -2769,26 +3036,6 @@ p, li { white-space: pre-wrap; }
                </property>
               </widget>
              </item>
-             <item row="3" column="0">
-              <widget class="QMyLabel" name="label_STAGED_CONTACT_RULE">
-               <property name="text">
-                <string>label_STAGED_CONTACT_RULE</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="2">
-              <widget class="QLineEdit" name="line_STAGED_CONTACT_RULE">
-               <property name="maximumSize">
-                <size>
-                 <width>60</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
              <item row="0" column="1">
               <spacer name="horizontalSpacer_36">
                <property name="orientation">
@@ -2828,26 +3075,13 @@ p, li { white-space: pre-wrap; }
                </property>
               </spacer>
              </item>
-             <item row="3" column="1">
-              <spacer name="horizontalSpacer_39">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
             </layout>
            </widget>
            <widget class="QwtPlot" name="qwtPlot_STIM_HILL">
             <property name="geometry">
              <rect>
               <x>90</x>
-              <y>310</y>
+              <y>420</y>
               <width>231</width>
               <height>171</height>
              </rect>
@@ -2856,8 +3090,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QWidget" name="gridLayoutWidget_7">
             <property name="geometry">
              <rect>
-              <x>400</x>
-              <y>80</y>
+              <x>390</x>
+              <y>140</y>
               <width>331</width>
               <height>152</height>
              </rect>
@@ -3117,8 +3351,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QLabel" name="label_7">
             <property name="geometry">
              <rect>
-              <x>400</x>
-              <y>60</y>
+              <x>390</x>
+              <y>120</y>
               <width>131</width>
               <height>16</height>
              </rect>
@@ -3133,40 +3367,198 @@ p, li { white-space: pre-wrap; }
              <string>Common parameters</string>
             </property>
            </widget>
-           <widget class="QLabel" name="label_stimulation_plot">
+           <widget class="QMyLabel" name="label_DUMMY_STIMULATION_PLOT">
             <property name="geometry">
              <rect>
               <x>150</x>
-              <y>490</y>
-              <width>131</width>
+              <y>600</y>
+              <width>181</width>
               <height>16</height>
              </rect>
             </property>
             <property name="text">
-             <string>Normalized pMHC*avidity</string>
+             <string>label_DUMMY_STIMULATION_PLOT</string>
             </property>
            </widget>
            <widget class="QwtPlot" name="qwtPlot_BINDTIME_HILL">
             <property name="geometry">
              <rect>
-              <x>840</x>
-              <y>310</y>
+              <x>810</x>
+              <y>420</y>
               <width>231</width>
               <height>171</height>
              </rect>
             </property>
            </widget>
-           <widget class="QLabel" name="label_bindtime_plot">
+           <widget class="QMyLabel" name="label_DUMMY_BINDTIME_PLOT">
             <property name="geometry">
              <rect>
-              <x>900</x>
-              <y>490</y>
-              <width>131</width>
+              <x>870</x>
+              <y>600</y>
+              <width>161</width>
               <height>16</height>
              </rect>
             </property>
             <property name="text">
-             <string>Normalized pMHC*avidity</string>
+             <string>label_DUMMY_BINDTIME_PLOT</string>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_STAGED_CONTACT_RULE">
+            <property name="geometry">
+             <rect>
+              <x>90</x>
+              <y>310</y>
+              <width>161</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>label_STAGED_CONTACT_RULE</string>
+            </property>
+           </widget>
+           <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_0">
+            <property name="geometry">
+             <rect>
+              <x>90</x>
+              <y>330</y>
+              <width>82</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Constant</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string>buttonGroup_STAGED_CONTACT_RULE</string>
+            </attribute>
+           </widget>
+           <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_1">
+            <property name="geometry">
+             <rect>
+              <x>90</x>
+              <y>350</y>
+              <width>82</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Hill function</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string>buttonGroup_STAGED_CONTACT_RULE</string>
+            </attribute>
+           </widget>
+           <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_2">
+            <property name="geometry">
+             <rect>
+              <x>90</x>
+              <y>370</y>
+              <width>82</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Henrickson</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string>buttonGroup_STAGED_CONTACT_RULE</string>
+            </attribute>
+           </widget>
+           <widget class="QMyLabel" name="label_ACTIVATION_MODE">
+            <property name="geometry">
+             <rect>
+              <x>390</x>
+              <y>30</y>
+              <width>141</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>label_ACTIVATION_MODE</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="line_DUMMY_STIMULATION_PLOT">
+            <property name="geometry">
+             <rect>
+              <x>123</x>
+              <y>600</y>
+              <width>0</width>
+              <height>20</height>
+             </rect>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="line_DUMMY_BINDTIME_PLOT">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>842</x>
+              <y>600</y>
+              <width>0</width>
+              <height>20</height>
+             </rect>
+            </property>
+           </widget>
+          </widget>
+          <widget class="QWidget" name="tab">
+           <attribute name="title">
+            <string>Graphs</string>
+           </attribute>
+           <widget class="QGroupBox" name="groupBox_graphselect">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>40</y>
+              <width>521</width>
+              <height>531</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_timeseries">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>20</y>
+              <width>131</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Time-series Plots</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_profile">
+            <property name="geometry">
+             <rect>
+              <x>270</x>
+              <y>20</y>
+              <width>111</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Profile Plots</string>
             </property>
            </widget>
           </widget>
@@ -3455,19 +3847,6 @@ p, li { white-space: pre-wrap; }
               <width>151</width>
               <height>20</height>
              </rect>
-            </property>
-           </widget>
-           <widget class="QGroupBox" name="groupBox_graphselect">
-            <property name="geometry">
-             <rect>
-              <x>750</x>
-              <y>10</y>
-              <width>241</width>
-              <height>481</height>
-             </rect>
-            </property>
-            <property name="title">
-             <string>Graphs</string>
             </property>
            </widget>
            <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
@@ -4466,7 +4845,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -4766,7 +5145,7 @@ p, li { white-space: pre-wrap; }
    </hints>
   </connection>
   <connection>
-   <sender>rbut_ACTIVATIONMODE_0</sender>
+   <sender>rbut_ACTIVATION_MODE_0</sender>
    <signal>toggled(bool)</signal>
    <receiver>MainWindow</receiver>
    <slot>on_activation_mode_toggled()</slot>
@@ -4787,6 +5166,9 @@ p, li { white-space: pre-wrap; }
   <slot>on_activation_mode_toggled()</slot>
  </slots>
  <buttongroups>
+  <buttongroup name="buttonGroup_ACTIVATION_MODE"/>
   <buttongroup name="buttonGroup_SPECIES"/>
+  <buttongroup name="buttonGroup_STAGED_CONTACT_RULE"/>
+  <buttongroup name="buttonGroup_EXIT_RULE"/>
  </buttongroups>
 </ui>

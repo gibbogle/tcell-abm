@@ -2,17 +2,13 @@
 #define TRANSFER_H
 
 #include <QMutex.h>
+#include "profile.h"
 
 extern int showingVTK;
 
 #define MAX_TC 1000000
 #define MAX_DC 1000
 #define MAX_BOND 50000
-
-#define PROFILE_CD69 0
-#define PROFILE_S1PR1 1
-#define PROFILE_STIM 2
-#define PROFILE_STIMRATE 3
 
 extern int VTKbuffer[100];
 extern int TC_list[5*MAX_TC];

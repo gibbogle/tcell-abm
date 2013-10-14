@@ -1,12 +1,9 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#define maxGraphs 9     // This is the number of graphs that can be displayed (tiled)
+#include "profile.h"
 
-#define PROFILE_CD69 0
-#define PROFILE_S1PR1 1
-#define PROFILE_STIM 2
-#define PROFILE_STIMRATE 3
+#define maxGraphs 9     // This is the number of graphs that can be displayed (tiled)
 
 struct graph_set {
 	QString tag;

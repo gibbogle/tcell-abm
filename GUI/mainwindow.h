@@ -10,6 +10,8 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 
+#include <QButtonGroup>
+
 using namespace std;
 
 #include "ui_ABM_GUI.h"
@@ -94,6 +96,8 @@ private slots:
 	void redrawDistPlot();
 	void showMore(QString);
 	void updateSliderBox();
+    void exitRuleChanged();
+    void radioButtonChanged(QAbstractButton *);
 
 	double getMaximum(RESULT_SET *, double *);
 	void addGraph();

@@ -49,15 +49,35 @@ Graphs::Graphs()
 "",
 3, true, 0, .01, 0, true},
 
-{"stim",
-"Average Stimulation",
+{"stim_LN",
+"Average Stimulation (LN)",
 "",
 13, true, 0, .01, 1.0, true},
 
-{"stimrate",
-"Average Stimulation Rate",
+{"stim_PER",
+"Average Stimulation (PER)",
 "",
-14, true, 0, .01, 1.0, true},
+13, false, 0, .01, 1.0, true},
+
+{"stimrate_LN",
+"Average Stimulation Rate (LN)",
+"",
+15, true, 0, .01, 1.0, true},
+
+{"stimrate_PER",
+"Average Stimulation Rate (PER)",
+"",
+16, false, 0, .01, 1.0, true},
+
+{"DCcontact_time",
+"Average First DC Contact Time",
+"Hours",
+17, true, 0, .01, 0, true},
+
+{"nDC_SOI",
+"Average No. of Cells in DC SOI",
+"",
+18, true, 0, .1, 0, true},
 
 {"CD69",
 "CD69 Profile",
@@ -70,14 +90,19 @@ PROFILE_CD69, true, 0, 1, 1.0, false},
 PROFILE_S1PR1, true, 0, 1, 1.0, false},
 
 {"Stimulation",
-"Stimulation Profile",
+"Stimulation Profile (LN)",
 "Fraction",
 PROFILE_STIM, true, 0, 1, 1.0, false},
 
 {"Stimulation Rate",
-"Stimulation Rate Profile",
+"Stimulation Rate Profile (LN)",
 "Fraction",
 PROFILE_STIMRATE, true, 0, 1, 1.0, false},
+
+{"DC Contact Time (20h)",
+"First DC Contact Time Profile",
+"Fraction",
+PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
 
 {"ncog_PER",
 "Activated T Cells in Periphery",

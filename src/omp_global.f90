@@ -131,9 +131,16 @@ integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: TCP_PORT_2 = 5002
 integer, parameter :: TCP_PORT_3 = 5003
 
-integer, parameter :: CT_CONSTANT = 1
-integer, parameter :: CT_HILL = 2
-integer, parameter :: CT_HENRICKSON = 3
+! Staged activation bind duration rules
+integer, parameter :: CT_CONSTANT = 0
+integer, parameter :: CT_HILL = 1
+integer, parameter :: CT_HENRICKSON = 2
+
+! Exit rules
+integer, parameter :: EXIT_GEN_THRESHOLD = 0
+integer, parameter :: EXIT_STIM_THRESHOLD = 1
+integer, parameter :: EXIT_S1PR1_THRESHOLD = 2
+integer, parameter :: EXIT_UNLIMITED = 3
 
 integer, parameter :: STAGE_BYTE = 1
 integer, parameter :: GENERATION_BYTE = 2
@@ -207,8 +214,7 @@ integer, parameter :: NDIFFSTEPS = 6    ! divisions of DELTA_T for diffusion com
 integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
 logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
-integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit (exit_rule = 1)
-integer, parameter :: exit_rule = 3     ! 1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = use S1PR1_EXIT_THRESHOLD, 4 = all OK
+integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit 
 
 ! Old chemotaxis method, not used now
 real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
@@ -370,9 +376,9 @@ logical, parameter :: CD25_SWITCH = .true.
 ! Result type
 type result_type
     integer :: dN_EffCogTC(NCTYPES)
-    integer :: dN_EffCogTCGen(MMAX_GEN)
+    integer :: dN_EffCogTCGen(0:MMAX_GEN)	! gen=0 corresponds to unactivated cognate cell
     integer :: N_EffCogTC(NCTYPES)
-    integer :: N_EffCogTCGen(MMAX_GEN)
+    integer :: N_EffCogTCGen(0:MMAX_GEN)
     integer :: dN_Dead
     integer :: N_Dead
 end type
@@ -586,6 +592,7 @@ logical :: use_HEV_portals = .true.
 logical :: use_traffic = .false.
 logical :: use_exit_chemotaxis
 logical :: use_DC_chemotaxis
+integer :: exit_rule					! 0 = use NGEN_EXIT, 1 = use EXIT_THRESHOLD, 2 = use S1PR1_EXIT_THRESHOLD, 3 = all OK
 logical :: FAST
 logical :: use_single_DC = .false.		! To evaluate chemokine field from a single DC
 
@@ -594,9 +601,6 @@ real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> i
 real :: Inflammation_days1 = 4          ! Days of plateau level - parameters for VEGF_MODEL = 1
 real :: Inflammation_days2 = 5          ! End of inflammation
 real :: Inflammation_level = 1.0		! This is the level of inflammation (scaled later by NTcells0)
-integer :: exit_region                   ! determines blob region for cell exits
-real :: efactor                         ! If constant_efactor = true, this is the factor for the p correction
-integer :: VEGF_MODEL                   ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
 
 logical :: fix_avidity                  ! true if avidity takes discrete values, false if a distribution is used
 logical :: avidity_logscale             ! true if actual avidity = 10^(avidity_min + i*avidity_step)
@@ -687,6 +691,7 @@ real :: TagRadius
 real :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real :: Centre(3)
 real :: Vc, Ve
+integer :: exit_region   ! determines blob region for cell exits
 
 ! Motility data
 integer :: nreldir, njumpdirs
@@ -768,6 +773,8 @@ integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T
 real :: min_transit_time = 60		! minimum time a T cell spends in the DCU (min)
 real :: CD69_threshold				! level of CD69 below which egress can occur
 real :: last_portal_update_time		! time that the number of exit portals was last updated
+real :: efactor                         ! If constant_efactor = true, this is the factor for the p correction
+integer :: VEGF_MODEL                   ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
 logical :: initialized, steadystate
 integer :: navid = 0
 integer ::  Nsteps, nsteps_per_min, istep

@@ -189,7 +189,10 @@ void MainWindow::createActions()
     connect(action_set_speed, SIGNAL(triggered()), SLOT(setVTKSpeed()));
     connect(actionShow_2D_gradient_field, SIGNAL(triggered()), this, SLOT(on_action_show_gradient2D_triggered()));
     connect(actionShow_3D_gradient_field, SIGNAL(triggered()), this, SLOT(on_action_show_gradient3D_triggered()));
-	for (int i=0; i<nLabels; i++) {
+    connect(buttonGroup_STAGED_CONTACT_RULE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    connect(buttonGroup_ACTIVATION_MODE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    connect(buttonGroup_EXIT_RULE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
 //		LOG_QMSG(label_str);
@@ -309,8 +312,9 @@ void MainWindow::loadParams()
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-				wtag = parse_rbutton(wtag,&rbutton_case);
-			}
+//				wtag = parse_rbutton(wtag,&rbutton_case);
+                wtag = parse_rbutton(qsname,&rbutton_case);
+            }
             // Find corresponding data in workingParameterList
             bool found = false;
 			for (int k=0; k<nParams; k++) {
@@ -513,19 +517,23 @@ void MainWindow::loadParams()
 
 //--------------------------------------------------------------------------------------------------------
 // This really should be changed.  Note that it requires that there is only one more "_" after "rbut_"
-// In any case, it is easier to include all the radiobutton cases in the params list.
+// We really want to split wtag into the parts before and after the last '_'
 //--------------------------------------------------------------------------------------------------------
-QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
+QString MainWindow::parse_rbutton(QString qsname, int *rbutton_case)
 {
 	// parse wtag into part before '_' and part after '_'
-	int j = wtag.indexOf('_');
+    QString wtag = qsname.mid(5);   // strips off "rbut_"
+    int j = wtag.lastIndexOf('_');  // position of last '_'
 	QString suffix = wtag.mid(j+1);
-	// the prefix becomes wtag, the suffix becomes rbutton_case, an integer 0,1,2,...
-	wtag = wtag.mid(0,j);
+    // the prefix becomes wtag0, the suffix becomes rbutton_case, an integer 0,1,2,...
+    QString wtag0 = wtag.mid(0,j);
 	bool ok;
 	*rbutton_case = suffix.toInt(&ok);
-    sprintf(msg,"parse_rbutton: case: %d\n",*rbutton_case);
-	return wtag;
+    sprintf(msg,"parse_rbutton: case: %d",*rbutton_case);
+    LOG_MSG(msg);
+    LOG_QMSG(wtag);
+    LOG_QMSG(wtag0);
+    return wtag0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -537,12 +545,13 @@ void MainWindow::reloadParams()
         QString qsname = w->objectName();
 		if (qsname.startsWith("line_") || qsname.startsWith("spin_") 
 			|| qsname.startsWith("comb_") || qsname.startsWith("cbox_")
-			|| qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
+            || qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-				wtag = parse_rbutton(wtag,&rbutton_case);
-			}
+//				wtag = parse_rbutton(wtag,&rbutton_case);
+                wtag = parse_rbutton(qsname,&rbutton_case);
+            }
             // Find corresponding data in workingParameterList
             bool found = false;
 			for (int k=0; k<nParams; k++) {
@@ -2069,28 +2078,32 @@ void MainWindow::on_line_SPECIAL_CASE_textEdited(QString str)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
-    QVBoxLayout *vbox = new QVBoxLayout;
-/*
-    checkBox_conc = new QCheckBox("Concentration Profile");
-    checkBox_conc->setChecked(field->isConcPlot());
-    vbox->addWidget(checkBox_conc);
-    checkBox_vol = new QCheckBox("Cell Volume Distribution");
-    checkBox_vol->setChecked(field->isVolPlot());
-    vbox->addWidget(checkBox_vol);
-    checkBox_oxy = new QCheckBox("Cell Oxygen Distribution");
-    checkBox_oxy->setChecked(field->isOxyPlot());
-    vbox->addWidget(checkBox_oxy);
-*/
+//    QVBoxLayout *vbox = new QVBoxLayout;
+    QGridLayout *grid = new QGridLayout;
+    int row0=-1, row1=-1;
     cbox_ts = new QCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
+        int row, col;
+//        if (grph->isTimeseries(i)) {
+        if (grph->tsGraphs[i].ts) {
+            col = 0;
+            row0++;
+            row = row0;
+        } else {
+            col = 1;
+            row1++;
+            row = row1;
+        }
         QString text = grph->tsGraphs[i].title;
         cbox_ts[i] = new QCheckBox;
         cbox_ts[i]->setText(text);
         cbox_ts[i]->setObjectName("checkBox_"+grph->tsGraphs[i].tag);
         cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
-        vbox->addWidget(cbox_ts[i]);
+//        vbox->addWidget(cbox_ts[i]);
+        grid->addWidget(cbox_ts[i],row,col);
     }
-    groupBox_graphselect->setLayout(vbox);
+//    groupBox_graphselect->setLayout(vbox);
+    groupBox_graphselect->setLayout(grid);
     QRect rect;
     rect = groupBox_graphselect->geometry();
 #ifdef __DISPLAY768
@@ -2409,7 +2422,7 @@ void MainWindow::create_hill_function(int N, double C, int n, double *x, double 
 //------------------------------------------------------------------------------------------------------
 void MainWindow::on_activation_mode_toggled()
 {
-    if (rbut_ACTIVATIONMODE_0->isChecked()) {
+    if (rbut_ACTIVATION_MODE_0->isChecked()) {
         line_IL2_THRESHOLD->setEnabled(true);
         line_ACTIVATION_THRESHOLD->setEnabled(true);
         line_BINDTIME_HILL_THRESHOLD->setEnabled(false);
@@ -2431,6 +2444,34 @@ void MainWindow::on_activation_mode_toggled()
         line_UNSTAGED_MIN_DIVIDE_T->setEnabled(true);
 //        line_MAXIMUM_AVIDITY->setEnabled(true);
 //        line_MAXIMUM_ANTIGEN->setEnabled(true);
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::exitRuleChanged()
+{
+
+}
+
+//------------------------------------------------------------------------------------------------------
+// This should be used for any radioButtonGroups
+//------------------------------------------------------------------------------------------------------
+void MainWindow::radioButtonChanged(QAbstractButton *b)
+{
+    QString wtag = b->objectName();
+    int rbutton_case;
+    if (b->isChecked()) {
+        QString ptag = parse_rbutton(wtag,&rbutton_case);
+        // Now need to reflect the change in the workingParameterList
+        // Need to locate ptag
+        for (int k=0; k<nParams; k++) {
+            PARAM_SET p = parm->get_param(k);
+            if (ptag.compare(p.tag) == 0) {
+                parm->set_value(k,double(rbutton_case));
+                break;
+            }
+        }
     }
 }
 

@@ -4,7 +4,7 @@
 Params::Params()
 {
 	PARAM_SET params[] = {
-{"TC_AVIDITY_MEDIAN", 1.0, 0.1, 10.0,
+{"TC_AVIDITY_MEDIAN", 0.5, 0.1, 10.0,
 "TCR avidity median parameter",
 "TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
@@ -93,7 +93,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Antigen density on a DC decays with a specified half-life.\n\
 [hours]"},
 
-{"MAX_TC_BIND", 30, 0, 0,
+{"MAX_TC_BIND", 200, 0, 0,
 "Max T cell binding/DC",
 "The maximum number of T cells that can be in simultaneous contact with a DC."},
 
@@ -133,12 +133,12 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Threshold factor",
 "All threshold values are scaled by this factor."},
 
-{"STAGED_CONTACT_RULE", 1, 1, 3,
-"Contact rule",
+{"STAGED_CONTACT_RULE", 0, 0, 0,
+"Contact duration rule",
 "Rule for contact durations: \n\
-    1 = fixed (specified median values) \n\
-    2 = linear variation with stimulation rate \n\
-    3 = Henrickson: lognormal distn., median depends linearly on total stimulation."},
+    Constant = fixed (using specified median values) \n\
+    Hill = linear variation with stimulation rate, which is a Hill function \n\
+    Henrickson = lognormal distn., median depends linearly on total stimulation."},
 
 {"STIM_HILL_THRESHOLD", 0.01, 0, 1,
 "Stimulation rate threshold",
@@ -146,19 +146,17 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 
 {"STIM_HILL_N", 1, 0, 0,
 "Stimulation rate Hill N",
-"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), parameters N and C."},
+"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), with parameters N and C. \n\
+ H(x;N,c) = (1 + C^N).x^N/(x^N + C^N)"},
 
 {"STIM_HILL_C", 0.3, 0, 0,
 "Stimulation rate Hill C",
-"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), parameters N and C."},
+"Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), with parameters N and C. \n\
+ H(x;N,c) = (1 + C^N).x^N/(x^N + C^N)"},
 
-{"ACTIVATIONMODE_0", 1, 0, 1,
-"Staged activation mode",
-"The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
-
-{"ACTIVATIONMODE_1", 0, 0, 1,
-"Unstaged activation mode",
-"The activation mode is either STAGED_MODE or UNSTAGED_MODE."},
+{"ACTIVATION_MODE", 0, 0, 0,
+"Activation mode",
+"The activation mode is either STAGED or UNSTAGED."},
 
 {"BINDTIME_HILL_THRESHOLD", 0.05, 0, 1,
 "Signalling threshold",
@@ -196,7 +194,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Avidity upper limit",
 "T cell TCR avidity levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
-{"MAXIMUM_ANTIGEN", 200, 0, 0,
+{"MAXIMUM_ANTIGEN", 400, 0, 0,
 "DC antigen upper limit",
 "DC antigen density levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
@@ -288,6 +286,14 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Simulate only cognate cells?",
 "For fast simulation, no non-cognate cells are simulated."},
 
+{"EXIT_RULE", 2, 0, 0,
+"Cell egress control rule",
+"Cognate cell egress control rules: \n\
+ Generation threshold = egress permitted when cell generation exceeds a threshold \n\
+ Stimulation threshold = egress permitted when cell stimulation level is below a threshold \n\
+ S1PR1 threshold = egress permitted when cell S1PR1 expression level exceeds a threshold \n\
+ Unlimited = egress permitted when a cell is adjacent to an exit portal"},
+
 {"RESIDENCE_TIME_CD4", 12.0, 0, 0,
 "CD4 T cell residence time",
 "CD4 T cell residence time (based on no DCs).\n\
@@ -311,27 +317,6 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 {"INFLAMM_LEVEL", 0.5, 0, 0,
 "Inflammation level",
 "The plateau inflammation signal level."},
-
-//{"EXIT_RULE", 3, 1, 3,
-//"Exit rule",
-//"T cell exit rule.  1 = use NGEN_EXIT, 2 = use EXIT_THRESHOLD, 3 = no restriction."},
-
-//{"EXIT_REGION", 4, 1, 4,
-//"Exit region",
-//"Determines blob region for cell exits: 1 = everywhere, 2 = lower half of blob, 3 = blob portals, 4 = surface portals."},
-
-//{"CHEMO_RADIUS", 60.0, 10.0, 200.0,
-//"Radius of chemotactic influence",
-//"Range of chemotactic influence of an exit site or DC on T cell motion.  At this distance the influence is reduced to 5% of its maximum value.\n\
-//[um]"},
-
-//{"CHEMO_K_EXIT", 0.5, 0.0, 1.0,
-//"Exit chemotaxis influence parameter",
-//"Strength of chemotactic influence on T cell motion towards exits."},
-
-//{"CHEMO_K_DC", 0.0, 0.0, 10.0,
-//"DC chemotaxis influence parameter",
-//"Strength of chemotactic influence on T cell motion towards DCs (CCL3-CCR1)."},
 
 {"CCR1_STRENGTH", 1.0, 0, 0,
 "CCR1_STRENGTH",
@@ -440,7 +425,18 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 
 {"INPUT_FILE", 0, 0, 0,
 "fixed.inpdata",
-"The auxiliary input file contains data that (almost!) never changes"}
+"The auxiliary input file contains data that (almost!) never changes"},
+
+{"DUMMY_STIMULATION_PLOT", 0, 0, 0,
+"Normalized (pMHC*avidity)",
+"In the STAGED case binding durations depend on stage, and the stimulation rate is a Hill function of x = (normalized pMHC)*(normalised avidity). \n\
+ Note that the normalised value is the actual value divided by the specified upper limit."},
+
+{"DUMMY_BINDTIME_PLOT", 0, 0, 0,
+"Normalized (pMHC*avidity)",
+"In the UNSTAGED case the stimulation rate is simply x = (normalized pMHC)*(normalised avidity), and the binding duration is a Hill function of x. \n\
+ Note that the normalised value is the actual value divided by the specified upper limit."}
+
 
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);

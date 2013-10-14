@@ -189,6 +189,8 @@ void ExecThread::run()
             get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
             k = PROFILE_STIMRATE;
             get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
+            k = PROFILE_FIRSTDCCONTACTTIME;
+            get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
             mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals
 		}
