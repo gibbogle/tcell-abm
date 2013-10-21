@@ -1,0 +1,11 @@
+#ifndef PROFILE_H
+#define PROFILE_H
+
+#define PROFILE_CD69 0
+#define PROFILE_S1PR1 1
+#define PROFILE_STIM 2
+#define PROFILE_STIMRATE 3
+#define PROFILE_AVIDITY 4
+#define PROFILE_FIRSTDCCONTACTTIME 5
+
+#endif // PROFILE_H
