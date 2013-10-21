@@ -150,7 +150,8 @@ private:
     void showGradient2D();
 	void showGradient3D();
 
-	double erf(double z);
+    void showmdiAreaSize();
+    double erf(double z);
     double pnorm(double x1, double x2, double mu, double sig);
     double plognorm(double x1, double x2, double mu, double sig);
     void create_lognorm_dist(double p1, double p2,int n, double *x, double *prob);

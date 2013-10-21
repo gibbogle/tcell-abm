@@ -138,7 +138,6 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     groupBox_run->setGeometry(rect);
 
-//	vtk = new MyVTK(page_3D);
     vtk = new MyVTK(mdiArea_VTK, test_page);
     vtk->init();
     rect.setX(50);
@@ -151,6 +150,7 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setWidth(800);
 #endif
     mdiArea_VTK->setGeometry(rect);
+    /*
     rect.setX(10);
     rect.setY(0);
 #ifdef __DISPLAY768
@@ -161,7 +161,9 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setWidth(1500);
 #endif
     mdiArea->setGeometry(rect);
-	tabs->setCurrentIndex(0);
+    */
+    showmdiAreaSize();
+    tabs->setCurrentIndex(0);
 	goToInputs();
 }
 
@@ -853,7 +855,7 @@ void MainWindow::loadResultFile()
 		if (show_outputdata)
 			box_outputData = 0;
 		initializeGraphs(R);
-		drawGraphs();
+        drawGraphs();
 		goToOutputs();
 	}
 }
@@ -1255,6 +1257,19 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Time (hours)");
         }
 	}
+//    showmdiAreaSize();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showmdiAreaSize()
+{
+    QRect rect;
+    rect = mdiArea->geometry();
+    int h = rect.height();
+    int w = rect.width();
+    sprintf(msg,"mdiArea w,h: %d %d",w,h);
+    LOG_MSG(msg);
 }
 
 //--------------------------------------------------------------------------------------------------------
