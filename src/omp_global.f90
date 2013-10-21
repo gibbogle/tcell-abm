@@ -1173,6 +1173,7 @@ do kcell = 1,nlist
         enddo
     endif
 enddo
+write(*,*) 'Did initial_binding'
 !write(*,*) 'DC occupancy:'
 !write(*,'(8i6)') DClist(1:NDC)%nbound
 end subroutine

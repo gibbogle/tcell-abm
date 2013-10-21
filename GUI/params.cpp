@@ -74,7 +74,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DC antigen density shape parameter",
 "Antigen density has a lognormal distribution, described by the median and shape parameters."},
 
-{"DC_LIFETIME_MEDIAN", 3.0, 0.1, 100,
+{"DC_LIFETIME_MEDIAN", 10.0, 0.1, 100,
 "DC lifetime median parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters.\n\
 [days]"},
@@ -101,21 +101,21 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Max cognate T cell binding/DC",
 "The maximum number of cognate T cells that can bind simultaneously to a DC."},
 
-{"IL2_THRESHOLD", 30, 0, 0,
+{"IL2_THRESHOLD", 100, 0, 0,
 "Stimulation threshold for IL-2",
 "Integrated TCR stimulation needed to initiate IL-2/CD5 production."},
 
-{"ACTIVATION_THRESHOLD", 30, 0, 0,
+{"ACTIVATION_THRESHOLD", 100, 0, 0,
 "Stimulation threshold for activation",
 "Integrated TCR stimulation level needed for full activation.\n\
  If after passing this threshold the cell fails to achieve sufficient activation for the first division it will die."},
 
-{"FIRST_DIVISION_THRESHOLD", 60, 0, 0,
+{"FIRST_DIVISION_THRESHOLD", 300, 0, 0,
 "Stimulation threshold for first division",
 "Integrated TCR stimulation level needed for first division.\n\
  (Also used for UNSTAGED mode)"},
 
-{"DIVISION_THRESHOLD", 20, 0, 0,
+{"DIVISION_THRESHOLD", 100, 0, 0,
 "Stimulation threshold for subsequent divisions",
 "Integrated TCR stimulation level needed for subsequent divisions.\n\
 (Also used for UNSTAGED mode)"},
@@ -124,7 +124,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Stimulation threshold for exit",
 "Integrated TCR stimulation level below which exit is permitted (using Exit Rule #2)."},
 
-{"STIMULATION_LIMIT", 200, 0, 0,
+{"STIMULATION_LIMIT", 500, 0, 0,
 "Maximum stimulation level",
 "Maximum integrated TCR stimulation level (saturation level).\n\
 (Also used for UNSTAGED mode)"},
@@ -198,7 +198,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "DC antigen upper limit",
 "DC antigen density levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
-{"K1_CD69", 0.04, 0, 0,
+{"K1_CD69", 0.4, 0, 0,
 "CD69 K1 parameter",
 "K1 parameter of the CD69 ODE"},
 

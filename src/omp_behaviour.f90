@@ -1137,8 +1137,8 @@ integer :: kcell
 integer :: k, idc, site(3), indx(2), ctype, stype, region
 logical :: cognate
 
-!write(logmsg,*) 'Tcell_death: ',kcell
-!call logger(logmsg)
+write(logmsg,*) 'Tcell_death: ',kcell
+call logger(logmsg)
 cognate = (associated(cellist(kcell)%cptr))
 if (cognate) then
 	call get_region(cellist(kcell)%cptr,region)
@@ -1298,6 +1298,7 @@ p2 => cellist(icnew)%cptr
 !    p2%avidity = p1%avidity
 !endif
 
+p2%avidity = p1%avidity
 p2%stimulation = p1%stimulation
 p2%stimrate = p1%stimrate
 p2%status = p1%status
@@ -1332,6 +1333,7 @@ if (use_cytokines) then
 endif
 p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1PR1 expression
 p2%S1PR1 = p1%S1PR1
+p2%CCR7 = p1%CCR7
 if (gen == 1) then
     write(logmsg,'(a,2i7,a,2e12.3)') 'First division cell: ',kcell,icnew,' at hour: ',tnow/60, p2%stimrate
     call logger(logmsg)
@@ -4043,9 +4045,9 @@ end function
 ! HYPOTHESIS: bind time should also increase with level of stimulation rate,
 ! i.e. CT_HILL should be combined with CT_HENRICKSON - but how?
 !--------------------------------------------------------------------------------------
-real function get_bindtime(p,cognate,ctype,pMHC,stimrate_norm,kpar)
+real function get_bindtime(p,signal,ctype,pMHC,stimrate_norm,kpar)
 type(cog_type), pointer :: p
-logical :: cognate
+logical :: signal
 integer :: ctype, kpar
 real :: pMHC, stimrate_norm
 integer :: stage, region, i
@@ -4055,7 +4057,7 @@ real, parameter :: CT_shape = 2.0, CT_max_factor = 4.0
 real, parameter :: p2 = log(CT_shape)
 
 get_bindtime = 0
-if (cognate) then
+if (signal) then
     if (activation_mode == STAGED_MODE) then
 	    call get_stage(p,stage,region)
 	    btime = dc_mean_bindtime_c(stage,ctype)
@@ -4083,9 +4085,9 @@ if (cognate) then
         h = stimrate_norm**BINDTIME_HILL_N/(stimrate_norm**BINDTIME_HILL_N + BINDTIME_HILL_C**BINDTIME_HILL_N)
         h = (1 + BINDTIME_HILL_C**BINDTIME_HILL_N)*h
         get_bindtime = h*BINDTIME_MAX
-	    write(logmsg,'(a,a,f5.3,a,f5.3,a,f5.3,a,f5.3,a,f6.1)') &
-	        'UNSTAGED: ','A: ',a,' D: ',d,' dS/dt: ',stimrate_norm,' H: ',h,' T: ',get_bindtime
-	    call logger(logmsg)
+!	    write(logmsg,'(a,a,f5.3,a,f5.3,a,f5.3,a,f5.3,a,f6.1)') &
+!	        'UNSTAGED: ','A: ',a,' D: ',d,' dS/dt: ',stimrate_norm,' H: ',h,' T: ',get_bindtime
+!	    call logger(logmsg)
     endif
 else
     R = par_uni(kpar)

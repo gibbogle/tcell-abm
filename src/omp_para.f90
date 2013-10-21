@@ -1017,7 +1017,8 @@ do kcell = 1,nlist
                         if (stimrate < BINDTIME_HILL_THRESHOLD) then
                             cell%signalling = .false.
                             stimrate = 0
-                            cognate = .false.
+!                            cognate = .false.	! the idea is that if the signal strength is < threshold, 
+												! it is like a non-cognate interaction.  Use cell%signalling instead
                         endif
                     else
                         stimrate = 0    ! not used
@@ -1039,7 +1040,7 @@ do kcell = 1,nlist
                     cell%DCbound(nbnd) = idc
                     ctype = cell%ctype
                     pMHC = DClist(idc)%density
-                    bindtime = get_bindtime(cog_ptr,cognate,ctype,pMHC,stimrate,kpar)
+                    bindtime = get_bindtime(cog_ptr,cell%signalling,ctype,pMHC,stimrate,kpar)
                     cell%unbindtime(nbnd) = tnow + bindtime
 !                    if (cognate) then
 !                        write(logmsg,*) 'cognate and bound: ', idc,kcell,bindtime
@@ -2669,6 +2670,8 @@ totalres%N_EffCogTC(ctype)   = totalres%N_EffCogTC(ctype) + 1
 totalres%N_EffCogTCGen(gen)  = totalres%N_EffCogTCGen(gen) + 1
 !write(*,'(a,2i3,a,2i6)') 'Cognate egress: ctype, gen :',ctype,gen,' totals: ',totalres%N_EffCogTCGen(0),totalres%N_EffCogTCGen(1)
 
+! Debugging early egress
+!write(nflog,'(a,2i6,3f8.3)') 'efferent: ',istep,gen,p%stimulation,p%CD69,p%S1PR1
 if (log_results) then
     ! Record avidity statistics for exiting cells
     avid = p%avidity
@@ -3996,7 +3999,11 @@ write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
 if (FAST) then
     ntot_LN = NTcells
 endif
-nDCSOI = (10*nDCSOI)/NDCalive
+if (NDCalive > 0) then
+	nDCSOI = (10*nDCSOI)/NDCalive
+else
+	nDCSOI = 0
+endif
 
 summaryData(1:19) = (/ int(tnow/60),istep,NDCalive,nact,ntot_LN,nseed,ncog(1),ncog(2),ndead, &
 	nbnd,int(InflowTotal),Nexits, teffgen, navestim(1), navestim(2), navestimrate(1), navestimrate(2), naveDCtime, nDCSOI /)
@@ -4136,6 +4143,39 @@ do k = 1,lastcogID
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
     i = min(int(p%stimrate/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_avidity(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_avidity
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx, avid
+
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    avid = p%avidity/MAXIMUM_AVIDITY
+    i = min(int(avid/dx + 1),n)
     i = max(i,1)
     cnt(i) = cnt(i) + 1
 enddo
@@ -4503,29 +4543,29 @@ if (.not.ok) then
 endif
 
 if (use_DC .and. NDCalive > 0) then
-	if (dbug) write(nflog,*) 'call binder'
+	if (dbug) write(nflog,*) 'call binder: ',cellist(8)%DCbound(1)
     call binder(ok)
     if (.not.ok) then
 		call logger('binder returned error')
 		res = -2
 		return
 	endif
-	if (dbug) write(nflog,*) 'did binder'
+	if (dbug) write(nflog,*) 'did binder: ',cellist(8)%DCbound(1)
     if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-		if (dbug) write(nflog,*) 'call update_DCstate'
+		if (dbug) write(nflog,*) 'call update_DCstate: ',cellist(8)%DCbound(1)
         call update_DCstate(ok)
         if (.not.ok) then
 			call logger('update_DCstate returned error')
 			res = -3
 			return
 		endif
-		if (dbug) write(nflog,*) 'did update_DCstate'
+		if (dbug) write(nflog,*) 'did update_DCstate: ',cellist(8)%DCbound(1)
     endif
 endif
 if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-	if (dbug) write(nflog,*) 'call updater'
+	if (dbug) write(nflog,*) 'call updater: ',cellist(8)%DCbound(1)
     call updater(ok)
-	if (dbug) write(nflog,*) 'did updater'
+	if (dbug) write(nflog,*) 'did updater: ',cellist(8)%DCbound(1)
     if (.not.ok) then
 		call logger('updater returned error')
 		res = -4
@@ -4559,9 +4599,9 @@ if (use_traffic) then
 endif
 if (dbug) call check_xyz(3)
 
-if (dbug) write(nflog,*) 'call balancer'
+if (dbug) write(nflog,*) 'call balancer: ',cellist(8)%DCbound(1)
 call balancer(ok)
-if (dbug) write(nflog,*) 'did balancer'
+if (dbug) write(nflog,*) 'did balancer: ',cellist(8)%DCbound(1)
 if (.not.ok) then
 	call logger('balancer returned error')
 	res = -6

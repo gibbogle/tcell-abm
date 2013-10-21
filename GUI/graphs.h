@@ -3,7 +3,7 @@
 
 #include "profile.h"
 
-#define maxGraphs 9     // This is the number of graphs that can be displayed (tiled)
+#define maxGraphs 12     // This is the number of graphs that can be displayed (tiled)
 
 struct graph_set {
 	QString tag;

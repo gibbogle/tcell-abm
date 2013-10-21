@@ -16,32 +16,32 @@ Graphs::Graphs()
 
 {"ntot_LN",
 "Total T Cell Population in LN",
-"No. of cells",
+"",  //No. of cells",
 4, true, 0, 1, 0, true},
 
 {"ncog_LN",
 "Cognate T Cells in LN",
-"No. of cells",
+"",  //No. of cells",
 6, true, 0, 1, 0, true},
 
 {"ncogseed",
 "Seed Cognate Cells",
-"No. of cells",
+"",  //No. of cells",
 5, true, 0, 1, 0, true},
 
 {"nbnd",
 "Bound Cognate Cells",
-"No. of cells",
+"",  //No. of cells",
 9, true, 0, 1, 0, true},
 
 {"teffgen",
 "Efferent Activated Cells",
-"No. of cells",
+"",  //No. of cells",
 12, true, 0, 1, 0, true},
 
 {"nDC",
 "Antigen Presenting Cells",
-"No. of cells",
+"",  //No. of cells",
 2, true, 0, 1, 0, true},
 
 {"act",
@@ -70,8 +70,8 @@ Graphs::Graphs()
 16, false, 0, .01, 1.0, true},
 
 {"DCcontact_time",
-"Average First DC Contact Time",
-"Hours",
+"Average First DC Contact Time (h)",
+"",  //Hours",
 17, true, 0, .01, 0, true},
 
 {"nDC_SOI",
@@ -81,37 +81,42 @@ Graphs::Graphs()
 
 {"CD69",
 "CD69 Profile",
-"Fraction",
+"",  //Fraction",
 PROFILE_CD69, true, 0, 1, 1.0, false},
 
 {"S1PR1",
 "S1PR1 Profile",
-"Fraction",
+"",  //Fraction",
 PROFILE_S1PR1, true, 0, 1, 1.0, false},
 
 {"Stimulation",
 "Stimulation Profile (LN)",
-"Fraction",
+"",  //Fraction",
 PROFILE_STIM, true, 0, 1, 1.0, false},
 
 {"Stimulation Rate",
 "Stimulation Rate Profile (LN)",
-"Fraction",
+"",  //Fraction",
 PROFILE_STIMRATE, true, 0, 1, 1.0, false},
+
+{"Avidity",
+"Avidity Profile (LN)",
+"",  //Fraction",
+PROFILE_AVIDITY, true, 0, 1, 1.0, false},
 
 {"DC Contact Time (20h)",
 "First DC Contact Time Profile",
-"Fraction",
+"",  //Fraction",
 PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
 
 {"ncog_PER",
 "Activated T Cells in Periphery",
-"No. of cells",
+"",  //No. of cells",
 7, false, 0, 1, 0, true},
 
 {"nexits",
-"Exit Portals",
-"No. of portals",
+"No. of Exit Portals",
+"",  //No. of portals",
 11, false, 0, 1, 0, true}
 
 };

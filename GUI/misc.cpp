@@ -163,6 +163,8 @@ void ExecThread::run()
     get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_S1PR1;
     get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_AVIDITY;
+    get_profile_avidity(profile_x[k],profile_y[k],&profile_n[k]);
     mutex1.unlock();
 	emit summary();		// Emit signal to update summary plots
 	for (int i=1; i<= nsteps; i++) {
@@ -189,6 +191,8 @@ void ExecThread::run()
             get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
             k = PROFILE_STIMRATE;
             get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
+            k = PROFILE_AVIDITY;
+            get_profile_avidity(profile_x[k],profile_y[k],&profile_n[k]);
             k = PROFILE_FIRSTDCCONTACTTIME;
             get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
             mutex1.unlock();
