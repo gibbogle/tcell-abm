@@ -906,7 +906,7 @@ subroutine binder(ok)
 logical :: ok
 integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc
 integer :: nadd, nsub, nu, nb, nc, nbt, nbc, nt
-real :: tnow, bindtime, pMHC, stimrate, t_travel
+real :: tnow, bindtime, pMHC, stimrate, t_travel, ttravel
 logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
@@ -1029,6 +1029,7 @@ do kcell = 1,nlist
 					if (log_firstDCcontact .and. cell%unbindtime(1) < 0) then
 						call logfirstDCcontact(cell,idc)
 					endif
+	                ttravel = tnow - cell%unbindtime(2)		! this is the time of the previous unbinding
                     nbnd = nbnd + 1
                     if (cell%DCbound(nbnd) /= 0) then
                         write(logmsg,'(a,i6)') 'Error: binder: DCbound(nbnd) /= 0: ',cell%DCbound(nbnd)
@@ -1036,21 +1037,19 @@ do kcell = 1,nlist
 				        ok = .false.
 						return
                     endif
-!                    bound = .true.
                     cell%DCbound(nbnd) = idc
+                    DClist(idc)%nbound = DClist(idc)%nbound + 1
                     ctype = cell%ctype
                     pMHC = DClist(idc)%density
                     bindtime = get_bindtime(cog_ptr,cell%signalling,ctype,pMHC,stimrate,kpar)
                     cell%unbindtime(nbnd) = tnow + bindtime
-!                    if (cognate) then
-!                        write(logmsg,*) 'cognate and bound: ', idc,kcell,bindtime
-!	    		        call logger(logmsg)
-!	    		    endif
                     nadd = nadd + 1
-                    DClist(idc)%nbound = DClist(idc)%nbound + 1
                     if (cognate) then
                         DClist(idc)%ncogbound = DClist(idc)%ncogbound + 1
 	                    call AddCogbound(idc,kcell)
+	                    call log_count(DCbindtime_count,bindtime)
+!	                    write(nflog,'(a,f8.1)') 'bindtime: ',bindtime
+	                    call log_count(DCtraveltime_count,ttravel)
                     endif
                     if (cell%DCbound(1) == 0 .and. cell%DCbound(2) /= 0) then
                         write(logmsg,'(a,3i6)') 'Error: binder: DCbound order: ',kcell,cell%DCbound
@@ -1246,7 +1245,6 @@ do z = NZ,1,-1
         nz_totsites(z) = nz_sites(z) + nz_totsites(z+1)
     endif
     if (nz_sites(z) > 0) then
-!        eratio(z) = nz_excess(z)/real(nz_sites(z))
         eratio(z) = 100*nz_excess(z)/real(nz_totsites(z))
         nz1 = min(z,nz1)
         nz2 = max(z,nz2)
@@ -1254,22 +1252,9 @@ do z = NZ,1,-1
         eratio(z) = 0
     endif
 enddo
-!write(*,*) 'scanner, istep: ',istep
-!nz1 = nz1 + 3
-!nz2 = nz2 - 3
-!if (mod(istep,100) == 0) then
-!    er = eratio((nz1+nz2)/2)     ! actually value at the midline
-!    ave_er = (nave*ave_er + er)/(nave+1)
-!    nave = nave + 1
-!    write(*,'(a,2f6.2)') 'scanner: eratio, average (%): ',er,ave_er
-!endif
-!deallocate(eratio)
-!deallocate(nz_sites0)
-!deallocate(nz_totsites)
 if (constant_efactor) then
     excess_factor = efactor
 else
-!    excess_factor = (efactor - excess_factor0 - excess_factor1*NTcells)/excess_factor2
     excess_factor = efactor + (1-efactor)*exp(-etheta*(NTcells - 50000))
 endif
 end subroutine
@@ -1920,21 +1905,12 @@ if (evaluate_residence_time .or. track_DCvisits) then
 elseif (associated(cellist(kcell)%cptr)) then
     cognate = .true.
     p => cellist(kcell)%cptr
-!    stage = get_stage(p)
 	call get_stage(p,stage,region)
     gen = get_generation(p)
-!        tin = tnow - p%entrytime
-!        if (tin < min_transit_time) cycle     ! prevent immediate exit of newly arrived cell
-!        if (stage /= NAIVE .and. gen < NGEN_EXIT) cycle
-!        if (stage /= NAIVE) then
-!    if (use_DC .and. gen <= 1) return            ! prevents immediate exit of newly arrived cell, in fact of undivided cell
-!    if (stage == ACTIVATED) then   ! this allows cells to exit with gen < NGEN_EXIT (unlike DCU paper runs)
-        ctype = cellist(kcell)%ctype
-        if (.not.exitOK(p,ctype)) then
-!            write(*,*) 'cell_exit: cognate exit suppressed: ',kcell
-            return
-        endif
-!    endif
+    ctype = cellist(kcell)%ctype
+    if (.not.exitOK(p,ctype)) then
+        return
+    endif
 else
     cognate = .false.
 endif
@@ -1954,32 +1930,19 @@ else
     endif
 endif
 if (cognate) then
-!	if (stage > CLUSTERS) then
-!		activated = .true.
-!	else
-!		activated = .false.
-!	endif
-!    if (.not.evaluate_residence_time .and. activated) then
     if (.not.evaluate_residence_time) then
 		call efferent(p,ctype)
 	endif
-!	if (activated) then
-!		write(logmsg,'(a,i4,2f8.1)') "activated cognate cell left: stage: ",stage,cellist(kcell)%entrytime,tnow
-!		call logger(logmsg)
-!	else 
-!		call logger("non-activated cognate cell left") 
-!    endif
-!	if (SIMULATE_PERIPHERY .and. activated) then 
-	if (SIMULATE_PERIPHERY) then 
+!	if (SIMULATE_PERIPHERY) then ! Useful to keep a record of egressing cognate cells, even if they are not touched again
 		region = PERIPHERY
 		call set_stage_region(p,stage,region)
-	else
-		ngaps = ngaps + 1
-		gaplist(ngaps) = kcell
-		cellist(kcell)%ID = 0
-	    cognate_list(p%cogID) = 0
+!	else
+!		ngaps = ngaps + 1
+!		gaplist(ngaps) = kcell
+!		cellist(kcell)%ID = 0
+!	    cognate_list(p%cogID) = 0
 	    ncogleft = ncogleft + 1
-	endif
+!	endif
 else
 	ngaps = ngaps + 1
 	gaplist(ngaps) = kcell
@@ -1992,15 +1955,7 @@ end subroutine
 !--------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------- 
 subroutine initialise_vascularity
-if (VEGF_MODEL == 2) then	! Not used
-	VEGF_beta = 0
-	VEGF_baserate = 0
-    VEGF_decayrate = 0.0012
-    vasc_maxrate = 0.001
-    VEGF = 0
-    vasc_beta = 0.00001
-    vasc_decayrate = 0.001
-else	! VEGF_MODEL = 1
+! VEGF_MODEL = 1
 !	VEGF_beta = 4.0e-8
 	VEGF_baserate = VEGF_beta*NTcells0
 !    VEGF_decayrate = 0.002		! delta_G
@@ -2014,7 +1969,6 @@ else	! VEGF_MODEL = 1
  !   write(*,*) 'alpha_V,beta_V,delta_V: ',vasc_maxrate,vasc_beta,vasc_decayrate
  !   write(*,*) 'c_vegf_0,VEGF0,VEGF_baserate: ',c_vegf_0,VEGF,VEGF_baserate
  !   write(*,*) 'vasc_beta*c_vegf_0: ',vasc_beta*c_vegf_0
-endif
 vascularity = 1.00
 !write(*,*) 'VEGF_MODEL, VEGF_baserate: ',VEGF_MODEL, VEGF_baserate
 end subroutine
@@ -2269,8 +2223,8 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 !       write(*,*) 'Nexits: ',Nexits
 !       write(*,*) '--------------------------'
 !       write(nflog,*) 'added: Nexits: ',naddex, Nexits
-        write(logmsg,*) 'add: Nexits: ',naddex, NTcells, Nexits, requiredExitPortals(NTcells),istep
-        call logger(logmsg) 
+!        write(logmsg,*) 'add: Nexits: ',naddex, NTcells, Nexits, requiredExitPortals(NTcells),istep
+!        call logger(logmsg) 
         do k = 1,naddex
             call AddExitPortal()
         enddo
@@ -2675,21 +2629,23 @@ totalres%N_EffCogTCGen(gen)  = totalres%N_EffCogTCGen(gen) + 1
 if (log_results) then
     ! Record avidity statistics for exiting cells
     avid = p%avidity
-    if (avid_count%logscale) then
-        avid = log10(avid)
-    endif
-    if (avid_count%nbins == 1) then
-        i = 1
-    else
-        !i = (avid-avidity_min)*1.01/avidity_step + 1
-        i = (avid-avid_count%binmin)/avid_count%binstep + 1.5
-        i = max(i,1)
-        !i = min(i,avidity_nlevels)
-        i = min(i,avid_count%nbins)
-    endif
-    avid_count%ndist(i) = avid_count%ndist(i) + 1
+    call log_count(avid_count,avid)
+!    if (avid_count%logscale) then
+!        avid = log10(avid)
+!    endif
+!    if (avid_count%nbins == 1) then
+!        i = 1
+!    else
+!        !i = (avid-avidity_min)*1.01/avidity_step + 1
+!        i = (avid-avid_count%binmin)/avid_count%binstep + 1.5
+!        i = max(i,1)
+!        !i = min(i,avidity_nlevels)
+!        i = min(i,avid_count%nbins)
+!    endif
+!    avid_count%bincount(i) = avid_count%bincount(i) + 1
 endif
 end subroutine
+
 
 !-----------------------------------------------------------------------------------------
 ! Using the complete list of cells, cellist(), extract info about the current state of the
@@ -3482,12 +3438,12 @@ do kcell = 1,nlist
 enddo
 if (fix_avidity) then
     write(nfres,fmtstr) hour,ntot,ncog,real(gendist)/ncog,real(tcrdist)/ncog,real(aviddist)/ncog, &
-        avid_count%ndist
+        avid_count%bincount
 else
     write(nfres,fmtstr) hour,ntot,ncog,real(gendist)/ncog,real(tcrdist)/ncog
 endif
-avid_count_total%ndist = avid_count_total%ndist + avid_count%ndist
-avid_count%ndist = 0
+!avid_count_total%bincount = avid_count_total%bincount + avid_count%bincount
+avid_count%bincount = 0
 !write(nfout,'(8i6)') aviddist
 end subroutine
 
@@ -3692,30 +3648,15 @@ subroutine init_counters
 ninflow_tag = 0
 noutflow_tag = 0
 restime_tot = 0
-if (log_results) then
-    if (.not.use_cognate) then
-        write(*,*) 'No use logging results with no cognate cells'
-        stop
-    endif
-    avid_count%nbins = avidity_nlevels
-    allocate(avid_count%ndist(avid_count%nbins))
-    avid_count%period = ntres
-    avid_count%logscale = avidity_logscale
-    avid_count%binmin = avidity_min
-    avid_count%binstep = avidity_step
-    avid_count%ndist = 0
-    avid_count%total = 0
-
-    allocate(avid_count_total%ndist(avid_count%nbins))
-    avid_count_total = avid_count
-!    avid_count_total%nbins = avid_count%nbins
-!    avid_count_total%period = avid_count%period
-!    avid_count_total%logscale = avid_count%logscale
-!    avid_count_total%binmin = avidity_min
-!    avid_count_total%binstep = avidity_step
-!    avid_count_total%ndist = 0
-!    avid_count_total%total = 0
+if (.not.use_cognate) then
+    write(*,*) 'No use logging results with no cognate cells'
+    stop
 endif
+call init_counter(avid_count, avidity_nlevels, avidity_min, avidity_step, avidity_logscale)
+call init_counter(DCfirstcontact_count,200,0.0,1.0,.false.)
+call init_counter(DCbindtime_count,200,0.0,5.0,.false.)
+call init_counter(DCtraveltime_count,200,0.0,2.0,.false.)
+
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -3800,8 +3741,9 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), error
-integer :: gen, ngens, neffgens, teffgen, teffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCtime, naveDCtime, nDCSOI
+integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), n, error
+integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
+integer :: nDCtime, naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim(2), totstimrate(2), totDCtime, t
 type (cog_type), pointer :: p
 integer :: nst(FINISHED), nearDC
@@ -3810,10 +3752,10 @@ integer, allocatable :: div_gendist(:)  ! cells that are capable of dividing
 character*(6) :: numstr
 character*(256) :: msg
 
-if (firstSummary) then
-	write(nfout,'(a)') "==========================================================================="
-	firstSummary = .false.
-endif
+!if (firstSummary) then
+!	write(nfout,'(a)') "==========================================================================="
+!	firstSummary = .false.
+!endif
 ok = .true.
 allocate(gendist(TC_MAX_GEN))
 allocate(div_gendist(TC_MAX_GEN))
@@ -3884,9 +3826,11 @@ do kcell = 1,nlist
         write(*,*) 'ERROR: show_snapshot: bad stype: ',ctype,stype
         stop
     endif
-    site = cellist(kcell)%site
-    neardc = occupancy(site(1),site(2),site(3))%DC(0)      ! list of DC near this site
-	nDCSOI = nDCSOI + nearDC
+    if (region == LYMPHNODE) then
+		site = cellist(kcell)%site
+		neardc = occupancy(site(1),site(2),site(3))%DC(0)      ! list of DC near this site
+		nDCSOI = nDCSOI + nearDC
+	endif
 enddo
 do i = 1,FINISHED
     if (nst(i) > 0) then
@@ -3903,8 +3847,8 @@ do i = TC_MAX_GEN,1,-1
 enddo
 ngens = i
 
-teffgen0 = totalres%N_EffCogTCGen(0)
-teffgen = sum(totalres%N_EffCogTCGen(1:TC_MAX_GEN))
+nteffgen0 = totalres%N_EffCogTCGen(0)
+nteffgen = sum(totalres%N_EffCogTCGen(1:TC_MAX_GEN))
 do i = TC_MAX_GEN,1,-1
     if (totalres%N_EffCogTCGen(i) /= 0) exit
 enddo
@@ -3915,8 +3859,8 @@ Ndead = totalres%N_Dead
 act = get_DCactivity()
 mols_pM = L_um3*M_pM/(NTcells*Vc*Navo)
 
-if (teffgen > 0) then
-    fac = 1/real(teffgen)
+if (nteffgen > 0) then
+    fac = 1/real(nteffgen)
 else
     fac = 0
 endif
@@ -3927,7 +3871,7 @@ write(*,'(a,7i7)')   '# in stage:  ',nst
 write(*,'(a,7f7.0)') 'stimulation: ',stim
 !write(*,'(a,7f7.0)') 'IL2 signal:  ',IL2sig
 write(*,'(a,2i8,4x,i8)') 'Recent efferent: ',totalres%dN_EffCogTC(2:3),sum(totalres%dN_EffCogTC)
-write(*,'(a,2i8,4x,i8)') 'Total efferent:  ',totalres%N_EffCogTC(2:3),teffgen
+write(*,'(a,2i8,4x,i8)') 'Total efferent:  ',totalres%N_EffCogTC(2:3),nteffgen
 write(*,'(a,10i6)')   'gen dist: ',(i,i=1,10)
 write(*,'(a)')        'In node:  '
 write(*,'(10x,10f6.3)') gendist(1:ngens)/tgen
@@ -3950,17 +3894,19 @@ write(*,*) '========= Average time to IL2 threshold: ',nIL2thresh,tIL2thresh/max
 write(*,'(a)') '----------------------------------------------------------------------'
 endif
 
-if (use_tcp) then
-    msg = ''
-    do i = 1,ngens
-		write(numstr,'(i6)') gendist(i)
-		msg = trim(msg)//trim(adjustl(numstr))
-		msg = trim(msg)//'('
-		write(numstr,'(i6)') div_gendist(i)
-		msg = trim(msg)//trim(adjustl(numstr))
-		msg = trim(msg)//')-'
-	enddo
-    call logger(msg)
+if (.false.) then	! not using this for now
+	if (use_tcp) then
+		msg = ''
+		do i = 1,ngens
+			write(numstr,'(i6)') gendist(i)
+			msg = trim(msg)//trim(adjustl(numstr))
+			msg = trim(msg)//'('
+			write(numstr,'(i6)') div_gendist(i)
+			msg = trim(msg)//trim(adjustl(numstr))
+			msg = trim(msg)//')-'
+		enddo
+		call logger(msg)
+	endif
 endif
 deallocate(gendist)
 
@@ -3977,36 +3923,75 @@ totalres%dN_Dead = 0
 !endif
 nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
 !write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot_LN,nseed,ncog,Ndead, &
-!	nbnd,int(InflowTotal),Nexits, teffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
-nact = 100*act
+!	nbnd,int(InflowTotal),Nexits, nteffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
+nact = 1000*act
 do i = 1,2
 	if (ncog(i) > 0) then
-		navestim(i) = 100*totstim(i)/(STIMULATION_LIMIT*ncog(i))
-		navestimrate(i) = 100*totstimrate(i)/ncog(i)
+		navestim(i) = 1000*totstim(i)/(STIMULATION_LIMIT*ncog(i))
+		navestimrate(i) = 1000*totstimrate(i)/ncog(i)
 	else
 		navestim(i) = 0
 		navestimrate(i) = 0
 	endif
 enddo
 if (nDCtime > 0) then
-	naveDCtime = (100*totDCtime)/nDCtime
+	naveDCtime = (1000*totDCtime)/nDCtime
 else
 	naveDCtime = 0
 endif
 write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
-!write(logmsg,'(a,e12.3,i6,f6.0,i4)') 'stim: ',totstim,(ncog(1) + ncog(2)),STIMULATION_LIMIT,navestim
-!call logger(logmsg)
+
+! DCtraveltime
+n = DCtraveltime_count%nsamples
+if (n > 0) then
+	naveDCtraveltime = 1000*(DCtraveltime_count%total/n)
+else
+	naveDCtraveltime = 0
+endif
+DCtraveltime_count%nsamples = 0
+DCtraveltime_count%total = 0
+
+! DCbindtime
+n = DCbindtime_count%nsamples
+if (n > 0) then
+	naveDCbindtime = 1000*(DCbindtime_count%total/n)
+else
+	naveDCbindtime = 0
+endif
+DCbindtime_count%nsamples = 0
+DCbindtime_count%total = 0
+
+nbndfraction = (1000.*nbnd)/ncog(1)
+
 if (FAST) then
     ntot_LN = NTcells
 endif
 if (NDCalive > 0) then
-	nDCSOI = (10*nDCSOI)/NDCalive
+	nDCSOI = (1000*nDCSOI)/NDCalive
 else
 	nDCSOI = 0
 endif
 
-summaryData(1:19) = (/ int(tnow/60),istep,NDCalive,nact,ntot_LN,nseed,ncog(1),ncog(2),ndead, &
-	nbnd,int(InflowTotal),Nexits, teffgen, navestim(1), navestim(2), navestimrate(1), navestimrate(2), naveDCtime, nDCSOI /)
+!summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, nact, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+!	nbnd, int(InflowTotal), Nexits, nteffgen, navestim(1), navestim(2), navestimrate(1), navestimrate(2), &
+!	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
+
+summaryData(1:21) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+	nbnd, int(InflowTotal), Nexits, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
+	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
+
+write(nfout,'(12i10,$)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+	nbnd, int(InflowTotal), Nexits, nteffgen
+write(nfout,'(f10.1,$)') .001*nact
+write(nfout,'(f10.3,$)') .001*navestim(1)
+write(nfout,'(f10.3,$)') .001*navestim(2)
+write(nfout,'(f10.3,$)') .001*navestimrate(1)
+write(nfout,'(f10.1,$)') .001*naveDCtime
+write(nfout,'(f10.1,$)') .001*naveDCtraveltime
+write(nfout,'(f10.1,$)') .001*naveDCbindtime
+write(nfout,'(f10.3,$)') .001*nbndfraction
+write(nfout,'(f10.1,$)') .001*nDCSOI
+write(nfout,*)
 
 if (track_DCvisits) then
 	write(logmsg,'(a,3i6,f6.0)') 'ntagged, ntaglimit, ntagged_left, t_taglimit: ', &
@@ -4015,6 +4000,35 @@ if (track_DCvisits) then
 endif
 check_inflow = 0
 check_egress = 0
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine write_header
+write(nfout,'(a)') '================================================================================================================'
+write(nfout,*)
+write(nfout,'(a10,$)') '      Hour'
+write(nfout,'(a10,$)') '  Timestep'
+write(nfout,'(a10,$)') '      N_DC'
+write(nfout,'(a10,$)') '  N_Tcells'
+write(nfout,'(a10,$)') '    N_seed'
+write(nfout,'(a10,$)') '  N_cog_LN'
+write(nfout,'(a10,$)') ' N_cog_per'
+write(nfout,'(a10,$)') '    N_dead'
+write(nfout,'(a10,$)') '   N_bound'
+write(nfout,'(a10,$)') '  N_influx'
+write(nfout,'(a10,$)') '   N_exits'
+write(nfout,'(a10,$)') '    N_left'
+write(nfout,'(a10,$)') '    DC_act'
+write(nfout,'(a10,$)') '   Stim_LN'
+write(nfout,'(a10,$)') '  Stim_per'
+write(nfout,'(a10,$)') '  Stimrate'
+write(nfout,'(a10,$)') '   T_first'
+write(nfout,'(a10,$)') '  T_travel'
+write(nfout,'(a10,$)') '    T_bind'
+write(nfout,'(a10,$)') ' Bnd_fract'
+write(nfout,'(a10,$)') '  N_DC_SOI'
+write(nfout,*)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4155,14 +4169,14 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine get_profile_avidity(x,y,n) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_avidity
+subroutine get_profile_avidity_ln(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_avidity_ln
 use, intrinsic :: iso_c_binding
 real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, avid
 
@@ -4174,6 +4188,8 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
     avid = p%avidity/MAXIMUM_AVIDITY
     i = min(int(avid/dx + 1),n)
     i = max(i,1)
@@ -4188,8 +4204,77 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+subroutine get_profile_avidity_per(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_avidity_per
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell, region
+integer,allocatable :: cnt(:)
+real :: dx, avid
+
+n = 20
+dx = 1.0/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= PERIPHERY) cycle
+    avid = p%avidity/MAXIMUM_AVIDITY
+    i = min(int(avid/dx + 1),n)
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_generation_ln(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_generation_ln
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell, region, gen
+integer,allocatable :: cnt(:)
+real :: dx, avid
+
+n = 20
+dx = 1.0
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
+	gen = get_generation(p)
+    i = min(gen,n)
+    cnt(i) = cnt(i) + 1
+enddo
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = i*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine get_profile_firstDCcontacttime(x,y,n) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_firstdccontacttime
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_firstdccontacttime 
 use, intrinsic :: iso_c_binding
 real(c_double) :: x(*)
 real(c_double) :: y(*)
@@ -4200,7 +4285,7 @@ integer,allocatable :: cnt(:)
 real :: dx, t
 
 n = 20
-dx = 2.0/n
+dx = 300.0/n
 allocate(cnt(n))
 cnt = 0
 do k = 1,lastcogID
@@ -4208,18 +4293,20 @@ do k = 1,lastcogID
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
     if (p%firstDCtime == 0) cycle
-    t = p%firstDCtime - cellist(kcell)%entrytime
-    i = min(int(t/2 + 1),n)
+    t = (p%firstDCtime - cellist(kcell)%entrytime)
+!    write(nflog,*) 'get_profile_firstDCcontacttime: ',t
+    i = min(int(t/dx + 1),n)
     i = max(i,1)
     cnt(i) = cnt(i) + 1
 enddo
 nc = max(1,sum(cnt))
-write(nflog,*) 'get_profile_firstDCcontacttime: ',nc
-write(nflog,'(20i4)') cnt
+!write(nflog,*) 'get_profile_firstDCcontacttime: ',nc
+!write(nflog,'(20i4)') cnt
 do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
+write(nflog,*) 'xmax: ',x(n)
 end subroutine
 
 !-------------------------------------------------------------------------------- 
@@ -4956,8 +5043,9 @@ if (TAGGED_LOG_PATHS) then
 endif
 if (save_input) then
     call save_inputfile(inputfile)
-    call save_parameters
 	call save_inputfile(fixedfile)
+    call save_parameters
+    call write_header
 endif
 ! Time to first DC contact computation
 firstDC_n = 0
@@ -5137,8 +5225,6 @@ end subroutine
 ! Python, the form character*(*) must be used.
 !-----------------------------------------------------------------------------------------
 subroutine execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)
-!!DEC$ ATTRIBUTES DLLEXPORT :: EXECUTE
-!!DEC$ ATTRIBUTES C, REFERENCE, MIXED_STR_LEN_ARG, ALIAS:"EXECUTE" :: execute
 !DEC$ ATTRIBUTES DLLEXPORT :: execute
 use, intrinsic :: iso_c_binding
 character(c_char) :: infile_array(128), outfile_array(128)

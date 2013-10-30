@@ -45,9 +45,9 @@ int NX, NY, NZ, NBY;
 int nt_vtk;
 bool leftb;
 
-double *profile_x[10];
-double *profile_y[10];
-int profile_n[10];
+double *profile_x[20];
+double *profile_y[20];
+int profile_n[20];
 
 //#define NO_USE_PGRAPH true
 
@@ -197,11 +197,9 @@ void MainWindow::createActions()
     for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
-//		LOG_QMSG(label_str);
-		if (label_str.startsWith("label_")) {
+        if (label_str.startsWith("label_") && label->inherits("QMyLabel")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
-//			LOG_QMSG(label_str);
-		}
+        }
 	}
 	// Graph menu
     connect(action_add_graph, SIGNAL(triggered()), this, SLOT(addGraph()));
@@ -1377,28 +1375,23 @@ void MainWindow::showSummary()
         if (!grph->isActive(i)) continue;
         if (grph->isProfile(i)) {
             double *x, *y;
+            double xscale;
             int n;
             QString tag = grph->get_tag(i);
             int k = grph->get_dataIndex(i);
-                x = profile_x[k];
-                y = profile_y[k];
-                n = profile_n[k];
-                yscale = grph->get_yscale(i);
-//                if (yscale == 0) {
-//                    for (int j=0; j<n; j++) {
-//                        if (yscale < y[j])
-//                            yscale = y[j];
-//                    }
-//                    int v = int(12*yscale);
-//                    yscale = double(v/10.);
-//                }
-//                sprintf(msg,"yscale: %f",yscale);
-//                LOG_MSG(msg);
-//                pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-//                if (k == PROFILE_CD69 || k == PROFILE_S1PR1) {
-                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 1.0, 0);
-                pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
-                pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
+            x = profile_x[k];
+            y = profile_y[k];
+            n = profile_n[k];
+            xscale = grph->get_xscale(x[n-1]);
+            yscale = grph->get_yscale(i);
+            pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
+//            if (k == PROFILE_GENERATION_LN) {
+//                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 20, 0);
+//            } else {
+//                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 1.0, 0);
+//            }
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
             pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
         }
     }
@@ -2435,7 +2428,7 @@ void MainWindow::create_hill_function(int N, double C, int n, double *x, double 
 
 //------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------
-void MainWindow::on_activation_mode_toggled()
+void MainWindow::on_rbut_ACTIVATION_MODE_0_toggled(bool checked)
 {
     if (rbut_ACTIVATION_MODE_0->isChecked()) {
         line_IL2_THRESHOLD->setEnabled(true);

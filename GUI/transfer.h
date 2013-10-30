@@ -24,8 +24,8 @@ extern int NX, NY, NZ;
 extern int nt_vtk;
 extern bool leftb;
 
-extern double *profile_x[10];
-extern double *profile_y[10];
-extern int profile_n[10];
+extern double *profile_x[20];
+extern double *profile_y[20];
+extern int profile_n[20];
 
 #endif // TRANSFER_H

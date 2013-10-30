@@ -9,85 +9,99 @@ Graphs::Graphs()
 {
     GRAPH_SET tsGraphSet[] = {
 
+//        summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+//            nbnd, int(InflowTotal), Nexits, nteffgen, nact, navestim(1), navestim(2), navestimrate(1), &
+//            naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
+
 //{"dummy",
 //"",
 //"",
 //0, false, 0, 1, 0, true},
 
+{"nDC",
+"Antigen Presenting Cells",
+"",  //No. of cells",
+2, false, 0, 1, 0, true},
+
 {"ntot_LN",
 "Total T Cell Population in LN",
 "",  //No. of cells",
-4, true, 0, 1, 0, true},
-
-{"ncog_LN",
-"Cognate T Cells in LN",
-"",  //No. of cells",
-6, true, 0, 1, 0, true},
+3, true, 0, 1, 0, true},
 
 {"ncogseed",
 "Seed Cognate Cells",
+"",  //No. of cells",
+4, false, 0, 1, 0, true},
+
+{"ncog_LN",
+"Cognate T Cells in LN",
 "",  //No. of cells",
 5, true, 0, 1, 0, true},
 
 {"nbnd",
 "Bound Cognate Cells",
 "",  //No. of cells",
-9, true, 0, 1, 0, true},
+8, false, 0, 1, 0, true},
 
-{"teffgen",
+{"nteffgen",
 "Efferent Activated Cells",
 "",  //No. of cells",
-12, true, 0, 1, 0, true},
-
-{"nDC",
-"Antigen Presenting Cells",
-"",  //No. of cells",
-2, true, 0, 1, 0, true},
+11, false, 0, 1, 0, true},
 
 {"act",
 "Total DC Antigen Activity",
 "",
-3, true, 0, .01, 0, true},
+12, true, 0, .001, 0, true},
 
 {"stim_LN",
 "Average Stimulation (LN)",
 "",
-13, true, 0, .01, 1.0, true},
+13, true, 0, .001, 1.0, true},
 
 {"stim_PER",
 "Average Stimulation (PER)",
 "",
-13, false, 0, .01, 1.0, true},
+14, false, 0, .001, 1.0, true},
 
 {"stimrate_LN",
 "Average Stimulation Rate (LN)",
 "",
-15, true, 0, .01, 1.0, true},
-
-{"stimrate_PER",
-"Average Stimulation Rate (PER)",
-"",
-16, false, 0, .01, 1.0, true},
+15, false, 0, .001, 1.0, true},
 
 {"DCcontact_time",
-"Average First DC Contact Time (h)",
-"",  //Hours",
-17, true, 0, .01, 0, true},
+"Average First DC Contact Time (min)",
+"",
+16, true, 0, .001, 0, true},
+
+{"DCtravel_time",
+"Average Inter-DC Travel Time (min)",
+"",
+17, true, 0, .001, 0, true},
+
+{"DCbind_time",
+"Average DC Bind Time (min)",
+"",
+18, true, 0, .001, 0, true},
+
+{"Bound_fraction",
+"Bound Fraction",
+"",
+19, true, 0, .001, 1.0, true},
 
 {"nDC_SOI",
 "Average No. of Cells in DC SOI",
 "",
-18, true, 0, .1, 0, true},
+20, false, 0, .001, 0, true},
 
 {"CD69",
 "CD69 Profile",
 "",  //Fraction",
-PROFILE_CD69, true, 0, 1, 1.0, false},
+PROFILE_CD69, false, 0, 1, 1.0, false},
 
 {"S1PR1",
 "S1PR1 Profile",
 "",  //Fraction",
-PROFILE_S1PR1, true, 0, 1, 1.0, false},
+PROFILE_S1PR1, false, 0, 1, 1.0, false},
 
 {"Stimulation",
 "Stimulation Profile (LN)",
@@ -99,12 +113,22 @@ PROFILE_STIM, true, 0, 1, 1.0, false},
 "",  //Fraction",
 PROFILE_STIMRATE, true, 0, 1, 1.0, false},
 
-{"Avidity",
+{"Avidity LN",
 "Avidity Profile (LN)",
 "",  //Fraction",
-PROFILE_AVIDITY, true, 0, 1, 1.0, false},
+PROFILE_AVIDITY_LN, true, 0, 1, 1.0, false},
 
-{"DC Contact Time (20h)",
+{"Avidity PER",
+"Avidity Profile (PER)",
+"",  //Fraction",
+PROFILE_AVIDITY_PER, false, 0, 1, 1.0, false},
+
+{"Generation LN",
+"Generation Profile (LN)",
+"",  //Fraction",
+PROFILE_GENERATION_LN, false, 0, 1, 1.0, false},
+
+{"DC Contact Time (min)",
 "First DC Contact Time Profile",
 "",  //Fraction",
 PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
@@ -179,6 +203,15 @@ double Graphs::get_scaling(int k) {
 
 double Graphs::get_yscale(int k) {
     return graphList[k].yscale;
+}
+
+double Graphs::get_xscale(double xmax) {
+    int n = 1;
+    for (;;) {
+        if (xmax <= n) break;
+        n++;
+    }
+    return double(n);
 }
 
 bool Graphs::isActive(int k)

@@ -55,6 +55,10 @@ implicit none
 INTEGER,  PARAMETER  ::  DP=SELECTED_REAL_KIND( 12, 60 )
 integer, parameter :: REAL_KIND = 4
 
+! Files
+integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, nftraffic = 16, nfrun = 17, &
+					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nfDCinfo=23
+
 ! General parameters
 integer, parameter :: BIG_INT = 2**30
 integer, parameter :: NEUMANN_MODEL = 1
@@ -174,12 +178,10 @@ integer, parameter :: OUTSIDE_TAG = -BIG_INT + 1
 
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 integer, parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
-integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, nftraffic = 16, nfrun = 17, &
-					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nfDCinfo=23
+real, parameter :: DELTA_T = 0.25       ! minutes
 real, parameter :: BIG_TIME = 100000
 real, parameter :: BALANCER_INTERVAL = 10
 integer, parameter :: SCANNER_INTERVAL = 100
-real, parameter :: DELTA_T = 0.25       ! minutes
 logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals 
 logical, parameter :: save_input = .true.
 
@@ -190,6 +192,13 @@ integer, parameter :: NDCcore_IN_VITRO = 8
 real, parameter :: STACKRAD_2 = 3.5
 real, parameter :: STACKRAD_3 = 2.3
 
+! Vascularity parameters
+real, parameter :: VEGF_alpha = 4.0e-7			! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
+real, parameter :: VEGF_beta = 5.0e-8			! rate constant for basal VEGF production (beta_G in hev.m) (was 4.0e-8)
+real, parameter :: VEGF_decayrate = 0.002		! VEGF decay rate (/min)	(was 0.002)
+real, parameter :: vasc_maxrate = 0.001			! max rate constant for vascularity growth (/min)  (was 0.003)
+real, parameter :: vasc_beta = 2.0				! Hill function parameter
+integer, parameter :: vasc_n = 2				! Hill function exponent
 
 ! DC parameters
 logical, parameter :: DC_motion = .false.
@@ -215,15 +224,29 @@ integer, parameter :: traffic_mode = TRAFFIC_MODE_2	! always
 logical, parameter :: use_blob = .true.				! always
 integer, parameter :: MMAX_GEN = 20     ! max number of generations (for array dimension only)
 integer, parameter :: NGEN_EXIT = 8     ! minimum non-NAIVE T cell generation permitted to exit 
+logical, parameter :: FIXED_NEXITS = .false.		! the number of exit portals is held fixed
+real, parameter :: XFOLLICLE = 0.6					! normalized x boundary of follicular interface "cap"
+! These parameters are used only if exit_region = EXIT_LOWERHALF
+logical, parameter :: constant_efactor = .true.
+real, parameter :: etheta = 1./25000.
+real, parameter :: ZIN_FRACTION = 1.0   ! fraction of blob radius for traffic inflow in upper hemisphere
+real, parameter :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
+real, parameter :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
+real, parameter :: EGRESS_SUPPRESSION_RAMP = 6		! hours
+real, parameter :: INLET_R_FRACTION = 0.7			! fraction of blob radius within which ingress occurs
+logical, parameter :: RELAX_INLET_EXIT_PROXIMITY = .false.	! override INLET_R_FRACTION, allow inlet closer to exits
+real, parameter :: INLET_LAYER_THICKNESS = 5		! if RELAX_INLET_EXIT_PROXIMITY, inlets are within this distance of the blob boundary
+real, parameter :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines how close an inlet point can be to an exit portal.
+real, parameter :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
+! Chemotaxis parameters
+integer, parameter :: MAX_EX_CHEMO = 4, MAX_DC_CHEMO = 6	! max allowed influences on a cell
+real, parameter :: BASE_DCchemo = 0.0
 ! Old chemotaxis method, not used now
 real, parameter :: CHEMO_RADIUS_UM = 50	! radius of chemotactic influence in old ad-hoc formulation
 real, parameter :: CHEMO_MIN = 0.05		! minimum level of exit chemotactic influence (at r = chemo_radius)
 real, parameter :: chemo_K_exit = 1.0   ! level of chemotactic influence towards exits
 real, parameter :: chemo_K_DC = 1.0     ! level of chemotactic influence towards DCs
-real :: chemo_radius					! radius of chemotactic influence (um)
-integer :: chemo_N
-real :: chemo_exp
 
 ! Chemokine/receptor parameters
 integer, parameter :: MAX_CHEMO = 1
@@ -237,47 +260,19 @@ logical, parameter :: use_ODE_diffusion = .false.	! for general case, use ODE sy
 logical, parameter :: USE_DC_SECRETION = .false.
 logical, parameter :: USE_ORIGINAL_CODE = .not.USE_GENERAL_CODE	! simple case, fixed secretion into DC neighborhood
 
-!specify bdry concentrations, not secretion rates
-
 ! Data above this line almost never change
 !==============================================================================================================
 
 ! Run parameters
 
-! These parameters are used only if exit_region = EXIT_LOWERHALF
-logical, parameter :: constant_efactor = .true.
-real, parameter :: etheta = 1./25000.
-real, parameter :: ZIN_FRACTION = 1.0   ! fraction of blob radius for traffic inflow in upper hemisphere
-!real, parameter :: ZOUT_FRACTION = 1.0  ! not used
-! This method of excess adjustment is no longer used
-!real, parameter :: excess_factor0 = 11.495
-!real, parameter :: excess_factor1 = 0.0158e-3
-!real, parameter :: excess_factor2 = -8.750
-
-
-!logical, parameter :: vary_vascularity = .true.
-!logical, parameter :: use_chemotaxis = .false. ! now based on exit_region == EXIT_CHEMOTAXIS
-!logical, parameter :: fix_avidity = .true.
-!integer, parameter :: avidity_nlevels = 8
-!!logical, parameter :: avidity_logscale = .true.
-!!real, parameter :: avidity_min = -1    ! if avidity_logscale then avidity_min is log10(actual min)
-!!real, parameter :: avidity_step = 0.185861   ! and log10(actual max) = log10(actual min) + (nlevels-1)*avidity_step
-!logical, parameter :: avidity_logscale = .false.
-!real, parameter :: avidity_min = 0.3
-!real, parameter :: avidity_step = 0.2
-
-!logical, parameter :: use_DC_chemotaxis = .true.
-integer, parameter :: MAX_EX_CHEMO = 4, MAX_DC_CHEMO = 6	! max allowed influences on a cell
-!real, parameter :: chemo_K_DC = 2.0
-real, parameter :: BASE_DCchemo = 0.0
-
-! Parameters and switches for calibration
+! Parameters and switches for calibration etc.
 logical, parameter :: calibrate_motility = .false.
 logical, parameter :: motility_param_range = .false.
 logical, parameter :: motility_save_paths = .false.
 logical, parameter :: calibrate_diffusion = .false.
 logical, parameter :: compute_travel_time = .false.
 integer, parameter :: n_multiple_runs = 1
+logical, parameter :: use_single_DC = .false.		! To evaluate chemokine field from a single DC
 
 ! Parameters and switches for testing
 logical, parameter :: test_vascular = .false.
@@ -290,15 +285,13 @@ logical, parameter :: dbug_cog = .false.
 logical, parameter :: avid_debug = .false.
 logical, parameter :: debug_DCchemotaxis = .false.
 integer, parameter :: CHECKING = 0
-integer :: idbug = 0
-
-real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
 
 ! To investigate the effect of chemotaxis on residence time.
 ! The situation to be simulated is one in which most cells are not subject to exit chemotaxis,
 ! but a small fraction of tagged cells are.  The question is: what is the effect on the residence time
 ! of the tagged cells?
 logical, parameter :: TAGGED_EXIT_CHEMOTAXIS = .false.	! ==> evaluate_residence_time = .true.
+real, parameter :: TAGGED_CHEMO_ACTIVITY = 1.0
 logical, parameter :: evaluate_residence_time = .false.
 integer, parameter :: istep_res1 = 4*60*24*3			! 3 days (was 5000)
 integer, parameter :: istep_res2 = istep_res1 + 4*60*24	! 1 day of tagging
@@ -372,6 +365,12 @@ integer, parameter :: CYT_TAG(1:N_CYT) = (/IL2_TAG/)
 integer, parameter :: CYT_NP = 0    !IL2_NP
 logical, parameter :: CD25_SWITCH = .true.
 !-------------------------------------------------------------
+! PERIPHERY parameters 
+logical, parameter :: SIMULATE_PERIPHERY = .false.
+integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
+real, parameter :: PERI_PROBFACTOR = 10
+!-------------------------------------------------------------
+
 
 ! Result type
 type result_type
@@ -498,10 +497,10 @@ end type
 
 type counter_type
     logical :: logscale
-    integer :: period
+    integer :: nsamples
     integer :: nbins
     real :: binmin, binstep
-    integer, allocatable :: ndist(:)
+    integer, allocatable :: bincount(:)
     real :: total
 end type
 
@@ -594,7 +593,6 @@ logical :: use_exit_chemotaxis
 logical :: use_DC_chemotaxis
 integer :: exit_rule					! 0 = use NGEN_EXIT, 1 = use EXIT_THRESHOLD, 2 = use S1PR1_EXIT_THRESHOLD, 3 = all OK
 logical :: FAST
-logical :: use_single_DC = .false.		! To evaluate chemokine field from a single DC
 
 real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> inflow rate
 ! Vascularity parameters
@@ -611,20 +609,20 @@ real :: days                            ! number of days to simulate
 integer :: seed(2)                      ! seed vector for the RNGs
 integer :: NT_GUI_OUT					! interval between GUI outputs (timesteps)
 integer :: SPECIES						! animal species source of T cells
-logical :: IN_VITRO = .false.			! select in vivo or in vitro simulation
+logical :: IN_VITRO						! select in vivo or in vitro simulation
 real :: IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 integer :: IV_NTCELLS					! initial T cell population in vitro
 real :: IV_COGNATE_FRACTION				! fraction of in vitro cells that are cognate for DC antigen
-logical :: IV_SHOW_NONCOGNATE = .false.	! display non-cognate T cells
+logical :: IV_SHOW_NONCOGNATE			! display non-cognate T cells
 character*(128) :: fixedfile
 
 !---------------------------------------------------
 ! end of parameters to read from input file
 !---------------------------------------------------
 
-!---------------------------------------------------
-! More input parameters
-!---------------------------------------------------
+!-------------------------------------------------------
+! More input parameters to be read from fixed input file
+!-------------------------------------------------------
 integer :: NX
 
 ! T cell parameters
@@ -666,9 +664,9 @@ real :: exit_fraction = 1.0/1000.       ! number of exits as a fraction of T cel
 real :: Ksurfaceportal = 40				! calibration factor for number of surface portals
 logical :: suppress_egress = .false.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
 
-!---------------------------------------------------
-! end of more parameters to be read from input file
-!---------------------------------------------------
+!---------------------------------------------------------
+! end of more parameters to be read from fixed input file
+!---------------------------------------------------------
 
 ! Cytokine data
 real, allocatable :: cyt(:,:,:,:)
@@ -705,22 +703,20 @@ integer :: nreldir2D, njumpdirs2D
 integer :: reldir2D(8,8)
 real(DP) :: dirprob2D(0:8)
 logical :: diagonal_jumps
-!real :: ep_factor      ! (25k) 2.4 when K1_S1PR1 = 0.01, 2.8 when K1_S1PR1 = 0.001  ! based on no-DC case!
-                       ! (50k) 2.3 when K1_S1PR1 = 0.01, chemo_K_exit = 0.3
 
 ! Chemotaxis data
 real :: DC_CHEMO_DELAY	! gets set = DC_BIND_DELAY
 real :: t_taglimit
-
-!real, allocatable :: chemo_r(:,:,:)    ! no longer used
 real, allocatable :: chemo_p(:,:,:,:)
+! These are parameters of the old method, not used now
+real :: chemo_radius					! radius of chemotactic influence (um)
+integer :: chemo_N
+real :: chemo_exp
 
 ! Cell data
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable, target :: cellist(:)
 type(DC_type), allocatable :: DClist(:)
-!type(DC_type), allocatable :: FDClist(:)
-!integer :: NFDC
 type(source_type), allocatable :: sourcelist(:)
 integer :: nsources
 integer, allocatable :: cognate_list(:)
@@ -745,11 +741,13 @@ type(result_type) :: localres, totalres
 integer :: nvisits(2,2), nrevisits(2,2)
 integer, allocatable :: DCvisits(:,:,:,:)
 integer, allocatable :: DCtotvisits(:,:,:,:)
-!integer :: tot_nvisits, tot_nrevisits, tot_DCvisits(0:MAX_DC+1)
 integer :: noutflow_tag, ninflow_tag
 real :: restime_tot
 real, allocatable :: Tres_dist(:)
-type(counter_type) :: avid_count,avid_count_total
+type(counter_type), target :: avid_count
+type(counter_type), target :: DCfirstcontact_count
+type(counter_type), target :: DCbindtime_count
+type(counter_type), target :: DCtraveltime_count
 integer :: dcbind(0:50)
 logical :: firstSummary
 
@@ -767,10 +765,8 @@ real :: firstDC_dist(2,2,10000)
 
 ! Miscellaneous data
 type(exit_type), allocatable :: exitlist(:)
-!type(global_type) :: globalvar
 integer :: max_exits        ! size of the exitlist(:) array
 integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T cell
-real :: min_transit_time = 60		! minimum time a T cell spends in the DCU (min)
 real :: CD69_threshold				! level of CD69 below which egress can occur
 real :: last_portal_update_time		! time that the number of exit portals was last updated
 real :: efactor                         ! If constant_efactor = true, this is the factor for the p correction
@@ -780,7 +776,7 @@ integer :: navid = 0
 integer ::  Nsteps, nsteps_per_min, istep
 integer :: Mnodes
 integer :: IDtest
-integer :: total_in = 0, total_out = 0
+integer :: total_in, total_out
 integer :: nIL2thresh = 0           ! to store times to IL2 threshold
 real :: tIL2thresh = 0
 integer :: ndivided(MMAX_GEN) = 0   ! to store times between divisions
@@ -789,22 +785,10 @@ real :: DCdecayrate                 ! base rate of depletion of DC activity (/mi
 real :: TCRdecayrate                ! rate of decay of integrated TCR stimulation (/min)
 real :: max_TCR = 0
 real :: avidity_level(MAX_AVID_LEVELS)  ! discrete avidity levels for use with fix_avidity
-logical :: vary_vascularity = .true.     ! to allow inflammation to change vascularity (false if VEGF_MODEL = 0)
+logical :: vary_vascularity			! to allow inflammation to change vascularity (false if VEGF_MODEL = 0)
 
 integer :: check_egress(1000)		! for checking traffic
 integer :: check_inflow
-
-! Vascularity parameters
-real :: VEGF_alpha = 4.0e-7         ! rate constant for dependence on inflammation (/min) (alpha_G in hev.m) (was 5.0e-7)
-real :: VEGF_beta = 5.0e-8			! rate constant for basal VEGF production (beta_G in hev.m) (was 4.0e-8)
-real :: VEGF_decayrate = 0.002      ! VEGF decay rate (/min)	(was 0.002)
-!real :: vasc_maxrate = 0.0006       ! max rate constant for vascularity growth (/min)
-real :: vasc_maxrate = 0.001       ! max rate constant for vascularity growth (/min)  (was 0.003)
-!real :: vasc_beta = 1.5				! Hill function parameter
-real :: vasc_beta = 2.0				! Hill function parameter
-integer :: vasc_n = 2               ! Hill function exponent
-! NOTE: all the parameter changes I've been trying do not get the peak N/N0 above 4, with 
-! inflam = 1, days 3,4.
 
 real :: vasc_decayrate				! vascularity decay rate (/min) (deduced)
 real :: VEGF_baserate				! base rate of production of VEGF (> 0 for VEGF-vascularity model VEGF_MODEL = 1)
@@ -821,33 +805,18 @@ real :: DC_LIFETIME_MEDIAN				! days
 
 character*(128) :: inputfile
 character*(128) :: outputfile
-!character*(128) :: resultfile
 character*(128) :: DCinjectionfile
 character*(2048) :: logmsg
 TYPE(winsockport) :: awp_0, awp_1, awp_2, awp_3
 logical :: use_TCP = .true.         ! turned off in para_main()
-logical :: use_CPORT1 = .false.
+logical :: use_CPORT1
 logical :: stopped, clear_to_send, simulation_start, par_zig_init
-logical :: dbug = .false.
 logical :: USE_PORTAL_EGRESS			! use fixed exit portals rather than random exit points
 logical :: BLOB_PORTALS					! egress to the sinus at portals throughout the blob
 logical :: SURFACE_PORTALS				! egress to the sinus at portals on the blob surface
-logical :: FIXED_NEXITS = .false.		! the number of exit portals is held fixed
-real :: XFOLLICLE = 0.6					! normalized x boundary of follicular interface "cap"
-real :: EGRESS_SUPPRESSION_TIME1 = 12	! hours
-real :: EGRESS_SUPPRESSION_TIME2 = 24	! hours
-real :: EGRESS_SUPPRESSION_RAMP = 6		! hours
-real :: INLET_R_FRACTION = 0.7			! fraction of blob radius within which ingress occurs
-logical :: RELAX_INLET_EXIT_PROXIMITY = .false.	! override INLET_R_FRACTION, allow inlet closer to exits
-real :: INLET_LAYER_THICKNESS = 5		! if RELAX_INLET_EXIT_PROXIMITY, inlets are within this distance of the blob boundary
-real :: INLET_EXIT_LIMIT = 5			! if RELAX_INLET_EXIT_PROXIMITY, this determines how close an inlet point can be to an exit portal.
-real :: CHEMO_K_RISETIME = 120			! if RELAX_INLET_EXIT_PROXIMITY, this the the time for chemotaxis to reach full strength (mins) 
 
-! PERIPHERY parameters 
-logical, parameter :: SIMULATE_PERIPHERY = .false.
-integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
-real, parameter :: PERI_PROBFACTOR = 10
-
+integer :: idbug = 0
+logical :: dbug = .false.
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
@@ -1173,7 +1142,6 @@ do kcell = 1,nlist
         enddo
     endif
 enddo
-write(*,*) 'Did initial_binding'
 !write(*,*) 'DC occupancy:'
 !write(*,'(8i6)') DClist(1:NDC)%nbound
 end subroutine
@@ -2853,6 +2821,54 @@ if (isopen) then
 endif
 if (error /= 0) stop
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine init_counter(counter, nbins, binmin, binstep, logscale)
+type(counter_type) :: counter
+integer :: nbins
+real :: binmin, binstep
+logical :: logscale
+
+counter%nbins = nbins
+counter%binmin = binmin
+counter%binstep = binstep
+counter%logscale = logscale
+if (allocated(counter%bincount)) then
+	deallocate(counter%bincount)
+endif
+allocate(counter%bincount(counter%nbins))
+counter%bincount = 0
+counter%nsamples = 0
+counter%total = 0
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! The ndist(i) count is incremented if binmin + (i-1)*binstep <= val < binmin + i*binstep
+!-----------------------------------------------------------------------------------------
+subroutine log_count(counter, sample)
+type(counter_type) :: counter
+real :: sample
+real :: val
+integer :: i
+
+if (counter%logscale) then
+    val = log10(sample)
+else
+	val = sample   
+endif
+if (counter%nbins == 1) then
+    i = 1
+else
+    i = (val - counter%binmin)/counter%binstep + 1
+    i = max(i,1)
+    i = min(i,counter%nbins)
+endif
+counter%bincount(i) = counter%bincount(i) + 1
+counter%nsamples = counter%nsamples + 1
+counter%total = counter%total + sample
+end subroutine
+
 
 !--------------------------------------------------------------------------------
 !     NON-RECURSIVE STACK VERSION OF QUICKSORT FROM N.WIRTH'S PASCAL

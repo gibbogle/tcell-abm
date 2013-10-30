@@ -362,44 +362,6 @@ deallocate(pt)
 end subroutine
 
 !----------------------------------------------------------------------------------------
-! These parameters are not yet in an input file, but they will be ...
-!----------------------------------------------------------------------------------------
-subroutine old_unread_cell_params
-
-!NX = 100
-
-! T cell parameters
-!use_traffic = .false.
-!TCR_splitting = .false.  ! enable sharing of integrated TCR signal between progeny cells
-!transient_stagetime = 1.0
-!clusters_stagetime = 13.0
-!transient_bindtime = 10.0
-!clusters_bindtime = 180.0
-!swarms_bindtime = 20.0
-!TC_life_median1 = 196				! median lifetime of naive T cells
-!TC_life_median2 = 196				! median lifetime of activated T cells
-!TC_life_shape= 1.4					! shape parameter for lifetime of T cells
-
-! DC parameters
-!use_DCflux = .false.
-!STIM_HILL_THRESHOLD = 10   ! DC density limit for TCR stimulation capability (0.05)
-!STIM_HILL_C = 300
-!STAGED_CONTACT_RULE = CT_HENRICKSON
-!ABIND1 = 0.4    ! binding to a DC
-!ABIND2 = 0.8
-
-! Vascularity parameters
-!Inflammation_days1  ! Days of plateau level - parameters for VEGF_MODEL = 1
-!Inflammation_days2  ! End of inflammation
-!Inflammation_level	! This is the level of inflammation
-
-! Egress parameters
-!chemo_radius = 5  ! radius of chemotactic influence (sites)
-!exit_fraction = 1.0/1000.    ! number of exits as a fraction of T cell population
-
-end subroutine
-
-!----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine read_fixed_params(ok)
 logical :: ok
@@ -624,12 +586,6 @@ read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
 read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
-!read(nfcell,*) exit_region                  ! blob region for cell exits (1 = all z, 2 = lower half, 3 = blob portals, 4 = surface portals)
-!read(nfcell,*) efactor                     ! If constant_efactor = true, this is the factor for the p correction
-!read(nfcell,*) VEGF_MODEL                  ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
-!read(nfcell,*) chemo_radius			        ! radius of chemotactic influence (um) (NOT USED NOW)
-!read(nfcell,*) chemo_K_exit                 ! level of chemotactic influence towards exits (NOT USED NOW)
-!read(nfcell,*) chemo_K_DC                  ! level of chemotactic influence towards DCs (NOT USED NOW)
 
 	read(nfcell,*) receptor(CCR1)%strength      ! relative strength of CCL3-CCR1 chemotactic influence (chemo_K_DC)
     read(nfcell,*) receptor(CCR1)%level(1)
@@ -877,28 +833,14 @@ Vc = FLUID_FRACTION*Ve
 Nsteps = days*60*24/DELTA_T
 call make_outputfilename
 open(nfout,file=outputfile,status='replace')
-write(nfout,*) 'TC_COGNATE_FRACTION: ',TC_COGNATE_FRACTION
-write(logmsg,*) 'Opened nfout: ',outputfile
-call logger(logmsg)
-!if (save_input) then
-!    call save_inputfile(inputfile)
-!    call save_parameters
-!	call save_inputfile(fixedfile)
-!endif
 
 call setup_dists
-!write(*,*) 'open resultfile: ',resultfile
-!open(nfres,file=resultfile,status='replace')
-!write(nfres,'(i3,a)') ntres,' ntres'
-!write(nfres,'(i2,a)') TC_MAX_GEN, ' TC_MAX_GEN'
-!write(nfres,'(i2,f6.0,a)') TCR_nlevels, TCR_limit, ' TCR_nlevels,TCR_limit'
 if (avidity_logscale) then
     logstr = ' log'
 else
     logstr = ' lin'
 endif
 if (fix_avidity) then
-!    write(nfres,'(i2,2f10.6,a,a)') avidity_nlevels,avidity_min,avidity_step,logstr,'  avidity_nlevels,avidity_min,avidity_step'
     do i = 1,avidity_nlevels
         if (avidity_logscale) then
             avidity_level(i) = 10**(avidity_min + (i-1)*avidity_step)
@@ -906,10 +848,6 @@ if (fix_avidity) then
             avidity_level(i) = avidity_min + (i-1)*avidity_step
         endif
     enddo
-!    write(*,*) 'avidity_level'
-!    write(*,'(10f8.4)') avidity_level
-else
-!    write(nfres,'(i2,2f6.2,a,a)') 0,0.,0.,logstr,'  avid_nlevels,avid_min,avid_step'
 endif
 
 if (save_DCbinding) then
@@ -1011,12 +949,16 @@ subroutine save_inputfile(cellfile)
 character(LEN=*) :: cellfile
 character*(128) :: line
 
+write(nfout,'(a)') '---------------------------------------------------------------------------'
+write(nfout,'(a,a)') 'Input file: ',trim(cellfile)
+write(nfout,*)
 open(nfcell,file=cellfile,status='old')
 do
     read(nfcell,'(a)',end=999) line
     write(nfout,'(a)') line
 enddo
 999 continue
+write(nfout,*)
 close(nfcell)
 end subroutine
 
@@ -1025,48 +967,29 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine save_parameters
 
-write(nfout,*) 'PARAMETER data'
-write(nfout,*) '--------------'
-write(nfout,*) 'DELTA_X: ',DELTA_X
-write(nfout,*) 'BALANCER_INTERVAL: ',BALANCER_INTERVAL
-write(nfout,*) 'use_add_count: ',use_add_count
-write(nfout,*) 'use_blob: ',use_blob
-write(nfout,*) 'use_traffic: ',use_traffic
-write(nfout,*) 'use_exit_chemotaxis: ',use_exit_chemotaxis
-write(nfout,*) 'use_DC_chemotaxis: ',use_DC_chemotaxis
-write(nfout,*) 'computed_outflow: ',computed_outflow
-write(nfout,*) 'use_cytokines: ',use_cytokines
-write(nfout,*) 'use_cognate: ',use_cognate
-!write(nfout,*) 'random_cognate: ',random_cognate
-write(nfout,*) 'use_diffusion: ',use_diffusion
-!write(nfout,*) 'NX: ',NX
-write(nfout,*) 'NGEN_EXIT: ',NGEN_EXIT
-write(nfout,*) 'constant_efactor: ',constant_efactor
-write(nfout,*) 'efactor: ',efactor
-write(nfout,*) 'ZIN_FRACTION: ',ZIN_FRACTION
-!write(nfout,*) 'ZOUT_FRACTION: ',ZOUT_FRACTION
-write(nfout,*) 'use_DC: ',use_DC
-write(nfout,*) 'use_DCflux: ',use_DCflux
-write(nfout,*) 'DCDIM: ',DCDIM
-write(nfout,*) 'DC_DCprox: ',DC_DCprox
-write(nfout,*) 'STIM_HILL_THRESHOLD: ',STIM_HILL_THRESHOLD
-write(nfout,*) 'ABIND1: ',ABIND1
-write(nfout,*) 'ABIND2: ',ABIND2
-write(nfout,*) 'NDIFFSTEPS: ',NDIFFSTEPS
-write(nfout,*) 'VEGF_MODEL: ',VEGF_MODEL
-write(nfout,*) 'VEGF_alpha: ',VEGF_alpha
-write(nfout,*) 'VEGF_beta: ',VEGF_beta
-write(nfout,*) 'VEGF_decayrate: ',VEGF_decayrate
-write(nfout,*) 'vasc_maxrate: ',vasc_maxrate
-write(nfout,*) 'vasc_decayrate: ',vasc_decayrate
-write(nfout,*) 'vasc_beta: ',vasc_beta
-write(nfout,*) 'vasc_n: ',vasc_n
-write(nfout,*) 'fix_avidity: ',fix_avidity
-write(nfout,*) 'avidity_nlevels: ',avidity_nlevels
-write(nfout,*) 'avidity_logscale: ',avidity_logscale
-write(nfout,*) 'avidity_min: ',avidity_min
-write(nfout,*) 'avidity_step: ',avidity_step
-
+write(nfout,'(a)') '---------------------------------------------------------------------------'
+write(nfout,'(a)') 'Hard-coded PARAMETERS'
+write(nfout,'(a)') '---------------------'
+write(nfout,'(a,f8.4)') 'DELTA_X: ',DELTA_X
+write(nfout,'(a,f8.2)') 'DELTA_T: ',DELTA_T
+write(nfout,'(a,f8.2)') 'BALANCER_INTERVAL: ',BALANCER_INTERVAL
+write(nfout,'(a,e12.4)') 'VEGF_alpha: ',VEGF_alpha
+write(nfout,'(a,e12.4)') 'VEGF_beta: ',VEGF_beta
+write(nfout,'(a,e12.4)') 'VEGF_decayrate: ',VEGF_decayrate
+write(nfout,'(a,e12.4)') 'vasc_maxrate: ',vasc_maxrate
+write(nfout,'(a,e12.4)') 'vasc_decayrate: ',vasc_decayrate
+write(nfout,'(a,f8.2)') 'vasc_beta: ',vasc_beta
+write(nfout,'(a,i4)') 'vasc_n: ',vasc_n
+write(nfout,'(a,f8.2)') 'DC_DCprox: ',DC_DCprox
+write(nfout,'(a,f8.2)') 'bdry_DCprox: ',bdry_DCprox
+write(nfout,'(a,f8.2)') 'exit_DCprox: ',exit_DCprox
+write(nfout,'(a,f8.2)') 'exit_prox: ',exit_prox
+write(nfout,'(a,f6.2)') 'XFOLLICLE: ',XFOLLICLE
+write(nfout,'(a,f6.2)') 'INLET_R_FRACTION: ',INLET_R_FRACTION
+write(nfout,'(a,i4)') 'NGEN_EXIT: ',NGEN_EXIT
+write(nfout,'(a,L)') 'L_selectin: ',L_selectin
+write(nfout,'(a,L)') 'SIMULATE_PERIPHERY: ',SIMULATE_PERIPHERY
+write(nfout,*)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2492,8 +2415,6 @@ endif
 call make_cognate_list(ok)
 if (.not.ok) return
 
-!write(*,*) 'nlist,id,RESIDENCE_TIME: ',nlist,id,RESIDENCE_TIME
-write(nfout,*) 'nlist,RESIDENCE_TIME: ',nlist,RESIDENCE_TIME
 Nsites = NTcells + NDC*NDCsites	! not relevant for IN_VITRO
 NTcells0 = NTcells
 Radius0 = Radius
@@ -3898,7 +3819,7 @@ end subroutine
 subroutine updatestage(kcell,tnow,divide_flag)
 integer :: kcell
 logical :: divide_flag
-real :: tnow
+real :: tnow, t
 integer :: stage, region, gen, ctype
 real :: stagetime
 type(cog_type), pointer :: p
@@ -3932,6 +3853,8 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 	    if (p%stimulation > 0) then
 	        gen = get_generation(p)
             p%firstDCtime = tnow
+            t = tnow - cellist(kcell)%entrytime
+            call log_count(DCfirstcontact_count,t)
             p%dietime = tnow + TClifetime(p)
 	        if (activation_mode == STAGED_MODE) then
                 call set_stage(p,TRANSIENT)

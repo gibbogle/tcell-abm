@@ -36,7 +36,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>6</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2294,7 +2294,7 @@ p, li { white-space: pre-wrap; }
               </spacer>
              </item>
              <item row="4" column="0">
-              <widget class="QLabel" name="label_S1PR1_EXIT_THRESHOLD">
+              <widget class="QMyLabel" name="label_S1PR1_EXIT_THRESHOLD">
                <property name="text">
                 <string>label_S1PR1_EXIT_THRESHOLD</string>
                </property>
@@ -3504,7 +3504,7 @@ p, li { white-space: pre-wrap; }
             </property>
            </widget>
           </widget>
-          <widget class="QWidget" name="tab">
+          <widget class="QWidget" name="tab_graphs">
            <attribute name="title">
             <string>Graphs</string>
            </attribute>
@@ -5132,38 +5132,22 @@ p, li { white-space: pre-wrap; }
    <sender>line_SPECIAL_CASE</sender>
    <signal>textEdited(QString)</signal>
    <receiver>MainWindow</receiver>
-   <slot>on_text_SPECIAL_CASE_textEdited()</slot>
+   <slot>on_line_SPECIAL_CASE_textEdited(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>567</x>
-     <y>158</y>
+     <x>569</x>
+     <y>130</y>
     </hint>
     <hint type="destinationlabel">
-     <x>0</x>
-     <y>768</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rbut_ACTIVATION_MODE_0</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>on_activation_mode_toggled()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>617</x>
-     <y>98</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>658</x>
-     <y>70</y>
+     <x>529</x>
+     <y>54</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
-  <slot>on_text_SPECIAL_CASE_textEdited()</slot>
-  <slot>on_activation_mode_toggled()</slot>
+  <slot>on_rbut_ACTIVATION_MODE_0_toggled(bool)</slot>
+  <slot>on_line_SPECIAL_CASE_textEdited(QString)</slot>
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_ACTIVATION_MODE"/>

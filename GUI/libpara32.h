@@ -16,7 +16,9 @@ void get_profile_cd69(double *, double *, int *);
 void get_profile_s1pr1(double *, double *, int *);
 void get_profile_stim(double *, double *, int *);
 void get_profile_stimrate(double *, double *, int *);
-void get_profile_avidity(double *, double *, int *);
+void get_profile_avidity_ln(double *, double *, int *);
+void get_profile_avidity_per(double *, double *, int *);
+void get_profile_generation_ln(double *, double *, int *);
 void get_profile_firstdccontacttime(double *, double *, int *);
 //
 //

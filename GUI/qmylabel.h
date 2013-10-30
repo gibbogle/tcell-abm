@@ -27,7 +27,7 @@ public:
 	QMyLabel(QWidget *parent = 0);
 	
 signals:
-	void labelClicked(QString text);
+    void labelClicked(QString text);
 
 private:
 

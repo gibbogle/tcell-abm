@@ -158,13 +158,7 @@ void ExecThread::run()
 //	LOG_MSG(msg);
 	mutex1.lock();
 	get_summary(summaryData);
-//    LOG_QMSG("did get_summary");
-    k = PROFILE_CD69;
-    get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
-    k = PROFILE_S1PR1;
-    get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
-    k = PROFILE_AVIDITY;
-    get_profile_avidity(profile_x[k],profile_y[k],&profile_n[k]);
+    getProfiles();
     mutex1.unlock();
 	emit summary();		// Emit signal to update summary plots
 	for (int i=1; i<= nsteps; i++) {
@@ -183,18 +177,7 @@ void ExecThread::run()
 		if (i%240 == 0) {
 			mutex1.lock();
 			get_summary(summaryData);
-            k = PROFILE_CD69;
-            get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
-            k = PROFILE_S1PR1;
-            get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
-            k = PROFILE_STIM;
-            get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
-            k = PROFILE_STIMRATE;
-            get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
-            k = PROFILE_AVIDITY;
-            get_profile_avidity(profile_x[k],profile_y[k],&profile_n[k]);
-            k = PROFILE_FIRSTDCCONTACTTIME;
-            get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
+            getProfiles();
             mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals
 		}
@@ -233,6 +216,30 @@ void ExecThread::snapshot()
 	}
 	mutex2.unlock();
 	emit display(); // Emit signal to update VTK display
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::getProfiles()
+{
+    int k;
+
+    k = PROFILE_CD69;
+    get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_S1PR1;
+    get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_STIM;
+    get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_STIMRATE;
+    get_profile_stimrate(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_AVIDITY_LN;
+    get_profile_avidity_ln(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_AVIDITY_PER;
+    get_profile_avidity_per(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_GENERATION_LN;
+    get_profile_generation_ln(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_FIRSTDCCONTACTTIME;
+    get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
 }
 
 //-----------------------------------------------------------------------------------------

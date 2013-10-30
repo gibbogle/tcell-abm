@@ -44,7 +44,8 @@ public:
 	ExecThread(QString);
 	void run();
 	void snapshot();
-	void pause();
+    void getProfiles();
+    void pause();
 	void unpause();
 	void stop();
 	int ncpu;

@@ -73,10 +73,10 @@ protected:
     void closeEvent(QCloseEvent *event);
 
 private slots:
-    void on_activation_mode_toggled();
+    void on_rbut_ACTIVATION_MODE_0_toggled(bool);
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
-	void on_line_SPECIAL_CASE_textEdited(QString);
+    void on_line_SPECIAL_CASE_textEdited(QString);
     void newFile();
     void open();
     void about();
