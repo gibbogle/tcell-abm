@@ -10,7 +10,7 @@ Graphs::Graphs()
     GRAPH_SET tsGraphSet[] = {
 
 //        summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-//            nbnd, int(InflowTotal), Nexits, nteffgen, nact, navestim(1), navestim(2), navestimrate(1), &
+//            nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen, nact, navestim(1), navestim(2), navestimrate(1), &
 //            naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
 
 //{"dummy",
@@ -38,60 +38,75 @@ Graphs::Graphs()
 "",  //No. of cells",
 5, true, 0, 1, 0, true},
 
+{"ncog_PER",
+"Activated T Cells in Periphery",
+"",  //No. of cells",
+6, false, 0, 1, 0, true},
+
 {"nbnd",
 "Bound Cognate Cells",
 "",  //No. of cells",
 8, false, 0, 1, 0, true},
 
+{"nexits",
+"No. of Exit Portals",
+"",  //No. of portals",
+10, false, 0, 1, 0, true},
+
+{"nteffgen0",
+"Efferent Unactivated Cells",
+"",  //No. of cells",
+11, false, 0, 1, 0, true},
+
 {"nteffgen",
 "Efferent Activated Cells",
 "",  //No. of cells",
-11, false, 0, 1, 0, true},
+12, false, 0, 1, 0, true},
 
 {"act",
 "Total DC Antigen Activity",
 "",
-12, true, 0, .001, 0, true},
+13, true, 0, .001, 0, true},
 
 {"stim_LN",
 "Average Stimulation (LN)",
 "",
-13, true, 0, .001, 1.0, true},
+14, true, 0, .001, 1.0, true},
 
 {"stim_PER",
 "Average Stimulation (PER)",
 "",
-14, false, 0, .001, 1.0, true},
+15, false, 0, .001, 1.0, true},
 
 {"stimrate_LN",
 "Average Stimulation Rate (LN)",
 "",
-15, false, 0, .001, 1.0, true},
+16, false, 0, .001, 1.0, true},
 
 {"DCcontact_time",
 "Average First DC Contact Time (min)",
 "",
-16, true, 0, .001, 0, true},
+17, true, 0, .001, 0, true},
 
 {"DCtravel_time",
 "Average Inter-DC Travel Time (min)",
 "",
-17, true, 0, .001, 0, true},
+18, true, 0, .001, 0, true},
 
 {"DCbind_time",
 "Average DC Bind Time (min)",
 "",
-18, true, 0, .001, 0, true},
+19, true, 0, .001, 0, true},
 
 {"Bound_fraction",
 "Bound Fraction",
 "",
-19, true, 0, .001, 1.0, true},
+20, true, 0, .001, 1.0, true},
 
 {"nDC_SOI",
 "Average No. of Cells in DC SOI",
 "",
-20, false, 0, .001, 0, true},
+21, false, 0, .001, 0, true},
 
 {"CD69",
 "CD69 Profile",
@@ -131,17 +146,7 @@ PROFILE_GENERATION_LN, false, 0, 1, 1.0, false},
 {"DC Contact Time (min)",
 "First DC Contact Time Profile",
 "",  //Fraction",
-PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
-
-{"ncog_PER",
-"Activated T Cells in Periphery",
-"",  //No. of cells",
-7, false, 0, 1, 0, true},
-
-{"nexits",
-"No. of Exit Portals",
-"",  //No. of portals",
-11, false, 0, 1, 0, true}
+PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false}
 
 };
     // Note: tsGraphs[] is constant = tsGraphSet[]

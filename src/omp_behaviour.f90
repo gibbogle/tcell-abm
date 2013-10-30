@@ -988,7 +988,7 @@ write(nfout,'(a,f6.2)') 'XFOLLICLE: ',XFOLLICLE
 write(nfout,'(a,f6.2)') 'INLET_R_FRACTION: ',INLET_R_FRACTION
 write(nfout,'(a,i4)') 'NGEN_EXIT: ',NGEN_EXIT
 write(nfout,'(a,L)') 'L_selectin: ',L_selectin
-write(nfout,'(a,L)') 'SIMULATE_PERIPHERY: ',SIMULATE_PERIPHERY
+!write(nfout,'(a,L)') 'SIMULATE_PERIPHERY: ',SIMULATE_PERIPHERY
 write(nfout,*)
 end subroutine
 
@@ -1819,6 +1819,7 @@ else
     param1 = log(TC_AVIDITY_MEDIAN)
     param2 = log(TC_AVIDITY_SHAPE)
     cell%cptr%status = 0
+    call set_activation(cell%cptr,0)
     call set_generation(cell%cptr,gen)
     call set_stage_region(cell%cptr,stage,region)
     if (fix_avidity) then
@@ -4050,14 +4051,14 @@ end function
 ! Note that when optionA = 1, the CD25 signal alone must also exceed a threshold for division,
 ! and if CD25_SWITCH is true and gen = 1 failure to reach the thresholds cancels division
 ! permanently.
-! In this revised version, the use of a weighted sum of signals for activation (with the
+! In this revised version, the use of a weighted sum of signals for stimulation (with the
 ! parameter TC_STIM_WEIGHT) has been separated from the optionA cases.
 !----------------------------------------------------------------------------------------
 logical function candivide(p,ctype)
 type(cog_type), pointer :: p
 integer :: ctype
 integer :: gen
-real :: tnow, div_thresh, act, CD25signal
+real :: tnow, div_thresh, stim, CD25signal
 !
 ! NOTE: Need to better account for first division time, and need to check CD4/CD8
 !
@@ -4066,6 +4067,9 @@ candivide = .false.
 gen = get_generation(p)
 if (gen == 1) then			! undivided cell
 	div_thresh = FIRST_DIVISION_THRESHOLD(ctype)
+    if (p%stimulation > div_thresh) then
+		call set_activation(p,1)
+	endif
 else											! clone, lower threshold for division
 	div_thresh = DIVISION_THRESHOLD(ctype)
 endif
@@ -4076,10 +4080,10 @@ if (activation_mode == UNSTAGED_MODE) then
     return 
 endif
 
-act = get_activation(p)     ! weighted sum of TCR signal and CD25/IL2 signal
+stim = get_stimulation(p)     ! weighted sum of TCR signal and CD25/IL2 signal
 if (optionA == 1) then
     CD25signal = get_IL2store(p)
-    if (act > div_thresh .and. CD25signal > CD25_DIVISION_THRESHOLD) then ! allow division
+    if (stim > div_thresh .and. CD25signal > CD25_DIVISION_THRESHOLD) then ! allow division
 	    if (gen > TC_MAX_GEN) then
 		    write(*,*) 'candivide: bad gen: ',gen
 		    stop
@@ -4093,7 +4097,7 @@ if (optionA == 1) then
 	    p%stagetime = BIG_TIME
 	endif
 elseif (optionA == 2) then
-    if (act > div_thresh) then ! allow division
+    if (stim > div_thresh) then ! allow division
 	    if (gen > TC_MAX_GEN) then
 		    write(*,*) 'candivide: bad gen: ',gen
 		    stop
@@ -4123,10 +4127,10 @@ end function
 !----------------------------------------------------------------------------------------
 logical function reached_act_threshold(p)
 type(cog_type), pointer :: p
-real :: activation
+real :: stimulation
 
-activation = get_activation(p)
-if (activation > ACTIVATION_THRESHOLD) then
+stimulation = get_stimulation(p)
+if (stimulation > ACTIVATION_THRESHOLD) then
 	reached_act_threshold = .true.
 else
 	reached_act_threshold = .false.
@@ -4137,14 +4141,10 @@ end function
 ! T cell activation is determined as the weighted sum of TCR stimulation and IL2_Store,
 ! which is the current level of integrated CD25 signal.
 !----------------------------------------------------------------------------------------
-real function get_activation(p)
+real function get_stimulation(p)
 type(cog_type), pointer :: p
 
-!if (optionA == 1) then
-    get_activation = TC_STIM_WEIGHT*p%stimulation + (1-TC_STIM_WEIGHT)*get_IL2store(p)
-!else
-!    get_activation = p%stimulation
-!endif
+get_stimulation = TC_STIM_WEIGHT*p%stimulation + (1-TC_STIM_WEIGHT)*get_IL2store(p)
 end function
 
 !----------------------------------------------------------------------------------------

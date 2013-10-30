@@ -148,6 +148,7 @@ integer, parameter :: EXIT_UNLIMITED = 3
 
 integer, parameter :: STAGE_BYTE = 1
 integer, parameter :: GENERATION_BYTE = 2
+integer, parameter :: ACTIVATION_BYTE = 3
 integer, parameter :: SLOT_NUM1 = 1
 integer, parameter :: SLOT_NUM2 = 2
 integer, parameter :: BOTH = 3
@@ -366,9 +367,9 @@ integer, parameter :: CYT_NP = 0    !IL2_NP
 logical, parameter :: CD25_SWITCH = .true.
 !-------------------------------------------------------------
 ! PERIPHERY parameters 
-logical, parameter :: SIMULATE_PERIPHERY = .false.
-integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
-real, parameter :: PERI_PROBFACTOR = 10
+!logical, parameter :: SIMULATE_PERIPHERY = .false.
+!integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
+!real, parameter :: PERI_PROBFACTOR = 10
 !-------------------------------------------------------------
 
 
@@ -396,7 +397,6 @@ end type
     integer :: lastexit
     real :: Radius
     real :: Radius0
-!    real :: DCactivity
 	real :: ave_residence_time
     real :: InflowTotal
     real :: OutflowTotal
@@ -404,23 +404,21 @@ end type
     real :: Vascularity
     real :: dVdt
     real :: c_vegf
-!!    real, allocatable :: Inflow(:)
-!!    real, allocatable :: Outflow(:)
 !end type
 
 type cog_type
     sequence
 	real :: avidity			! level of TCR avidity with DC
 	real :: stimulation		! TCR stimulation level
-!    real :: entrytime       ! time that the cell entered the paracortex (by HEV or cell division)
     real :: firstDCtime     ! time of first contact with antigen on a DC at a level to generate TCR signalling
 	real :: dietime			! time that the cell dies
 	real :: dividetime		! time that the cell divides
 	real :: stagetime		! time that a cell can pass to next stage
 	real :: stimrate        ! rate of TCR stimulation
 	real :: CD69            ! level of CD69 expression
-	real :: S1PR1            ! level of S1PR1 expression
+	real :: S1PR1           ! level of S1PR1 expression
 	real :: CCR7            ! level of CCR7 expression
+	real :: CFSE			! level of CFSE label
     real :: IL_state(CYT_NP)    ! receptor model state variable values
     real :: IL_statep(CYT_NP)   ! receptor model state variable time derivative values
     integer :: status       ! holds data in bytes: 1=stage, 2=generation
@@ -435,7 +433,6 @@ type cell_type
     integer :: ID
     integer :: site(3)
     integer :: step
-!	real :: DCchemo			! level of susceptibility to DC chemotaxis
 	real :: receptor_level(MAX_RECEPTOR)
 	real :: receptor_saturation_time(MAX_RECEPTOR)
     integer :: tag
@@ -638,7 +635,7 @@ real :: TC_life_shape					! shape parameter for lifetime of T cells
 integer :: NTC_LN = 3.0e07				! number of T cells in a LN
 integer :: NTC_BODY = 1.6e09			! number of circulating T cells in the whole body
 integer :: NLN_RESPONSE					! number of LNs in the response
-real :: K1_S1PR1 != 0.005					! S1PR1/CD69 system parameters
+real :: K1_S1PR1 != 0.005				! S1PR1/CD69 system parameters
 real :: K2_S1PR1 != 0.05
 real :: K1_CD69 != 0.04
 real :: K2_CD69 != 0.01
@@ -653,9 +650,9 @@ real :: R_DC_max
 ! DC parameters
 integer :: NDCsites						! Number of lattice sites occupied by the DC core (soma)
 logical :: use_DCflux = .true.
-real :: STIM_HILL_THRESHOLD = 10          ! DC pMHC limit for TCR stimulation capability
-real :: STIM_HILL_C = 300		    ! TCR stimulation Hill function parameter
-integer :: STIM_HILL_N = 1					! TCR stimulation Hill function exponent
+real :: STIM_HILL_THRESHOLD = 10        ! DC pMHC limit for TCR stimulation capability
+real :: STIM_HILL_C = 300				! TCR stimulation Hill function parameter
+integer :: STIM_HILL_N = 1				! TCR stimulation Hill function exponent
 integer :: STAGED_CONTACT_RULE = CT_HENRICKSON ! rule for determining the duration of T cell - DC contact
 real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 
@@ -1636,19 +1633,6 @@ p%status = status
 end subroutine
 
 !----------------------------------------------------------------------------------------
-! Interim
-!----------------------------------------------------------------------------------------
-integer function old_get_stage(p)
-type(cog_type), pointer :: p
-integer :: status
-integer(1) :: statusbyte(4)
-equivalence (status,statusbyte)
-
-status = p%status
-old_get_stage = statusbyte(STAGE_BYTE)
-end function
-
-!----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine get_stage(p,stage,region)
 type(cog_type), pointer :: p
@@ -1711,6 +1695,42 @@ equivalence (status,statusbyte)
 
 status = p%status
 get_generation = statusbyte(GENERATION_BYTE)
+end function
+
+!--------------------------------------------------------------------------------------
+! Interim
+!--------------------------------------------------------------------------------------
+subroutine set_activation(p,active)
+type(cog_type), pointer :: p
+integer :: active
+integer :: status
+integer(1) :: statusbyte(4)
+equivalence (status,statusbyte)
+
+status = p%status
+statusbyte(ACTIVATION_BYTE) = active
+p%status = status
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! Interim
+!----------------------------------------------------------------------------------------
+integer function get_activation(p)
+type(cog_type), pointer :: p
+integer :: status
+integer(1) :: statusbyte(4)
+equivalence (status,statusbyte)
+
+status = p%status
+get_activation = statusbyte(ACTIVATION_BYTE)
+end function
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+logical function is_activated(p)
+type(cog_type), pointer :: p
+
+is_activated = (get_activation(p) == 1)
 end function
 
 !---------------------------------------------------------------------

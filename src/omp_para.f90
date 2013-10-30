@@ -1412,20 +1412,20 @@ do while (k < node_outflow)
 		cycle
 	endif
 	kcell = indx(slot)
-	if (SIMULATE_PERIPHERY) then
-		prob = 1/PERI_PROBFACTOR	! prob of allowing this cell to exit 
-		if (associated(cellist(kcell)%cptr)) then
-			gen = get_generation(cellist(kcell)%cptr)
-			call get_stage(cellist(kcell)%cptr,stage,region)
-			if (gen >= PERI_GENERATION .and. NDCcapable == 0) then
-				prob = 1
-			elseif (gen == 1) then	! suppress egress for undivided cognate cells.  
-				prob = 0 
-			endif
-		endif
-		R = par_uni(kpar)
-		if (R > prob) cycle
-	endif
+!	if (SIMULATE_PERIPHERY) then
+!		prob = 1/PERI_PROBFACTOR	! prob of allowing this cell to exit 
+!		if (associated(cellist(kcell)%cptr)) then
+!			gen = get_generation(cellist(kcell)%cptr)
+!			call get_stage(cellist(kcell)%cptr,stage,region)
+!			if (gen >= PERI_GENERATION .and. NDCcapable == 0) then
+!				prob = 1
+!			elseif (gen == 1) then	! suppress egress for undivided cognate cells.  
+!				prob = 0 
+!			endif
+!		endif
+!		R = par_uni(kpar)
+!		if (R > prob) cycle
+!	endif
 	site = (/x,y,z/)
 	call cell_exit(kcell,slot,site,left)
 	if (.not.left) cycle
@@ -1472,7 +1472,7 @@ if (exit_rule == EXIT_GEN_THRESHOLD) then
     endif
 elseif (exit_rule == EXIT_STIM_THRESHOLD) then
     if (gen > 1) then
-        act = get_activation(p)
+        act = get_stimulation(p)
 !        cd4_8 = ctype - 1
         if (act < EXIT_THRESHOLD(ctype)) then
             exitOK = .true.
@@ -2601,14 +2601,14 @@ end subroutine
 !--------------------------------------------------------------------------------
 subroutine efferent(p,ctype)
 type (cog_type), pointer :: p
-integer :: ctype, gen, stage, region, i
+integer :: ctype, gen, region, i
 real :: avid
 
-call get_stage(p,stage,region)
-if (stage < CLUSTERS) then
-	gen = 0
-else
+!call get_stage(p,stage,region)
+if (is_activated(p)) then
 	gen = get_generation(p)
+else
+	gen = 0
 endif
 if (ctype > NCTYPES) then
     write(*,*) 'efferent: bad cell type:', ctype
@@ -3745,6 +3745,7 @@ integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i
 integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
 integer :: nDCtime, naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim(2), totstimrate(2), totDCtime, t
+logical :: activated
 type (cog_type), pointer :: p
 integer :: nst(FINISHED), nearDC
 integer, allocatable :: gendist(:)
@@ -3780,10 +3781,12 @@ do kcell = 1,nlist
     if (associated(p)) then
 		stype = COG_TYPE_TAG
 		call get_stage(p,stage,region)
+		activated = is_activated(p)
 	else
 		stype = NONCOG_TYPE_TAG
 		stage = 0
 		region = LYMPHNODE
+		activated = .false.
 	endif
 	if (region == LYMPHNODE) then
 	    ntot_LN = ntot_LN + 1
@@ -3791,16 +3794,16 @@ do kcell = 1,nlist
     ctype = cellist(kcell)%ctype
 !    stype = struct_type(ctype)
     if (stype == COG_TYPE_TAG) then
-		if (region == LYMPHNODE .or. stage > CLUSTERS) then	! count all cognate cells in the LN, but only activated cells in the periphery
+		if (region == LYMPHNODE .or. activated) then	! count all cognate cells in the LN, but only activated cells in the periphery
 			ncog(region) = ncog(region) + 1
+	        totstim(region) = totstim(region) + p%stimulation
+		    totstimrate(region) = totstimrate(region) + p%stimrate
 		endif
 		if (cellist(kcell)%DCbound(1) > 0 .or. cellist(kcell)%DCbound(2) > 0) then
 			nbnd = nbnd + 1
 		endif
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
-        totstim(region) = totstim(region) + p%stimulation
-        totstimrate(region) = totstimrate(region) + p%stimrate
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
         gen = get_generation(p)
         if (gen < 0 .or. gen > TC_MAX_GEN) then
@@ -3924,18 +3927,18 @@ totalres%dN_Dead = 0
 nseed = ncogseed(1) + ncogseed(2)	! CD4 + CD8
 !write(nfout,'(i4,i8,i4,f8.0,5i8,4i6,i8,25f7.4)') int(tnow/60),istep,NDCalive,act,ntot_LN,nseed,ncog,Ndead, &
 !	nbnd,int(InflowTotal),Nexits, nteffgen, fac*totalres%N_EffCogTCGen(1:TC_MAX_GEN)
-nact = 1000*act
+nact = 1000.*act
 do i = 1,2
 	if (ncog(i) > 0) then
-		navestim(i) = 1000*totstim(i)/(STIMULATION_LIMIT*ncog(i))
-		navestimrate(i) = 1000*totstimrate(i)/ncog(i)
+		navestim(i) = 1000.*totstim(i)/(STIMULATION_LIMIT*ncog(i))
+		navestimrate(i) = 1000.*totstimrate(i)/ncog(i)
 	else
 		navestim(i) = 0
 		navestimrate(i) = 0
 	endif
 enddo
 if (nDCtime > 0) then
-	naveDCtime = (1000*totDCtime)/nDCtime
+	naveDCtime = (1000.*totDCtime)/nDCtime
 else
 	naveDCtime = 0
 endif
@@ -3944,7 +3947,7 @@ write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
 ! DCtraveltime
 n = DCtraveltime_count%nsamples
 if (n > 0) then
-	naveDCtraveltime = 1000*(DCtraveltime_count%total/n)
+	naveDCtraveltime = 1000.*(DCtraveltime_count%total/n)
 else
 	naveDCtraveltime = 0
 endif
@@ -3954,7 +3957,7 @@ DCtraveltime_count%total = 0
 ! DCbindtime
 n = DCbindtime_count%nsamples
 if (n > 0) then
-	naveDCbindtime = 1000*(DCbindtime_count%total/n)
+	naveDCbindtime = 1000.*(DCbindtime_count%total/n)
 else
 	naveDCbindtime = 0
 endif
@@ -3967,21 +3970,17 @@ if (FAST) then
     ntot_LN = NTcells
 endif
 if (NDCalive > 0) then
-	nDCSOI = (1000*nDCSOI)/NDCalive
+	nDCSOI = (1000.*nDCSOI)/NDCalive
 else
 	nDCSOI = 0
 endif
 
-!summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, nact, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-!	nbnd, int(InflowTotal), Nexits, nteffgen, navestim(1), navestim(2), navestimrate(1), navestimrate(2), &
-!	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
-
-summaryData(1:21) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-	nbnd, int(InflowTotal), Nexits, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
+summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
 	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
 
-write(nfout,'(12i10,$)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-	nbnd, int(InflowTotal), Nexits, nteffgen
+write(nfout,'(13i10,$)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen
 write(nfout,'(f10.1,$)') .001*nact
 write(nfout,'(f10.3,$)') .001*navestim(1)
 write(nfout,'(f10.3,$)') .001*navestim(2)
@@ -4018,8 +4017,9 @@ write(nfout,'(a10,$)') '    N_dead'
 write(nfout,'(a10,$)') '   N_bound'
 write(nfout,'(a10,$)') '  N_influx'
 write(nfout,'(a10,$)') '   N_exits'
-write(nfout,'(a10,$)') '    N_left'
-write(nfout,'(a10,$)') '    DC_act'
+write(nfout,'(a10,$)') '  N_eff_un'
+write(nfout,'(a10,$)') ' N_eff_act'
+write(nfout,'(a10,$)') '  DC_pMHC'
 write(nfout,'(a10,$)') '   Stim_LN'
 write(nfout,'(a10,$)') '  Stim_per'
 write(nfout,'(a10,$)') '  Stimrate'
@@ -4111,7 +4111,7 @@ real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, stim
 
@@ -4123,6 +4123,10 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+    if (.not.is_activated(p)) cycle
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
+    if (.not.is_activated(p)) cycle
     stim = p%stimulation/STIMULATION_LIMIT
     i = min(int(stim/dx + 1),n)
     i = max(i,1)
@@ -4223,6 +4227,7 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+    if (.not.is_activated(p)) cycle
 	call get_region(p,region)
 	if (region /= PERIPHERY) cycle
     avid = p%avidity/MAXIMUM_AVIDITY
