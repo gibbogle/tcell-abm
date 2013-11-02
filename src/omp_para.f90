@@ -3654,8 +3654,8 @@ if (.not.use_cognate) then
 endif
 call init_counter(avid_count, avidity_nlevels, avidity_min, avidity_step, avidity_logscale)
 call init_counter(DCfirstcontact_count,200,0.0,1.0,.false.)
-call init_counter(DCbindtime_count,200,0.0,5.0,.false.)
-call init_counter(DCtraveltime_count,200,0.0,2.0,.false.)
+call init_counter(DCbindtime_count,200,0.0,1.0,.false.)
+call init_counter(DCtraveltime_count,200,0.0,1.0,.false.)
 
 end subroutine
 
@@ -4314,6 +4314,69 @@ enddo
 write(nflog,*) 'xmax: ',x(n)
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_DCbindtime(x,y,n) BIND(C) 
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_dcbindtime 
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n
+type (cog_type), pointer :: p
+type (counter_type), pointer :: cp
+integer :: i, nc
+
+cp => DCbindtime_count
+n = cp%nbins
+do i = 1,n
+	x(i) = cp%binmin + (i-0.5)*cp%binstep
+enddo
+y(1:n) = 0
+nc = sum(cp%bincount(1:n))
+if (nc > 0) then
+	y(1:n) = cp%bincount(1:n)/real(nc)
+else
+	y(1:n) = 0
+endif
+cp%bincount(1:n) = 0
+end subroutine
+
+!-------------------------------------------------------------------------------- 
+! x, y, z, gen, CFSE, CD69, S1PR1, stim, stimrate
+!--------------------------------------------------------------------------------
+subroutine write_FACS(hour)	!bind(C)	!(filename)
+!!DEC$ ATTRIBUTES DLLEXPORT :: write_facs
+integer :: hour
+character(14) :: filename
+type (cog_type), pointer :: p
+integer :: k, kcell, region, gen, site(3)
+
+filename = 'FACS_h0000.dat'
+write(filename(7:10),'(i0.4)') hour
+open(nffacs, file=filename, status='replace')
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
+	gen = get_generation(p)
+	site = cellist(kcell)%site
+!	write(nffacs,'(i7,a,$)') kcell,', '
+	write(nffacs,'(i3,a,$)') site(1),', '
+	write(nffacs,'(i3,a,$)') site(2),', '
+	write(nffacs,'(i3,a,$)') site(3),', '
+	write(nffacs,'(i3,a,$)') gen,', '
+	write(nffacs,'(e12.4,a,$)') p%CFSE,', '
+	write(nffacs,'(f7.4,a,$)') p%CD69,', '
+	write(nffacs,'(f7.4,a,$)') p%S1PR1,', '
+	write(nffacs,'(f7.1,a,$)') p%stimulation,', '
+	write(nffacs,'(f7.4,a,$)') p%stimrate,', '
+	write(nffacs,*)
+enddo
+close(nffacs)
+end subroutine
+
 !-------------------------------------------------------------------------------- 
 !--------------------------------------------------------------------------------
 subroutine get_scene(nTC_list,TC_list,nDC_list,DC_list,nbond_list,bond_list) BIND(C)
@@ -4565,6 +4628,7 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step 
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
+integer :: hour
 real :: tnow
 logical :: ok
 
@@ -4604,6 +4668,12 @@ if (mod(istep,240) == 0) then
 	if (use_DC_chemotaxis .and. USE_CHEMOKINE_GRADIENT .and. USE_GENERAL_CODE .and. use_traffic) then
 		call make_split(.true.)
 		call UpdateSSFields
+	endif
+endif
+if (FACS_INTERVAL > 0) then
+	if (mod(istep,FACS_INTERVAL*240) == 0) then
+		hour = istep/240
+		call write_FACS(hour)
 	endif
 endif
 if (TAGGED_LOG_PATHS .and. mod(istep,1) == 0) then
@@ -5190,6 +5260,7 @@ endif
 if (TAGGED_LOG_PATHS) then
 	call write_log_paths
 endif
+!call write_FACS
 call wrapup
 
 if (res == 0) then

@@ -97,9 +97,9 @@ MainWindow::MainWindow(QWidget *parent)
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
 	}
-    for (int i=0; i<10; i++) {
-        profile_x[i] = (double *)malloc(100*sizeof(double));
-        profile_y[i] = (double *)malloc(100*sizeof(double));
+    for (int i=0; i<20; i++) {  // need to fix the hard-coded numbers !!!!!!!!
+        profile_x[i] = (double *)malloc(1000*sizeof(double));
+        profile_y[i] = (double *)malloc(1000*sizeof(double));
     }
 	vtkfile = "basecase.pos";
 	savepos_start = 0;
@@ -499,7 +499,7 @@ void MainWindow::loadParams()
                         s->setMaximum(splus->nTicks());
 						s->setSliderPosition(ival);
 						sliderParam[j] = w;
-                        connect(s, SIGNAL(valueChanged(int)), this, SLOT(updateSliderBox())); //sliderReleased               
+                        connect(s, SIGNAL(valueChanged(int)), this, SLOT(updateSliderBox())); //sliderReleased()   // valueChanged(int)
                         param_to_sliderIndex[k] = j;
 					}                  
                     found = true;
@@ -529,10 +529,6 @@ QString MainWindow::parse_rbutton(QString qsname, int *rbutton_case)
     QString wtag0 = wtag.mid(0,j);
 	bool ok;
 	*rbutton_case = suffix.toInt(&ok);
-    sprintf(msg,"parse_rbutton: case: %d",*rbutton_case);
-    LOG_MSG(msg);
-    LOG_QMSG(wtag);
-    LOG_QMSG(wtag0);
     return wtag0;
 }
 
@@ -642,9 +638,9 @@ void MainWindow::reloadParams()
 				}
 			}
 			if (!found) {
-				LOG_MSG("Widget tag not found:");
-				LOG_QMSG(qsname);
-				LOG_QMSG(wtag);
+//				LOG_MSG("Widget tag not found:");
+//				LOG_QMSG(qsname);
+//				LOG_QMSG(wtag);
 			}
 		}
 	}				
@@ -1383,7 +1379,12 @@ void MainWindow::showSummary()
             y = profile_y[k];
             n = profile_n[k];
             xscale = grph->get_xscale(x[n-1]);
-            yscale = grph->get_yscale(i);
+            double maxval = 0;
+            for (int j=0; j<n; j++) {
+                if (y[j] > maxval) maxval = y[j];
+            }
+            yscale = pGraph[i]->calc_yscale_ts(maxval);
+//            yscale = grph->get_yscale(i);
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
 //            if (k == PROFILE_GENERATION_LN) {
 //                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 20, 0);
@@ -1730,7 +1731,9 @@ void MainWindow::updateSliderBox()
     SliderPlus *sp = sliderplus_list[j];
     double v = sp->int_to_val(ival);
     QString vstr = sp->val_to_str(v);
-    ((QLineEdit *)sliderParam[j])->setText(vstr);
+    if (((QSlider *)sender())->isSliderDown()) {    // This stops strange effects when changing the lineEdit field
+        ((QLineEdit *)sliderParam[j])->setText(vstr);
+    }
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -2452,6 +2455,18 @@ void MainWindow::on_rbut_ACTIVATION_MODE_0_toggled(bool checked)
         line_UNSTAGED_MIN_DIVIDE_T->setEnabled(true);
 //        line_MAXIMUM_AVIDITY->setEnabled(true);
 //        line_MAXIMUM_ANTIGEN->setEnabled(true);
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_FACS_PLOT_toggled()
+{
+    if (checkBox_FACS_PLOT->isChecked()) {
+        line_FACS_INTERVAL->setEnabled(true);
+    } else {
+        line_FACS_INTERVAL->setEnabled(false);
+        line_FACS_INTERVAL->setText("0");
     }
 }
 

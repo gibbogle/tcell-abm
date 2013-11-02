@@ -146,7 +146,12 @@ PROFILE_GENERATION_LN, false, 0, 1, 1.0, false},
 {"DC Contact Time (min)",
 "First DC Contact Time Profile",
 "",  //Fraction",
-PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false}
+PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
+
+{"DC Bind Time (min)",
+"DC Bind Time Profile",
+"",  //Fraction",
+PROFILE_DCBINDTIME, true, 0, 1, 1.0, false}
 
 };
     // Note: tsGraphs[] is constant = tsGraphSet[]

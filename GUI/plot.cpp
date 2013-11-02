@@ -239,6 +239,21 @@ void Plot::draw2(double *x1, double *y1, double *x2, double *y2, int n1, int n2)
 //-----------------------------------------------------------------------------------------
 double Plot::calc_yscale_ts(double yval)
 {
-	int v = int(1.3*yval);
-    return double(v);
+    int v;
+    double yscale;
+    if (yval > 10) {
+        v = int(1.3*yval);
+        yscale = double(v);
+    } else if (yval > 1) {
+        v = int(13*yval);
+        yscale = v/10;
+    } else if (yval > 0.1) {
+        v = int(130*yval);
+        yscale = v/100.;
+    } else {
+        yscale = 0.1;
+    }
+//    sprintf(msg,"calc_yscale_ts: %f %f",yval,yscale);
+//    LOG_MSG(msg);
+    return yscale;
 }

@@ -240,6 +240,8 @@ void ExecThread::getProfiles()
     get_profile_generation_ln(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_FIRSTDCCONTACTTIME;
     get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_DCBINDTIME;
+    get_profile_dcbindtime(profile_x[k],profile_y[k],&profile_n[k]);
 }
 
 //-----------------------------------------------------------------------------------------

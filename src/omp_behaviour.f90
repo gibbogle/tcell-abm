@@ -470,7 +470,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius
+real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
 integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev
 character(64) :: specialfile
@@ -612,6 +612,7 @@ read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
+read(nfcell,*) facs_h						! interval between FACS outputs (h)
 read(nfcell,*) SPECIES						! animal species source of T cells
 read(nfcell,*) invitro 						! select in vivo or in vitro simulation
 read(nfcell,*) IV_WELL_DIAMETER				! diameter of in vitro well (mm)
@@ -629,6 +630,7 @@ DC_RADIUS = real_DCradius                       ! convert real -> integer
 DCrate_100k = DCrate_100k*Inflammation_level	! DC influx is scaled by the inflammation level
 T_DC1 = T_DC1*24								! convert days -> hours
 T_DC2 = T_DC2*24
+FACS_INTERVAL = facs_h							! to ensure an integer
 CTYPE_FRACTION(CD8) = TC_CD8_FRACTION
 CTYPE_FRACTION(CD4) = 1 - CTYPE_FRACTION(CD8)
 ave_residence_time = CTYPE_FRACTION(CD4)*residence_time(CD4) + CTYPE_FRACTION(CD8)*residence_time(CD8)
@@ -1157,7 +1159,7 @@ integer :: kcell, site2(3), freeslot
 logical :: ok
 integer :: icnew, ctype, gen, region, site(3), indx(2)
 integer :: iseq, tag, kfrom, kto
-real :: tnow
+real :: tnow, cfse0
 type(cog_type), pointer :: p1, p2
 !real :: IL_state(CYT_NP)
 logical :: cognate
@@ -1200,6 +1202,8 @@ if (TCR_splitting) then
     p1%stimulation = p1%stimulation/2
 endif
 ctype = cellist(kcell)%ctype
+cfse0 = p1%CFSE
+p1%CFSE = generate_CFSE(cfse0/2)
 tag = 0
 p1%dietime = tnow + TClifetime(p1)
 p1%dividetime = tnow
@@ -1221,6 +1225,7 @@ p2 => cellist(icnew)%cptr
 !    p2%avidity = p1%avidity
 !endif
 
+p2%CFSE = cfse0 - p1%CFSE
 p2%avidity = p1%avidity
 p2%stimulation = p1%stimulation
 p2%stimrate = p1%stimrate
@@ -1852,6 +1857,7 @@ else
     ! to chemotaxis and exit until it has received enough TCR signal to drive CD69 high.
     cell%cptr%CD69 = 0
     cell%cptr%S1PR1 = 0
+    cell%cptr%CFSE = generate_CFSE(1.0)
 !	cell%cptr%DCchemo = BASE_DCchemo
 	cell%cptr%firstDCtime = 0
     cell%cptr%dietime = tnow + TClifetime(cell%cptr)
@@ -2035,8 +2041,6 @@ occupancy(newsite(1),newsite(2),newsite(3))%indx = 0
 if (dbug) write(*,'(a,7i6)') 'site, vacant site: ',site,newsite
 
 end subroutine
-
-
 
 !--------------------------------------------------------------------------------
 ! nb is the current number of T cells bound to the DC.  Probability of binding

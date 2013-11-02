@@ -391,6 +391,11 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
  "Animation interval (timesteps)",
  "Interval between animation screen updates (timesteps).  One timestep = 15 sec."},
 
+{"FACS_INTERVAL", 0, 0, 0,
+"FACS plot output interval (h)",
+"If > 0, this is the interval (in hours) at which FACS plots will be generated.\n\
+ The file naming is: FACS_h#### where #### is the hour"},
+
 {"SPECIES", 1, 0, 1,
 "Species",
 "Animal species (mouse or human)"},

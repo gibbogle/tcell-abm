@@ -20,6 +20,7 @@ void get_profile_avidity_ln(double *, double *, int *);
 void get_profile_avidity_per(double *, double *, int *);
 void get_profile_generation_ln(double *, double *, int *);
 void get_profile_firstdccontacttime(double *, double *, int *);
+void get_profile_dcbindtime(double *, double *, int *);
 //
 //
 #ifdef __cplusplus

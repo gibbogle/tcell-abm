@@ -57,7 +57,7 @@ integer, parameter :: REAL_KIND = 4
 
 ! Files
 integer, parameter :: nfcell = 10, nfout = 11, nfvec = 12, nfpath = 13, nfres = 14, nfdcbind = 15, nftraffic = 16, nfrun = 17, &
-					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nfDCinfo=23
+					  nftravel=18, nfcmgui=19, nfpos=20, nflog=21, nfchemo=22, nfDCinfo=23, nffacs = 24
 
 ! General parameters
 integer, parameter :: BIG_INT = 2**30
@@ -605,6 +605,7 @@ real :: avidity_step                    ! step between equi-spaced values
 real :: days                            ! number of days to simulate
 integer :: seed(2)                      ! seed vector for the RNGs
 integer :: NT_GUI_OUT					! interval between GUI outputs (timesteps)
+integer :: FACS_INTERVAL				! interval between FACs plot outputs (h)
 integer :: SPECIES						! animal species source of T cells
 logical :: IN_VITRO						! select in vivo or in vitro simulation
 real :: IV_WELL_DIAMETER				! diameter of in vitro well (mm)
@@ -2450,6 +2451,21 @@ enddo
 write(logmsg,*) 'ERROR: random_choice: ',N,p
 call logger(logmsg)
 stop
+end function
+
+!-----------------------------------------------------------------------------------------
+! Generate a random value for CFSE from a distribution with mean = average
+! In the simplest case we can allow a uniform distribution about the average.
+! Multiplying factor in the range (1-a, 1+a)
+!-----------------------------------------------------------------------------------------
+real function generate_CFSE(average)
+real :: average
+integer :: kpar = 0
+real :: R
+real, parameter :: a = 0.1
+
+R = par_uni(kpar)
+generate_CFSE = (1 - a + 2*a*R)*average
 end function
 
 !-----------------------------------------------------------------------------------------
