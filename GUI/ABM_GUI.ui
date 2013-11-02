@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>5</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -3080,9 +3080,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QwtPlot" name="qwtPlot_STIM_HILL">
             <property name="geometry">
              <rect>
-              <x>90</x>
-              <y>420</y>
-              <width>231</width>
+              <x>230</x>
+              <y>320</y>
+              <width>211</width>
               <height>171</height>
              </rect>
             </property>
@@ -3370,8 +3370,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_DUMMY_STIMULATION_PLOT">
             <property name="geometry">
              <rect>
-              <x>150</x>
-              <y>600</y>
+              <x>270</x>
+              <y>500</y>
               <width>181</width>
               <height>16</height>
              </rect>
@@ -3383,9 +3383,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QwtPlot" name="qwtPlot_BINDTIME_HILL">
             <property name="geometry">
              <rect>
-              <x>810</x>
-              <y>420</y>
-              <width>231</width>
+              <x>660</x>
+              <y>320</y>
+              <width>221</width>
               <height>171</height>
              </rect>
             </property>
@@ -3393,8 +3393,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_DUMMY_BINDTIME_PLOT">
             <property name="geometry">
              <rect>
-              <x>870</x>
-              <y>600</y>
+              <x>700</x>
+              <y>500</y>
               <width>161</width>
               <height>16</height>
              </rect>
@@ -3406,8 +3406,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_STAGED_CONTACT_RULE">
             <property name="geometry">
              <rect>
-              <x>90</x>
-              <y>310</y>
+              <x>20</x>
+              <y>300</y>
               <width>161</width>
               <height>20</height>
              </rect>
@@ -3419,8 +3419,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_0">
             <property name="geometry">
              <rect>
-              <x>90</x>
-              <y>330</y>
+              <x>20</x>
+              <y>320</y>
               <width>82</width>
               <height>18</height>
              </rect>
@@ -3438,8 +3438,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_1">
             <property name="geometry">
              <rect>
-              <x>90</x>
-              <y>350</y>
+              <x>20</x>
+              <y>340</y>
               <width>82</width>
               <height>18</height>
              </rect>
@@ -3454,8 +3454,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QRadioButton" name="rbut_STAGED_CONTACT_RULE_2">
             <property name="geometry">
              <rect>
-              <x>90</x>
-              <y>370</y>
+              <x>20</x>
+              <y>360</y>
               <width>82</width>
               <height>18</height>
              </rect>
@@ -4890,7 +4890,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
