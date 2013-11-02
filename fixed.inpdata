@@ -1,0 +1,51 @@
+F           use_traffic			!= .false.
+F           TCR_splitting		!= .false.  ! enable sharing of integrated TCR signal between progeny cells
+1.0         transient_stagetime	!= 1.0
+13.0        clusters_stagetime	!= 13.0
+10.0        transient_bindtime	!= 10.0
+180.0       clusters_bindtime	!= 180.0
+20.0        swarms_bindtime		!= 20.0
+96          TC_life_median1		!= 196				! median lifetime of naive T cells
+96          TC_life_median2		!= 196				! median lifetime of activated T cells
+1.4         TC_life_shape		!= 1.4				! shape parameter for lifetime of T cells
+30000000      NTC_LN                          ! number of T cells in a whole LN (mouse)
+1600000000      NTC_BODY                        ! number of circulating T cells in the whole body (mouse)
+1           NLN_RESPONSE                    ! number of LNs in the response
+T           use_DCflux			!= .false.
+10          DC_pMHC_THRESHOLD	!= 10   ! DC density limit for TCR stimulation capability (0.05)
+40          DC_STIM_THRESHOLD	!= 500
+3           N_STIM
+3           CONTACT_RULE		!= CT_HENRICKSON
+0.4         ABIND1				!= 0.4    ! binding to a DC
+0.8         ABIND2				!= 0.8
+0.001       exit_fraction		!= 1.0/1000.    ! number of exits as a fraction of T cell population
+2           optionA                        ! 1 = CD25 signal has influence in division, 2 = no influence
+1           optionB                        ! IL-2/CD25 prod., 1 = finite time, 2 = until activ., 3 = always
+2           optionC                        ! 1 = L threshold for survival, 2 = no threshold
+24          IL2_PRODUCTION TIME            ! max. duration of IL2/CD25 production (hours)
+160         CD25_DIVISION_THRESHOLD        ! CD25 signal level L needed for division (optionA = 1)
+10          CD25_SURVIVAL_THRESHOLD        ! CD25 signal level L needed for survival of activated cell (optionC = 1) (20)
+3.3         TCradius                       ! radius of T cell (microns)
+1.0         TC_STIM_WEIGHT                 ! contribution of TCR stimulation to activation level
+15          TC_MAX_GEN                     ! maximum T cell generation
+0.00        TC_CD8_FRACTION                ! fraction of all T cells that are CD8 (0.33)
+0.5         CD8_DIVTIME_FACTOR             ! CD8 divide time as multiple of CD4 divide time
+0.1         DC_MULTIBIND_PROB              ! reducing factor to bind prob for each DC binding
+2           MAX_BIND                       ! number of DC that a cell can bind to at once
+2           divide_dist1%class             ! 1st division dist type
+2           divide_dist2%class             ! later division dist type
+0.2         GAMMA                          ! controls crowding
+12          DC_ACTIV_TAPER                 ! time (hours) over which DC activity decays to zero 12
+0.000       DC_DENS_BY_STIM                ! rate of reduction of density by TCR stimulation (0.0001)
+1.0         DC_FACTOR                      ! multiplying factor for DC number
+0.5         efactor                        ! If constant_efactor = true, this is the factor for the p correction
+1           VEGF_MODEL                     ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
+F           fix_avidity                    ! true if avidity takes discrete values, false if a distribution is used
+F           avidity_logscale               ! true if actual avidity = 10^(avidity_min + i*avidity_step)
+8           avidity_nlevels
+0.3         avidity_min
+0.2         avidity_step
+0.01        K1_S1P1                         ! S1P1/CD69 system parameters
+0.05        K2_S1P1
+0.04        K1_CD69 
+0.01        K2_CD69
