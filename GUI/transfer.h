@@ -5,6 +5,7 @@
 #include "profile.h"
 
 extern int showingVTK;
+extern int recordfrom, recordto;
 
 #define MAX_TC 1000000
 #define MAX_DC 1000

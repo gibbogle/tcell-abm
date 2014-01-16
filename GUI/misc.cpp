@@ -136,6 +136,8 @@ void ExecThread::run()
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
     int len_infile, len_outfile, k;
+    bool record;
+    bool first = true;
 
     LOG_MSG("Invoking DLL...");
     infile_path = inputFile;
@@ -150,6 +152,7 @@ void ExecThread::run()
 
 
 	paused = false;
+    record = false;
 //	LOG_MSG("execute called");
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
 //	LOG_MSG("execute returned");
@@ -161,10 +164,21 @@ void ExecThread::run()
     getProfiles();
     mutex1.unlock();
 	emit summary();		// Emit signal to update summary plots
+
 	for (int i=1; i<= nsteps; i++) {
 		bool updated = false;
+        if (recordfrom >= 0 && i >= recordfrom-1 && i <= recordto) {
+            record = true;
+//            if (showingVTK==0) emit(action_VTK());
+            if (first) {
+                first = false;
+                emit(action_VTK());
+            }
+        } else {
+            record = false;
+        }
 		if (paused && !updated) {
-			snapshot();
+            snapshot(record);
 			updated = true;
 		}
 		while(paused || leftb) {
@@ -183,14 +197,14 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 		if (i%nt_vtk == 0) {
-			if (showingVTK != 0) {
-				snapshot();
+            if (record || showingVTK != 0) {
+                snapshot(record);
 				Sleep(10);
 			}
 		}
 		if (stopped) break;
 	}
-	snapshot();
+    snapshot(record);
 	Sleep(10);
 	terminate_run(&res);
 	return;
@@ -198,7 +212,7 @@ void ExecThread::run()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void ExecThread::snapshot()
+void ExecThread::snapshot(bool record)
 {
 	mutex2.lock();
 	get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
@@ -215,7 +229,7 @@ void ExecThread::snapshot()
 		exit(1);
 	}
 	mutex2.unlock();
-	emit display(); // Emit signal to update VTK display
+    emit display(record); // Emit signal to update VTK display
 }
 
 //-----------------------------------------------------------------------------------------

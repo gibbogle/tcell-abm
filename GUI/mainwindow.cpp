@@ -31,6 +31,7 @@ Params *parm;	// I don't believe this is the right way, but it works
 Graphs *grph;
 
 int showingVTK;
+int recordfrom, recordto;
 int VTKbuffer[100];
 int TC_list[5*MAX_TC];
 int nTC_list;
@@ -77,10 +78,9 @@ MainWindow::MainWindow(QWidget *parent)
    : QMainWindow(parent)
 {
 	LOG_MSG("Started MainWindow");
-
 	setupUi(this);
     showMaximized();
-	// Some initializations
+    // Some initializations
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
@@ -92,7 +92,9 @@ MainWindow::MainWindow(QWidget *parent)
     first = true;
 	started = false;
     firstVTK = true;
+    recording = 0;
 	showingVTK = 0;
+    showingVTK += recording;
 	nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -140,14 +142,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     vtk = new MyVTK(mdiArea_VTK, test_page);
     vtk->init();
+
+    videoOutput = new QVideoOutput(this, vtk->renWin);
+
     rect.setX(50);
     rect.setY(30);
 #ifdef __DISPLAY768
-    rect.setHeight(580);
-    rect.setWidth(580);
+    rect.setHeight(642);
+    rect.setWidth(642);
 #else
-    rect.setHeight(800);
-    rect.setWidth(800);
+    rect.setHeight(786);
+    rect.setWidth(786);
 #endif
     mdiArea_VTK->setGeometry(rect);
     /*
@@ -206,6 +211,8 @@ void MainWindow::createActions()
     connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
     connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
     connect(action_save_snapshot, SIGNAL(triggered()), this, SLOT(saveSnapshot()));
+    connect(action_start_recording, SIGNAL(triggered()), this, SLOT(startRecorder()));
+    connect(action_stop_recording, SIGNAL(triggered()), this, SLOT(stopRecorder()));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -896,6 +903,7 @@ void MainWindow::goToInputs()
 {
     stackedWidget->setCurrentIndex(0);
 	showingVTK = 0;
+    showingVTK += recording;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -908,6 +916,7 @@ void MainWindow::goToOutputs()
 {
     stackedWidget->setCurrentIndex(1);    
 	showingVTK = 0;
+    showingVTK += recording;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -918,13 +927,14 @@ void MainWindow::goToOutputs()
 //-------------------------------------------------------------
 void MainWindow::goToVTK()
 {
-	if (started) {
+    if (started) {
 		stackedWidget->setCurrentIndex(2);
 		action_outputs->setEnabled(true);
 		action_inputs->setEnabled(true);
 		action_VTK->setEnabled(false);
 		showingVTK = 1;
-	}
+        showingVTK += recording;
+    }
 }
 
 //-------------------------------------------------------------
@@ -948,7 +958,8 @@ void MainWindow::playVTK()
 		save_image = false;
 	started = true;
 	showingVTK = 0;
-	goToVTK();
+    showingVTK += recording;
+    goToVTK();
 	if (!vtk->startPlayer(QFileInfo(fileName).absoluteFilePath(), timer, save_image)) {
 		LOG_MSG("startPlayer failed");
 		errorPopup("Open failure on this file");
@@ -1002,6 +1013,59 @@ void MainWindow::setSavePosStart()
 		sprintf(msg,"savepos_start: %d",savepos_start);
 		LOG_MSG(msg);
 	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: startRecorder()
+{
+    bool ok;
+    int nframes=0;
+
+    int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
+    if (ok) {
+        nframes = i;
+    }
+    if (!ok || nframes == 0) return;
+
+    QStringList formatItems;
+    formatItems << tr("avi") << tr("mov") << tr("mpg");
+    QString itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                         tr("Video file format:"), formatItems, 0, false, &ok);
+    QStringList codecItems;
+    codecItems << tr("h264") << tr("mpeg4") << tr("mpeg");
+    QString itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                              tr("Codec:"), codecItems, 0, false, &ok);
+
+    const char *prompt;
+    if (itemFormat.contains("avi")) {
+        prompt = "Videos (*.avi)";
+    } else if (itemFormat.contains("mov")) {
+        prompt = "Videos (*.mov)";
+    } else if (itemFormat.contains("mpg")) {
+        prompt = "Videos (*.mpg)";
+    }
+    QString videoFileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Save File"),
+                                                    QString(),
+                                                    tr(prompt));
+    videoOutput->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
+    action_start_recording->setEnabled(false);
+    action_stop_recording->setEnabled(true);
+    recording = 10;
+    started = true;
+    goToVTK();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: stopRecorder()
+{
+    videoOutput->stopRecorder();
+    action_start_recording->setEnabled(true);
+    action_stop_recording->setEnabled(false);
+    showingVTK -= 10;
+    recording = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1067,7 +1131,8 @@ void MainWindow::runServer()
 		stackedWidget->setCurrentIndex(1);
 		showingVTK = 0;
 	}
-    // Disable parts of the GUI        
+    showingVTK += recording;
+    // Disable parts of the GUI
     action_run->setEnabled(false);
     action_pause->setEnabled(true);
     action_stop->setEnabled(true);
@@ -1113,10 +1178,22 @@ void MainWindow::runServer()
 		}
 	}
 	started = true;
+    if (cbox_record->isChecked()) {
+        double h1 = lineEdit_record_hour1->text().toDouble();
+        double h2 = lineEdit_record_hour2->text().toDouble();
+        recordfrom = int(h1*60/DELTA_T);
+        recordto = int(h2*60/DELTA_T);
+        sprintf(msg,"Recording frames: from: %d to: %d",recordfrom,recordto);
+        LOG_MSG(msg);
+    } else {
+        recordfrom = -1;
+        recordto = -1;
+    }
 	exthread = new ExecThread(inputFile);
-	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
+    connect(exthread, SIGNAL(display(bool)), this, SLOT(displayScene(bool)));
 	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
-	exthread->ncpu = ncpu;
+    connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
+    exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
 	exthread->stopped = false;
@@ -1306,7 +1383,7 @@ void MainWindow::drawGraphs()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::displayScene()
+void MainWindow::displayScene(bool record)
 {
 	bool redo = false;	// need to understand this
 	started = true;
@@ -1315,7 +1392,22 @@ void MainWindow::displayScene()
 	bool fast = true;
 	vtk->get_cell_positions(fast);
     vtk->renderCells(redo);
-	mutex2.unlock();
+    if (videoOutput->record) {
+        videoOutput->recorder();
+    } else if (action_stop_recording->isEnabled()) {
+//        emit pause_requested();
+        action_start_recording->setEnabled(true);
+        action_stop_recording->setEnabled(false);
+    }
+    // Old-style image saving
+    if (record) {
+        sprintf(msg,"record: framenum: %d",framenum);
+        LOG_MSG(msg);
+        QString basename = lineEdit_recordFileName->text();
+        vtk->record(basename, framenum);
+        framenum++;
+    }
+    mutex2.unlock();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1332,7 +1424,7 @@ void MainWindow::showSummary()
 		return;
 	}
 
-	mutex1.lock();
+    mutex1.lock();
 
 	hour = summaryData[1]*DELTA_T/60;
 	progress = int(100.*hour/hours);
@@ -1420,7 +1512,7 @@ void MainWindow::outputData(QString qdata)
 			bool redo = false;
 			if (showingVTK == 1) {
 				redo = true;
-				showingVTK = 2;
+//				showingVTK = 2;
 			} 
             vtk->renderCells(redo);
 		} 
@@ -1479,6 +1571,9 @@ void MainWindow::postConnection()
 		}
 	}
 
+    if (action_stop_recording->isEnabled()) {
+        stopRecorder();
+    }
     action_run->setEnabled(true);
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
@@ -1546,7 +1641,7 @@ void MainWindow::stopServer()
 			LOG_MSG("was paused, runServer before stopping");
 			runServer();
 		}
-		exthread->snapshot();
+        exthread->snapshot(false);
 		exthread->stop();
 		sleep(1);		// delay for Fortran to wrap up (does this help?)
 		if (use_CPORT1) {
@@ -1560,6 +1655,9 @@ void MainWindow::stopServer()
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
 	action_save_snapshot->setEnabled(true);
+    if (action_stop_recording->isEnabled()) {
+        stopRecorder();
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -2456,6 +2554,23 @@ void MainWindow::on_rbut_ACTIVATION_MODE_0_toggled(bool checked)
 //        line_MAXIMUM_AVIDITY->setEnabled(true);
 //        line_MAXIMUM_ANTIGEN->setEnabled(true);
     }
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_record_toggled(bool checked)
+{
+    if (checked) {
+        lineEdit_recordFileName->setEnabled(checked);
+        lineEdit_record_hour1->setEnabled(checked);
+        lineEdit_record_hour2->setEnabled(checked);
+        framenum = 0;
+    }
+//    } else {
+//        lineEdit_recordFileName->setEnabled(false);
+//        lineEdit_record_hour1->setEnabled(false);
+//        lineEdit_record_hour2->setEnabled(false);
+//    }
 }
 
 //------------------------------------------------------------------------------------------------------
