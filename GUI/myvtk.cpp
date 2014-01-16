@@ -133,6 +133,7 @@ MyVTK::MyVTK(QWidget *page, QWidget *test_page)
 	DCfade = true;
 	playing = false;
 	paused = false;
+    framenum = 0;
 
 	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
 }
@@ -215,13 +216,19 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 	QString line, saveline;
 	QTextStream *out = NULL;
 	QFile *vtkdata = NULL;
-	if (savepos) {
+
+    sprintf(msg,"read_cell_positions: savepos: %d\n",savepos);
+    LOG_MSG(msg);
+    LOG_QMSG(infileName);
+    LOG_QMSG(outfileName);
+    if (savepos) {
 		vtkdata = new QFile(outfileName);
 		if (!vtkdata->open(QFile::Append )) {
 			LOG_MSG("Open failure on vtk file");
 			return;
 		}
 		out = new QTextStream(vtkdata);
+        LOG_MSG("new QTestStream to vktdata");
 	}
 	QFile posdata(infileName);
 	if (posdata.open(QFile::ReadOnly)) {
@@ -321,7 +328,7 @@ void MyVTK::renderCells(bool redo)
 		LOG_MSG("Initializing the renderer");
 		ren->ResetCamera();
 	}
-	iren->Render();
+    iren->Render();
 	first_VTK = false;	
 }
 
@@ -689,8 +696,8 @@ bool MyVTK::nextFrame()
 		redo = true;
 	}
     renderCells(redo);
-	char numstr[5];
-	sprintf(numstr,"%04d",framenum);
+    char numstr[6];
+    sprintf(numstr,"%05d",framenum);
 	if (save_image) {
 		w2i->Modified();	//importante 
 		writer->SetFileName((casename + numstr + ".jpg").toStdString().c_str()); 
@@ -704,36 +711,42 @@ bool MyVTK::nextFrame()
 //-----------------------------------------------------------------------------------------
 void MyVTK::saveSnapshot(QString fileName, QString imgType)
 {
-	w2img->SetInput(renWin);
-	if (imgType.compare("png") == 0) {
+//    LOG_QMSG("saveSnapshot");
+    w2img->SetInput(renWin);
+    w2img->Modified();	//important
+    if (imgType.compare("png") == 0) {
 		vtkSmartPointer<vtkPNGWriter> pngwriter = vtkPNGWriter::New();
 		pngwriter->SetInputConnection(w2img->GetOutputPort()); 
-		w2img->Modified();
 		pngwriter->SetFileName((fileName.toStdString()).c_str()); 
 		pngwriter->Write();
-//		pngwriter->Delete();	// Note: using vtkSmartPointer, delete is not necessary.
 	} else if (imgType.compare("jpg") == 0) {
 		vtkJPEGWriter *jpgwriter = vtkJPEGWriter::New();
 		jpgwriter->SetInputConnection(w2img->GetOutputPort()); 
-		w2img->Modified();
 		jpgwriter->SetFileName((fileName.toStdString()).c_str()); 
 		jpgwriter->Write();
-//		jpgwriter->Delete();
 	} else if (imgType.compare("tif") == 0) {
 		vtkTIFFWriter *tifwriter = vtkTIFFWriter::New();
 		tifwriter->SetInputConnection(w2img->GetOutputPort()); 
-		w2img->Modified();
 		tifwriter->SetFileName((fileName.toStdString()).c_str()); 
 		tifwriter->Write();
-//		tifwriter->Delete();
 	} else if (imgType.compare("bmp") == 0) {
 		vtkBMPWriter *bmpwriter = vtkBMPWriter::New();
 		bmpwriter->SetInputConnection(w2img->GetOutputPort()); 
-		w2img->Modified();
 		bmpwriter->SetFileName((fileName.toStdString()).c_str()); 
 		bmpwriter->Write();
-//		bmpwriter->Delete();
 	}
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MyVTK::record(QString basename, int number)
+{
+    char numstr[6];
+    sprintf(numstr,"%05d",number);
+    QString imgType = "png";
+    QString fileName = basename + numstr + ".png";
+    saveSnapshot(fileName,imgType);
+    framenum++;
 }
 
 //-----------------------------------------------------------------------------------------

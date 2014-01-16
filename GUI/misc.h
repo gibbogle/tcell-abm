@@ -43,7 +43,7 @@ class ExecThread: public QThread
 public:
 	ExecThread(QString);
 	void run();
-	void snapshot();
+    void snapshot(bool);
     void getProfiles();
     void pause();
 	void unpause();
@@ -53,8 +53,9 @@ public:
 	bool paused;
 	bool stopped;
 signals:
-	void display();
+    void display(bool);
 	void summary();
+    void action_VTK();
 };
 
 bool quitMessage(QString);

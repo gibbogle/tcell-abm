@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>4</number>
+           <number>6</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -3858,8 +3858,8 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_savepos">
             <property name="geometry">
              <rect>
-              <x>380</x>
-              <y>450</y>
+              <x>1080</x>
+              <y>280</y>
               <width>120</width>
               <height>18</height>
              </rect>
@@ -4704,6 +4704,116 @@ p, li { white-space: pre-wrap; }
              </layout>
             </widget>
            </widget>
+           <widget class="QCheckBox" name="cbox_record">
+            <property name="geometry">
+             <rect>
+              <x>630</x>
+              <y>200</y>
+              <width>131</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Record 3D images</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit_recordFileName">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>630</x>
+              <y>270</y>
+              <width>151</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>frame</string>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_DUMMY_IMAGE_BASENAME">
+            <property name="geometry">
+             <rect>
+              <x>500</x>
+              <y>270</y>
+              <width>131</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>label_DUMMY_IMAGE_BASENAME</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit_record_hour1">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>630</x>
+              <y>220</y>
+              <width>31</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_record1">
+            <property name="geometry">
+             <rect>
+              <x>670</x>
+              <y>220</y>
+              <width>91</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Start hour</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_record2">
+            <property name="geometry">
+             <rect>
+              <x>670</x>
+              <y>240</y>
+              <width>91</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>End hour</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit_record_hour2">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>630</x>
+              <y>240</y>
+              <width>31</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="line_DUMMY_IMAGE_BASENAME">
+            <property name="geometry">
+             <rect>
+              <x>790</x>
+              <y>270</y>
+              <width>0</width>
+              <height>20</height>
+             </rect>
+            </property>
+           </widget>
           </widget>
          </widget>
         </item>
@@ -4890,7 +5000,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -4944,6 +5054,13 @@ p, li { white-space: pre-wrap; }
     <addaction name="actionShow_3D_gradient_field"/>
     <addaction name="actionShow_2D_gradient_field"/>
    </widget>
+   <widget class="QMenu" name="menuMovie">
+    <property name="title">
+     <string>Movie</string>
+    </property>
+    <addaction name="action_start_recording"/>
+    <addaction name="action_stop_recording"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuABM"/>
@@ -4951,6 +5068,7 @@ p, li { white-space: pre-wrap; }
    <addaction name="menuPlayer"/>
    <addaction name="menuSnapshot"/>
    <addaction name="menuChemokine"/>
+   <addaction name="menuMovie"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -5127,6 +5245,19 @@ p, li { white-space: pre-wrap; }
     <string>Show 2D gradient field</string>
    </property>
   </action>
+  <action name="action_start_recording">
+   <property name="text">
+    <string>Start recording</string>
+   </property>
+  </action>
+  <action name="action_stop_recording">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop recording</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -5180,8 +5311,8 @@ p, li { white-space: pre-wrap; }
    <slot>on_line_SPECIAL_CASE_textEdited(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>569</x>
-     <y>130</y>
+     <x>559</x>
+     <y>142</y>
     </hint>
     <hint type="destinationlabel">
      <x>529</x>
@@ -5189,10 +5320,27 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>cbox_record</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>on_cbox_record_toggled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>660</x>
+     <y>541</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>758</x>
+     <y>53</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>on_rbut_ACTIVATION_MODE_0_toggled(bool)</slot>
   <slot>on_line_SPECIAL_CASE_textEdited(QString)</slot>
+  <slot>on_cbox_record_toggled(bool)</slot>
  </slots>
  <buttongroups>
   <buttongroup name="buttonGroup_ACTIVATION_MODE"/>

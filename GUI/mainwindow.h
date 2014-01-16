@@ -24,6 +24,7 @@ using namespace std;
 #include "log.h"
 #include "SimpleView2DUI.h"
 #include "SimpleView3DUI.h"
+#include "qvideooutput.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -74,6 +75,7 @@ protected:
 
 private slots:
     void on_rbut_ACTIVATION_MODE_0_toggled(bool);
+    void on_cbox_record_toggled(bool);
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
     void on_line_SPECIAL_CASE_textEdited(QString);
@@ -115,8 +117,10 @@ public slots:
 	void postConnection();
 	void timer_update();
 	void errorPopup(QString);
-	void displayScene();
+    void displayScene(bool);
 	void showSummary();
+    void startRecorder();
+    void stopRecorder();
 
 private:
     void createActions();
@@ -240,6 +244,7 @@ private:
 
 	int step;
 	int ntimes;
+    int framenum;
 	int savepos_start;
 	int ncpu;
 	double hours;
@@ -247,6 +252,7 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
+    int recording;
 
 	RESULT_SET *newR;
 
@@ -266,6 +272,8 @@ private:
 
 	MyVTK *vtk;
 	ExecThread *exthread;
+
+    QVideoOutput   * videoOutput;
 };
 
 class MyDoubleValidator : public QDoubleValidator

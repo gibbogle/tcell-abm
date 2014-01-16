@@ -64,6 +64,7 @@ public:
 	void pause();
 	void playon();
 	void saveSnapshot(QString, QString);
+    void record(QString, int number);
 	void stop();
 
 	QList<CELL_POS > TCpos_list;

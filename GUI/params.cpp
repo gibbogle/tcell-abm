@@ -432,6 +432,11 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "fixed.inpdata",
 "The auxiliary input file contains data that (almost!) never changes"},
 
+{"DUMMY_IMAGE_BASENAME", 0, 0, 0,
+"3D image base file name",
+"The base name, including path, for saved 3D images. For example, movie/frame will give image files movie/frame00000.jpg, movie/frame00001.jpg, ... \n\
+ NOTE the use of the forward slash /."},
+
 {"DUMMY_STIMULATION_PLOT", 0, 0, 0,
 "Normalized (pMHC*avidity)",
 "In the STAGED case binding durations depend on stage, and the stimulation rate is a Hill function of x = (normalized pMHC)*(normalised avidity). \n\
