@@ -70,16 +70,16 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Antigen density is the number of pMHC per DC.  It has a lognormal distribution, described by the median and shape parameters.\n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
 
-{"DC_ANTIGEN_SHAPE", 1.5, 1.01, 3.0,
+{"DC_ANTIGEN_SHAPE", 1.15, 1.01, 4.0,
 "DC antigen density shape parameter",
 "Antigen density has a lognormal distribution, described by the median and shape parameters."},
 
-{"DC_LIFETIME_MEDIAN", 10.0, 0.1, 100,
+{"DC_LIFETIME_MEDIAN", 10.0, 0, 0,
 "DC lifetime median parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters.\n\
 [days]"},
 
-{"DC_LIFETIME_SHAPE", 1.2, 1.01, 3.0,
+{"DC_LIFETIME_SHAPE", 1.2, 1.01, 4.0,
 "DC lifetime shape parameter",
 "DC lifetime has a lognormal distribution, described by the median and shape parameters."},
 
@@ -88,12 +88,12 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "After a T cell unbinds from a DC there is a delay before it can bind to a DC again.\n\
 [mins]"},
 
-{"DC_DENS_HALFLIFE", 24.0, 0, 0,
+{"DC_DENS_HALFLIFE", 48.0, 0, 0,
 "Antigen density half-life",
 "Antigen density on a DC decays with a specified half-life.\n\
 [hours]"},
 
-{"MAX_TC_BIND", 200, 0, 0,
+{"MAX_TC_BIND", 50, 0, 0,
 "Max T cell binding/DC",
 "The maximum number of T cells that can be in simultaneous contact with a DC."},
 
@@ -131,7 +131,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 
 {"THRESHOLD_FACTOR", 1, 0, 0,
 "Threshold factor",
-"All threshold values are scaled by this factor."},
+"All stimulation threshold values are scaled by this factor."},
 
 {"STAGED_CONTACT_RULE", 0, 0, 0,
 "Contact duration rule",
@@ -154,11 +154,11 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Stimulation rate is a Hill function of x = (normalized avidity)*(normalized pMHC), with parameters N and C. \n\
  H(x;N,c) = (1 + C^N).x^N/(x^N + C^N)"},
 
-{"ACTIVATION_MODE", 0, 0, 0,
+{"ACTIVATION_MODE", 1, 0, 0,
 "Activation mode",
 "The activation mode is either STAGED or UNSTAGED."},
 
-{"BINDTIME_HILL_THRESHOLD", 0.05, 0, 1,
+{"BINDTIME_HILL_THRESHOLD", 0.01, 0, 1,
 "Signalling threshold",
 "If normalized signal strength is below this threshold there will be no binding interaction,\n\
  effectively the cognate cell will behave like a non-cognate cell."},
@@ -194,13 +194,16 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Avidity upper limit",
 "T cell TCR avidity levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
-{"MAXIMUM_ANTIGEN", 400, 0, 0,
+{"MAXIMUM_ANTIGEN", 250, 0, 0,
 "DC antigen upper limit",
 "DC antigen density levels are normalized by dividing by the maximum possible value, to give values in the range 0 - 1."},
 
 {"K1_CD69", 0.4, 0, 0,
 "CD69 K1 parameter",
-"K1 parameter of the CD69 ODE"},
+"K1 parameter of the CD69 ODE (K1_CD69 = K1C, K2_CD69 = K2C, K1_S1PR1 = K1S, K2_S1PR1 = K2S)\n\
+ dS/dt = normalised stimulation rate \n\
+ dCD69/dt = K1C*(1-CD69)*dS/dt - K2C*CD69 \n\
+ dS1PR1/dt = K1S*(1-S1PR1) - K2S*CD69*S1PR1"},
 
 {"K2_CD69", 0.01, 0, 0,
 "CD69 K2 parameter",
@@ -214,15 +217,15 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "S1PR1 K2 parameter",
 "K2 parameter of the S1PR1 ODE"},
 
-{"S1PR1_EXIT_THRESHOLD", 0.5, 0, 0,
+{"S1PR1_EXIT_THRESHOLD", 0.6, 0, 0,
 "S1PR1 exit threshold",
 "S1PR1 level required for egress permission with EXIT_RULE 3"},
 
-{"NX", 100, 100, 300,
+{"NX", 100, 0, 0,
 "Lattice size",
 "Dimension of the lattice (number of sites in X, Y and Z directions).  Typically 4*BLOB_RADIUS is OK."},
 
-{"BLOB_RADIUS", 23.1, 0, 50,
+{"BLOB_RADIUS", 23.1, 0, 0,
 "Initial blob size",
 "The radius of the initial spherical blob of T cells, as number of sites.  (18.38, 23.1, 29.1, 36.7 -> 25k, 50k, 100k, 200k sites)"},
 
@@ -282,9 +285,17 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "T cell DC chemotaxis?",
 "T cell chemotaxis towards DCs is simulated"},
 
-{"COGNATE_ONLY", 0, 0, 1,
+{"COGNATE_ONLY", 1, 0, 1,
 "Simulate only cognate cells?",
 "For fast simulation, no non-cognate cells are simulated."},
+
+{"HALVE_CD69", 0, 0, 1,
+"Halve CD69 on cell division?",
+"When a cell divides, the level of CD69 expression is halved."},
+
+{"CD8_EFFECTOR_PROB", 0, 0, 0,
+"Probability of effector switch on division (0-1)",
+"When a CD8 cell divides, it can switch to effector function with DC killing capability."},
 
 {"EXIT_RULE", 2, 0, 0,
 "Cell egress control rule",

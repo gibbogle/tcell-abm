@@ -423,6 +423,7 @@ type cog_type
     real :: IL_statep(CYT_NP)   ! receptor model state variable time derivative values
     integer :: status       ! holds data in bytes: 1=stage, 2=generation
 	integer :: cogID		! index in the list of cognate cells
+	logical :: effector     ! effector function
 	integer :: cnt(2)		! count of timesteps 
 							! (1) sharing a DC with activated CD4/CD8
 							! (2) in close proximity to an activated CD4/CD8
@@ -511,6 +512,14 @@ type source_type
 	real :: level(MAX_CHEMO)
 end type
 
+type clone_type
+    integer :: ID
+    integer :: count
+    real :: fraction
+    real :: entrytime
+    real :: avidity
+end type
+
 !---------------------------------------------------
 ! Parameters to read from cell parameters input file
 !---------------------------------------------------
@@ -590,12 +599,15 @@ logical :: use_exit_chemotaxis
 logical :: use_DC_chemotaxis
 integer :: exit_rule					! 0 = use NGEN_EXIT, 1 = use EXIT_THRESHOLD, 2 = use S1PR1_EXIT_THRESHOLD, 3 = all OK
 logical :: FAST
+logical :: use_halve_CD69
+logical :: use_CD8_effector_switch
+real :: CD8_effector_prob
 
 real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> inflow rate
 ! Vascularity parameters
-real :: Inflammation_days1 = 4          ! Days of plateau level - parameters for VEGF_MODEL = 1
-real :: Inflammation_days2 = 5          ! End of inflammation
-real :: Inflammation_level = 1.0		! This is the level of inflammation (scaled later by NTcells0)
+real :: Inflammation_days1              ! Days of plateau level - parameters for VEGF_MODEL = 1
+real :: Inflammation_days2              ! End of inflammation
+real :: Inflammation_level		        ! This is the level of inflammation (scaled later by NTcells0)
 
 logical :: fix_avidity                  ! true if avidity takes discrete values, false if a distribution is used
 logical :: avidity_logscale             ! true if actual avidity = 10^(avidity_min + i*avidity_step)
@@ -658,7 +670,7 @@ integer :: STAGED_CONTACT_RULE = CT_HENRICKSON ! rule for determining the durati
 real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 
 ! Egress parameters
-real :: exit_fraction = 1.0/1000.       ! number of exits as a fraction of T cell population
+real :: exit_fraction                   ! number of exits as a fraction of T cell population
 real :: Ksurfaceportal = 40				! calibration factor for number of surface portals
 logical :: suppress_egress = .false.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
 
@@ -714,7 +726,7 @@ real :: chemo_exp
 ! Cell data
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable, target :: cellist(:)
-type(DC_type), allocatable :: DClist(:)
+type(DC_type), allocatable, target :: DClist(:)
 type(source_type), allocatable :: sourcelist(:)
 integer :: nsources
 integer, allocatable :: cognate_list(:)
@@ -767,6 +779,7 @@ integer :: max_exits        ! size of the exitlist(:) array
 integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T cell
 real :: CD69_threshold				! level of CD69 below which egress can occur
 real :: last_portal_update_time		! time that the number of exit portals was last updated
+real :: DCinflux_dn_last                ! used in the calculation of DCinflux
 real :: efactor                         ! If constant_efactor = true, this is the factor for the p correction
 integer :: VEGF_MODEL                   ! 1 = VEGF signal from inflammation, 2 = VEGF signal from DCactivity
 logical :: initialized, steadystate
@@ -2386,7 +2399,7 @@ real :: t1, t2
 real :: rate, temp, dn
 real :: DCrate0
 real(DP) :: R
-real, save :: dn_last = 0
+!real, save :: dn_last = 0
 
 !write(logmsg,*) 'DCinflux: dn_last ',dn_last
 !call logger(logmsg)
@@ -2419,9 +2432,9 @@ else
 		endif
 	else
 		! Try making the DC influx deterministic
-		temp = rate*(t2-t1) + dn_last
+		temp = rate*(t2-t1) + DCinflux_dn_last
 		DCinflux = temp
-		dn_last = temp - DCinflux
+		DCinflux_dn_last = temp - DCinflux
 	endif
 endif
 !write(logmsg,*) 'DC rate: ',rate,DCinflux,dn_last

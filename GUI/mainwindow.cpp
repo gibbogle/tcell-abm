@@ -2575,13 +2575,27 @@ void MainWindow::on_cbox_record_toggled(bool checked)
 
 //------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------
-void MainWindow::on_checkBox_FACS_PLOT_toggled()
+void MainWindow::on_checkBox_FACS_PLOT_toggled(bool checked)
 {
-    if (checkBox_FACS_PLOT->isChecked()) {
-        line_FACS_INTERVAL->setEnabled(true);
-    } else {
-        line_FACS_INTERVAL->setEnabled(false);
+//    if (checkBox_FACS_PLOT->isChecked()) {
+//        line_FACS_INTERVAL->setEnabled(true);
+//    } else {
+//        line_FACS_INTERVAL->setEnabled(false);
+//        line_FACS_INTERVAL->setText("0");
+//    }
+    line_FACS_INTERVAL->setEnabled(checked);
+    if (!checked) {
         line_FACS_INTERVAL->setText("0");
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_EFFECTOR_FUNCTION_toggled(bool checked)
+{
+    line_CD8_EFFECTOR_PROB->setEnabled(checked);
+    if (!checked) {
+        line_CD8_EFFECTOR_PROB->setText("0");
     }
 }
 

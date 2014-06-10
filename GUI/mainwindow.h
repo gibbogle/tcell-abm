@@ -79,7 +79,8 @@ private slots:
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
     void on_line_SPECIAL_CASE_textEdited(QString);
-    void on_checkBox_FACS_PLOT_toggled();
+    void on_checkBox_FACS_PLOT_toggled(bool checked);
+    void on_checkBox_EFFECTOR_FUNCTION_toggled(bool checked);
     void newFile();
     void open();
     void about();
