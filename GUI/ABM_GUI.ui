@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>6</number>
+           <number>0</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -972,6 +972,45 @@ padding: 8px
               </item>
              </layout>
             </widget>
+           </widget>
+           <widget class="QCheckBox" name="checkBox_EFFECTOR_FUNCTION">
+            <property name="geometry">
+             <rect>
+              <x>360</x>
+              <y>300</y>
+              <width>201</width>
+              <height>17</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>CD8 cells acquire effector function?</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="line_CD8_EFFECTOR_PROB">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>360</x>
+              <y>330</y>
+              <width>31</width>
+              <height>21</height>
+             </rect>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_CD8_EFFECTOR_PROB">
+            <property name="geometry">
+             <rect>
+              <x>400</x>
+              <y>330</y>
+              <width>241</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Probability of effector switch</string>
+            </property>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_DC">
@@ -2437,6 +2476,19 @@ p, li { white-space: pre-wrap; }
              <string>label_EXIT_RULE</string>
             </property>
            </widget>
+           <widget class="QCheckBox" name="cbox_HALVE_CD69">
+            <property name="geometry">
+             <rect>
+              <x>360</x>
+              <y>140</y>
+              <width>161</width>
+              <height>17</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Halve CD69 on cell division?</string>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_TCR">
            <attribute name="title">
@@ -3081,7 +3133,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>230</x>
-              <y>320</y>
+              <y>310</y>
               <width>211</width>
               <height>171</height>
              </rect>
@@ -3371,7 +3423,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>270</x>
-              <y>500</y>
+              <y>490</y>
               <width>181</width>
               <height>16</height>
              </rect>
@@ -3384,7 +3436,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>660</x>
-              <y>320</y>
+              <y>310</y>
               <width>221</width>
               <height>171</height>
              </rect>
@@ -3394,7 +3446,7 @@ p, li { white-space: pre-wrap; }
             <property name="geometry">
              <rect>
               <x>700</x>
-              <y>500</y>
+              <y>490</y>
               <width>161</width>
               <height>16</height>
              </rect>
@@ -5000,7 +5052,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

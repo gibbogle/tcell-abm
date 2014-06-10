@@ -21,27 +21,27 @@ Graphs::Graphs()
 {"nDC",
 "Antigen Presenting Cells",
 "",  //No. of cells",
-2, false, 0, 1, 0, true},
+2, true, 0, 1, 0, true},
 
 {"ntot_LN",
-"Total T Cell Population in LN",
+"Total LN Population",
 "",  //No. of cells",
 3, true, 0, 1, 0, true},
 
 {"ncogseed",
 "Seed Cognate Cells",
 "",  //No. of cells",
-4, false, 0, 1, 0, true},
+4, true, 0, 1, 0, true},
 
 {"ncog_LN",
-"Cognate T Cells in LN",
+"Cognate T Cells (LN)",
 "",  //No. of cells",
 5, true, 0, 1, 0, true},
 
 {"ncog_PER",
-"Activated T Cells in Periphery",
+"Activated Cells (PER)",
 "",  //No. of cells",
-6, false, 0, 1, 0, true},
+6, true, 0, 1, 0, true},
 
 {"nbnd",
 "Bound Cognate Cells",
@@ -54,17 +54,17 @@ Graphs::Graphs()
 10, false, 0, 1, 0, true},
 
 {"nteffgen0",
-"Efferent Unactivated Cells",
+"Efferent Unactivated",
 "",  //No. of cells",
 11, false, 0, 1, 0, true},
 
 {"nteffgen",
-"Efferent Activated Cells",
+"Efferent Activated",
 "",  //No. of cells",
-12, false, 0, 1, 0, true},
+12, true, 0, 1, 0, true},
 
 {"act",
-"Total DC Antigen Activity",
+"Total DC Antigen",
 "",
 13, true, 0, .001, 0, true},
 
@@ -79,24 +79,24 @@ Graphs::Graphs()
 15, false, 0, .001, 1.0, true},
 
 {"stimrate_LN",
-"Average Stimulation Rate (LN)",
+"Stimulation Rate (LN)",
 "",
 16, false, 0, .001, 1.0, true},
 
 {"DCcontact_time",
-"Average First DC Contact Time (min)",
+"1st DC Contact (min)",
 "",
-17, true, 0, .001, 0, true},
+17, false, 0, .001, 0, true},
 
 {"DCtravel_time",
-"Average Inter-DC Travel Time (min)",
+"Inter-DC Travel (min)",
 "",
-18, true, 0, .001, 0, true},
+18, false, 0, .001, 0, true},
 
 {"DCbind_time",
-"Average DC Bind Time (min)",
+"DC Bind Time (min)",
 "",
-19, true, 0, .001, 0, true},
+19, false, 0, .001, 0, true},
 
 {"Bound_fraction",
 "Bound Fraction",
@@ -104,7 +104,7 @@ Graphs::Graphs()
 20, true, 0, .001, 1.0, true},
 
 {"nDC_SOI",
-"Average No. of Cells in DC SOI",
+"Cells in DC SOI",
 "",
 21, false, 0, .001, 0, true},
 
@@ -116,7 +116,7 @@ PROFILE_CD69, false, 0, 1, 1.0, false},
 {"S1PR1",
 "S1PR1 Profile",
 "",  //Fraction",
-PROFILE_S1PR1, false, 0, 1, 1.0, false},
+PROFILE_S1PR1, true, 0, 1, 1.0, false},
 
 {"Stimulation",
 "Stimulation Profile (LN)",
@@ -124,9 +124,9 @@ PROFILE_S1PR1, false, 0, 1, 1.0, false},
 PROFILE_STIM, true, 0, 1, 1.0, false},
 
 {"Stimulation Rate",
-"Stimulation Rate Profile (LN)",
+"Stim Rate Profile (LN)",
 "",  //Fraction",
-PROFILE_STIMRATE, true, 0, 1, 1.0, false},
+PROFILE_STIMRATE, false, 0, 1, 1.0, false},
 
 {"Avidity LN",
 "Avidity Profile (LN)",
@@ -146,12 +146,12 @@ PROFILE_GENERATION_LN, false, 0, 1, 1.0, false},
 {"DC Contact Time (min)",
 "First DC Contact Time Profile",
 "",  //Fraction",
-PROFILE_FIRSTDCCONTACTTIME, true, 0, 1, 1.0, false},
+PROFILE_FIRSTDCCONTACTTIME, false, 0, 1, 1.0, false},
 
 {"DC Bind Time (min)",
 "DC Bind Time Profile",
 "",  //Fraction",
-PROFILE_DCBINDTIME, true, 0, 1, 1.0, false}
+PROFILE_DCBINDTIME, false, 0, 1, 1.0, false}
 
 };
     // Note: tsGraphs[] is constant = tsGraphSet[]

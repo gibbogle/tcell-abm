@@ -472,7 +472,7 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev
+integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, halveCD69
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -579,6 +579,8 @@ read(nfcell,*) usehev					    ! use HEV portals
 read(nfcell,*) useexitchemo                 ! use exit chemotaxis
 read(nfcell,*) useDCchemo					! use DC chemotaxis
 read(nfcell,*) cognateonly				    ! simulate only cognate cells
+read(nfcell,*) halveCD69				    ! halve CD69 on cell division
+read(nfcell,*) CD8_effector_prob            ! probability of CD8 effector switch on division
 read(nfcell,*) EXIT_RULE					! rule controlling egress of cognate cells
 read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours -> inflow rate
 read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
@@ -668,6 +670,8 @@ else
 endif
 
 FAST = (cognateonly == 1)
+use_CD8_effector_switch = (CD8_effector_prob > 0)
+write(nflog,*) 'CD8_effector_prob: ',CD8_effector_prob,'  ',use_CD8_effector_switch
 computed_outflow = .false.
 BLOB_PORTALS = .false.
 SURFACE_PORTALS = .false.
@@ -1062,8 +1066,8 @@ integer :: kcell
 integer :: k, idc, site(3), indx(2), ctype, stype, region
 logical :: cognate
 
-write(logmsg,*) 'Tcell_death: ',kcell
-call logger(logmsg)
+!write(logmsg,*) 'Tcell_death: ',kcell
+!call logger(logmsg)
 cognate = (associated(cellist(kcell)%cptr))
 if (cognate) then
 	call get_region(cellist(kcell)%cptr,region)
@@ -1147,6 +1151,21 @@ endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine effector_switch(effector1, effector2)
+logical :: effector1, effector2
+integer :: kpar=0
+real :: R
+
+R = par_uni(kpar)
+effector1 = (R < CD8_effector_prob)
+!write(logmsg,*) 'effector_switch: R, prob: ',R,CD8_effector_prob,'  ',effector1
+!call logger(logmsg)
+R = par_uni(kpar)
+effector2 = (R < CD8_effector_prob)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 ! A cognate cell divides.  It has already been determined that there is space for the extra cell.
 ! One cell retains the cogID, the other gets cogID = 0 for now, to be allocated
 ! sequentially later, after gather_data() (unless Mnodes = 1, in which case the
@@ -1162,7 +1181,7 @@ integer :: iseq, tag, kfrom, kto
 real :: tnow, cfse0
 type(cog_type), pointer :: p1, p2
 !real :: IL_state(CYT_NP)
-logical :: cognate
+logical :: cognate, effector, effector1, effector2
 integer :: kpar = 0
 
 ok = .true.
@@ -1180,6 +1199,7 @@ if (gen == TC_MAX_GEN) then
 endif
 ndivided(gen) = ndivided(gen) + 1
 tdivided(gen) = tdivided(gen) + (tnow - p1%dividetime)
+effector = p1%effector
 
 if (ngaps > 0) then
     icnew = gaplist(ngaps)
@@ -1201,6 +1221,9 @@ call set_stage(p1,POST_DIVISION)
 if (TCR_splitting) then
     p1%stimulation = p1%stimulation/2
 endif
+if (use_halve_CD69) then
+    p1%CD69 = p1%CD69/2
+endif
 ctype = cellist(kcell)%ctype
 cfse0 = p1%CFSE
 p1%CFSE = generate_CFSE(cfse0/2)
@@ -1216,10 +1239,21 @@ if (region == LYMPHNODE) then
 	site = cellist(kcell)%site
 	indx = occupancy(site(1),site(2),site(3))%indx
 endif
-call create_Tcell(icnew,cellist(icnew),site2,ctype,cognate,gen,tag,POST_DIVISION,region,ok)
+if (ctype == CD8 .and. use_CD8_effector_switch .and. .not.effector) then
+    call effector_switch(effector1, effector2)
+    p1%effector = effector1
+endif
+call create_Tcell(icnew,cellist(icnew),site2,ctype,cognate,gen,tag,POST_DIVISION,region,.true.,ok)
 if (.not.ok) return
 
 p2 => cellist(icnew)%cptr
+if (ctype == CD8 .and. use_CD8_effector_switch) then
+    if (effector) then
+        p2%effector = effector
+    else
+        p2%effector = effector2
+    endif
+endif
 !if (p2%avidity /= p1%avidity) then
 !    navid = navid - 1   ! reset counter for setting avidity in create_Tcell
 !    p2%avidity = p1%avidity
@@ -1228,9 +1262,13 @@ p2 => cellist(icnew)%cptr
 p2%CFSE = cfse0 - p1%CFSE
 p2%avidity = p1%avidity
 p2%stimulation = p1%stimulation
+p2%CD69 = p1%CD69
+p2%S1PR1 = p1%S1PR1
+p2%CCR7 = p1%CCR7
 p2%stimrate = p1%stimrate
 p2%status = p1%status
-cellist(icnew)%entrytime = tnow
+cellist(icnew)%ID = cellist(kcell)%ID               ! the progeny cell inherits the parent's ID
+cellist(icnew)%entrytime = cellist(kcell)%entrytime ! and entrytime
 if (revised_staging) then
     p2%stagetime = tnow + dividetime(gen,ctype)
 else
@@ -1259,9 +1297,6 @@ if (use_cytokines) then
     enddo
     !p2%IL_state = p1%IL_state
 endif
-p2%CD69 = p1%CD69       ! for now just assume replication of the CD69 and S1PR1 expression
-p2%S1PR1 = p1%S1PR1
-p2%CCR7 = p1%CCR7
 if (gen == 1) then
     write(logmsg,'(a,2i7,a,2e12.3)') 'First division cell: ',kcell,icnew,' at hour: ',tnow/60, p2%stimrate
     call logger(logmsg)
@@ -1318,7 +1353,7 @@ integer :: kpar = 0
 real(DP) :: R
 real :: tnow, dist, rvec(3), prox, tmins
 logical :: OK
-type(DC_type) :: DC
+type(DC_type),pointer :: DC
 integer, parameter :: kmax = 10000
 
 !ndbug = DClist(idbug)%ncogbound
@@ -1415,6 +1450,9 @@ do i = 1,n
 		endif
         idc = NDC
     endif
+    
+    DC => DClist(idc)   ! revised
+    
     DC%ID = idc
     DC%alive = .true.
     DC%capable = .true.
@@ -1446,7 +1484,7 @@ do i = 1,n
 !            write(*,*) 'addDCsite: idc,k,err: ',idc,k,err
         endif
     enddo
-    DClist(idc) = DC
+!    DClist(idc) = DC
     nadded = nadded + 1
 !    write(*,*) 'Added DC at: ',site1,' with nsites: ',DC%nsites
     ! now the DC proximity data in occupancy()%DC must be updated
@@ -1795,12 +1833,14 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Create a new T cell.
-! We could give a progeny cell (the result of cell division) the same ID as its parent.
+! We need to give a progeny cell (the result of cell division) the same ID as its parent.
+! This implies that there needs to be a flag to indicate that the cell results from division.
+! Need to check what is being done with CD69, S1PR1
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,cell,site,ctype,cognate,gen,tag,stage,region,ok)
+subroutine create_Tcell(kcell,cell,site,ctype,cognate,gen,tag,stage,region,dividing,ok)
 type(cell_type) :: cell
 integer :: kcell, site(3), ctype, gen, tag, stage, region
-logical :: cognate, ok
+logical :: cognate, dividing, ok
 integer :: stype, cogID, i
 real :: tnow, param1, param2, R
 integer :: kpar = 0
@@ -1846,6 +1886,7 @@ else
     endif
     cell%cptr%stimulation = 0
     cell%cptr%stimrate = 0
+    cell%cptr%effector = .false.
 !    cell%cptr%IL_state = 0
 !    cell%cptr%IL_statep = 0
     if (use_cytokines) then
@@ -1882,8 +1923,12 @@ else
 !        cell%cptr%cogID = 0
 !    endif
 endif
-lastID = lastID + 1     ! Each node makes its own numbers, with staggered offset
-cell%ID = lastID
+if (dividing) then
+    cell%ID = 0
+else
+    lastID = lastID + 1
+    cell%ID = lastID
+endif
 cell%site = site
 cell%ctype = ctype
 cell%tag = tag
@@ -1943,7 +1988,7 @@ endif
 if (dbug) then
     write(*,'(a,9i7,L2)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region,cognate
 endif
-call create_Tcell(kcell,cellist(kcell),site,ctype,cognate,gen,tag,stage,region,ok)
+call create_Tcell(kcell,cellist(kcell),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
 if (.not.ok) return
 
 indx = occupancy(site(1),site(2),site(3))%indx
@@ -2321,7 +2366,7 @@ if (FAST) then
         ncogseed(ctype) = ncogseed(ctype) + 1
         tag = 0
         k = id
-        call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,ok)
+        call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
         if (.not.ok) return
         occupancy(x,y,z)%indx(1) = k
         if (id == ncog) exit
@@ -2389,7 +2434,7 @@ do x = 1,NX
 				else
 	                k = permc(id)
 	            endif
-                call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,ok)
+                call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
                 if (.not.ok) return
                 occupancy(x,y,z)%indx(1) = k
 ! Redundant - in create_Tcell()
@@ -3516,6 +3561,7 @@ do kcell = 1,nlist
 		stimrate = 0
 		do k = 1,MAX_DC_BIND
 			idc = DC(k)
+	        dstimrate = 0
 			if (idc /= 0) then
 				if (DClist(idc)%capable) then
 	!               dstimrate = TC_STIM_RATE_CONSTANT*DClist(idc)%density*p%avidity

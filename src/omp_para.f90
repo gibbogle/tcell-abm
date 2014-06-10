@@ -911,6 +911,7 @@ logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
 real, parameter :: fast_bind_prob = 0.25	! TESTING THIS -------------------------------
+real, parameter :: killing_time = 10        ! time taken for a DC to die
 integer :: kpar = 0
 
 nu = 0
@@ -1011,6 +1012,13 @@ do kcell = 1,nlist
 					bound = .false.
 				endif
                 if (bound .and. cognate) then
+                    if (cog_ptr%effector) then
+                        ! DC is killed
+                        DClist(idc)%dietime = tnow + killing_time
+                        bound = .false.
+                        call logger('DC is killed')
+                        cycle
+                    endif
                     cell%signalling = .true.
                     if (activation_mode == UNSTAGED_MODE) then
                         stimrate = stimulation_rate_norm(DClist(idc)%density,cog_ptr%avidity)
@@ -3942,7 +3950,7 @@ if (nDCtime > 0) then
 else
 	naveDCtime = 0
 endif
-write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
+!write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
 
 ! DCtraveltime
 n = DCtraveltime_count%nsamples
@@ -3991,6 +3999,11 @@ write(nfout,'(f10.1,$)') .001*naveDCbindtime
 write(nfout,'(f10.3,$)') .001*nbndfraction
 write(nfout,'(f10.1,$)') .001*nDCSOI
 write(nfout,*)
+
+write(logmsg,'(13i10)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen
+call logger(logmsg)
+
 
 if (track_DCvisits) then
 	write(logmsg,'(a,3i6,f6.0)') 'ntagged, ntaglimit, ntagged_left, t_taglimit: ', &
@@ -4123,10 +4136,9 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
-    if (.not.is_activated(p)) cycle
+!    if (.not.is_activated(p)) cycle
 	call get_region(p,region)
 	if (region /= LYMPHNODE) cycle
-    if (.not.is_activated(p)) cycle
     stim = p%stimulation/STIMULATION_LIMIT
     i = min(int(stim/dx + 1),n)
     i = max(i,1)
@@ -4311,7 +4323,6 @@ do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
-write(nflog,*) 'xmax: ',x(n)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4339,6 +4350,81 @@ else
 	y(1:n) = 0
 endif
 cp%bincount(1:n) = 0
+end subroutine
+
+!-------------------------------------------------------------------------------- 
+! Compute the clone size distribution
+! For each seeding cognate cell that survives to proliferate, determine the number
+! of progeny, using the %ID to identify the clones.
+! Note that all cells will carry the original entrytime of the seed cell.
+!
+!-------------------------------------------------------------------------------- 
+subroutine compute_clonesize
+integer :: k, kcell, nseed, nclones, iclone, jclone, ID, gen, totalcount, i
+type (cog_type), pointer :: p
+type(clone_type), allocatable :: clonelist(:)
+real, allocatable :: t(:)
+integer, allocatable :: indx(:)
+
+nseed = ncogseed(1) + ncogseed(2)
+allocate(clonelist(nseed))
+
+totalcount = 0
+nclones = 0
+do k = 1,lastcogID
+	kcell = cognate_list(k)
+	if (kcell > 0) then
+        p => cellist(kcell)%cptr
+!    	call get_region(p,region)
+!    	if (region /= LYMPHNODE) cycle
+	    gen = get_generation(p)
+	    if (gen < 2) cycle
+	    totalcount = totalcount + 1
+	    ID = cellist(kcell)%ID
+        iclone = 0
+        do jclone = 1,nclones
+            if (clonelist(jclone)%ID == ID) then
+                iclone = jclone
+                exit
+            endif
+        enddo
+        if (iclone == 0) then
+            nclones = nclones + 1
+            clonelist(nclones)%count = 1
+            clonelist(nclones)%ID = ID
+            clonelist(nclones)%avidity = p%avidity
+            clonelist(nclones)%entrytime = cellist(kcell)%entrytime/60
+        else
+            clonelist(iclone)%count = clonelist(iclone)%count + 1
+        endif
+    endif
+enddo
+write(nfout,*)
+write(nfout,*) 'Clones: total: ',totalcount
+write(nfout,'(a)') '    ID  entry hr   avidity  count  fraction'
+do iclone = 1,nclones
+    clonelist(iclone)%fraction = clonelist(iclone)%count/real(totalcount)
+    write(nfout,'(i6,f10.1,f10.3,i6,f10.4)') clonelist(iclone)%ID,clonelist(iclone)%entrytime, clonelist(iclone)%avidity, &
+    clonelist(iclone)%count, clonelist(iclone)%fraction
+enddo
+deallocate(clonelist)
+return
+
+allocate(indx(nclones))
+allocate(t(nclones))
+do i = 1,nclones
+    indx(i) = i
+    t(i) = clonelist(i)%entrytime
+enddo
+call qsort(t,nclones,indx)     ! sorts in increasing order 
+do i = 1,nclones
+    iclone = indx(i)
+    write(*,*) i, iclone, clonelist(iclone)%entrytime, clonelist(iclone)%count, clonelist(iclone)%fraction
+enddo
+
+deallocate(t)
+deallocate(indx)
+!deallocate(clonelist)
 end subroutine
 
 !-------------------------------------------------------------------------------- 
@@ -4628,7 +4714,7 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step 
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: hour
+integer :: hour, kpar=0
 real :: tnow
 logical :: ok
 
@@ -4655,7 +4741,7 @@ if (mod(istep,240) == 0) then
 !	call checkExits("simulate_step")
 !	call checkExitSpacing("simulate_step")
     Radius = (NTcells*3/(4*PI))**0.33333
-    write(nflog,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
+!    write(nflog,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
     if (log_traffic) then
         write(nftraffic,'(5i8,3f8.3)') istep, NTcells, Nexits, total_in, total_out, &
                 InflowTotal, vascularity
@@ -5126,6 +5212,8 @@ endif
 firstDC_n = 0
 firstDC_tot = 0
 firstDC_dist = 0
+! For DCinflux calculation
+DCinflux_dn_last = 0
 
 call SetupChemo
 if (USE_DC_CHEMOTAXIS .and. USE_CHEMOKINE_GRADIENT) then
@@ -5261,6 +5349,8 @@ if (TAGGED_LOG_PATHS) then
 	call write_log_paths
 endif
 !call write_FACS
+
+call compute_clonesize
 call wrapup
 
 if (res == 0) then
@@ -5285,7 +5375,7 @@ if (use_TCP) then
 		endif
 	endif
 endif
-close(nflog)
+!close(nflog)
 
 end subroutine
 
@@ -5306,7 +5396,7 @@ use, intrinsic :: iso_c_binding
 character(c_char) :: infile_array(128), outfile_array(128)
 integer(c_int) :: ncpu, inbuflen, outbuflen
 character*(128) :: infile, outfile
-logical :: ok, success
+logical :: ok, success, isopen
 integer :: i, res
 
 use_CPORT1 = .false.	! DIRECT CALLING FROM C++
@@ -5319,7 +5409,10 @@ do i = 1,outbuflen
 	outfile(i:i) = outfile_array(i)
 enddo
 
-open(nflog,file='para.log',status='replace')
+inquire(unit=nflog,OPENED=isopen)
+if (.not.isopen) then
+    open(nflog,file='para.log',status='replace')
+endif
 awp_0%is_open = .false.
 awp_1%is_open = .false.
 

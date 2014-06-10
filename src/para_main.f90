@@ -134,12 +134,14 @@ do jstep = 1,Nsteps
 	endif
 	if (mod(jstep,240) == 0) then
 		call get_summary(summarydata)
-!summaryData(1:13) = (/int(tnow/60),istep,globalvar%NDCalive,nact,ntot,ncogseed,ncog,Ndead,	nbnd,int(globalvar%InflowTotal),globalvar%Nexits, teffgen/)
+!summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+!	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
+!	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
 		hour = summaryData(1)
-		ntot = summaryData(5)
-		ncog(1:2) = summaryData(7:8)
-		inflow = summaryData(11)
-		exits = summaryData(12)
+		ntot = summaryData(4)
+		ncog(1:2) = summaryData(6:7)
+		inflow = summaryData(10)
+		exits = summaryData(11)
 		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits		
 	endif
 enddo
