@@ -20,7 +20,7 @@ Graphs::Graphs()
 
 {"nDC",
 "Antigen Presenting Cells",
-"",  //No. of cells",
+"",  //No. of cells ",
 2, true, 0, 1, 0, true},
 
 {"ntot_LN",
