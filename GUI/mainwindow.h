@@ -11,11 +11,14 @@
 #include <QTcpSocket>
 
 #include <QButtonGroup>
+#include "QImage"
 
 using namespace std;
 
 #include "ui_ABM_GUI.h"
 #include <qwt_plot_curve.h>
+#include <qwt_plot_marker.h>
+#include <qwt_symbol.h>
 #include "params.h"
 #include "misc.h"
 #include "plot.h"
@@ -35,7 +38,9 @@ class QTcpServer;
 class QTcpSocket;
 QT_END_NAMESPACE
 
-#define MAX_DATA 32
+#define MAX_DATA 64
+#define VTK_SOURCE 0
+#define QWT_SOURCE 1
 
 class SliderPlus 
 {
@@ -60,6 +65,10 @@ public:
 	int nTicks();
 };
 
+struct video_str {
+    int recording;
+    bool started;
+};
 
 class MainWindow : public QMainWindow, private Ui::MainWindow
 {
@@ -78,6 +87,7 @@ private slots:
     void on_cbox_record_toggled(bool);
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
+    void on_action_FACS_triggered();
     void on_line_SPECIAL_CASE_textEdited(QString);
     void on_checkBox_FACS_PLOT_toggled(bool checked);
     void on_checkBox_EFFECTOR_FUNCTION_toggled(bool checked);
@@ -115,19 +125,25 @@ private slots:
 public slots:
 	void preConnection();
 	void outputData(QString);
-	void postConnection();
+    void postConnection();
 	void timer_update();
 	void errorPopup(QString);
     void displayScene(bool);
 	void showSummary();
-    void startRecorder();
-    void stopRecorder();
+    void showFACS();
+    void startRecorderVTK();
+    void stopRecorderVTK();
+    void startRecorderFACS();
+    void stopRecorderFACS();
+    void redimensionCellArrays(int nbond_size);
+    bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
 
 private:
     void createActions();
 	void createLists();
     void initDistPlots();
-	void setupParamList();
+    void initFACSPlot();
+    void setupParamList();
 	void loadParams();
 	void reloadParams();
 	void enableInVitro();
@@ -213,6 +229,9 @@ private:
 
 	QList<QWidget *> widget_list;
 
+    QwtPlot *qpFACS;
+    QwtPlotCurve *curveFACS;
+
 	int nDistPts;
 	int nTicks;
 	int nParams;
@@ -253,7 +272,7 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
-    int recording;
+    int recordingVTK;
 
 	RESULT_SET *newR;
 
@@ -274,7 +293,9 @@ private:
 	MyVTK *vtk;
 	ExecThread *exthread;
 
-    QVideoOutput   * videoOutput;
+    QVideoOutput   * videoVTK;
+    QVideoOutput   * videoFACS;
+
 };
 
 class MyDoubleValidator : public QDoubleValidator

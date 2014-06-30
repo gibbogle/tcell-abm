@@ -181,7 +181,7 @@ integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,
 integer, parameter :: jumpvec2D(3,8) = reshape((/ 1,0,0, 1,1,0, 0,1,0, -1,1,0, -1,0,0, -1,-1,0, 0,-1,0, 1,-1,0 /), (/3,8/))
 real, parameter :: DELTA_T = 0.25       ! minutes
 real, parameter :: BIG_TIME = 100000
-real, parameter :: BALANCER_INTERVAL = 10
+real, parameter :: BALANCER_INTERVAL = 10    ! minutes
 integer, parameter :: SCANNER_INTERVAL = 100
 logical, parameter :: use_add_count = .true.    ! keep count of sites to add/remove, do the adjustment at regular intervals 
 logical, parameter :: save_input = .true.
@@ -354,6 +354,7 @@ logical, parameter :: log_traffic = .true.
 integer, parameter :: TCR_nlevels = 10
 real, parameter :: TCR_limit = 2000
 integer, parameter :: MAX_AVID_LEVELS = 30
+integer, parameter :: nprofilebins = 100
 
 !-------------------------------------------------------------
 ! Cytokine section
@@ -520,6 +521,15 @@ type clone_type
     real :: avidity
 end type
 
+type egress_blocking_type
+    real :: amp
+    real :: k1
+    real :: k2
+    real :: duration
+    real :: expansion
+    real :: scaling
+end type
+
 !---------------------------------------------------
 ! Parameters to read from cell parameters input file
 !---------------------------------------------------
@@ -601,6 +611,7 @@ integer :: exit_rule					! 0 = use NGEN_EXIT, 1 = use EXIT_THRESHOLD, 2 = use S1
 logical :: FAST
 logical :: use_halve_CD69
 logical :: use_CD8_effector_switch
+logical :: suppress_egress
 real :: CD8_effector_prob
 
 real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> inflow rate
@@ -625,6 +636,8 @@ integer :: IV_NTCELLS					! initial T cell population in vitro
 real :: IV_COGNATE_FRACTION				! fraction of in vitro cells that are cognate for DC antigen
 logical :: IV_SHOW_NONCOGNATE			! display non-cognate T cells
 character*(128) :: fixedfile
+
+type(egress_blocking_type) :: eblock
 
 !---------------------------------------------------
 ! end of parameters to read from input file
@@ -672,7 +685,7 @@ real :: ABIND1 = 0.4, ABIND2 = 0.8      ! binding to a DC
 ! Egress parameters
 real :: exit_fraction                   ! number of exits as a fraction of T cell population
 real :: Ksurfaceportal = 40				! calibration factor for number of surface portals
-logical :: suppress_egress = .false.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
+logical :: transient_egress_suppression = .false.	! transient suppression of egress (see EGRESS_SUPPRESSION_TIME1, 2)
 
 !---------------------------------------------------------
 ! end of more parameters to be read from fixed input file
@@ -1503,6 +1516,58 @@ if (istep == 1 .and. .not.use_TCP) then
 endif
 end subroutine
 
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+real function f_blocked_egress_inflow(t,a)
+real :: t, a
+real :: inflow0
+
+inflow0 = (DELTA_T/60)*NTcells0/ave_residence_time
+f_blocked_egress_inflow = inflow0*(1 + a*(1-exp(-eblock%k1*t)))*exp(-eblock%k2*t)
+!write(*,'(i6,4f8.1)') NTcells0,a,ave_residence_time,inflow0,f_blocked_egress_inflow
+end function
+
+!--------------------------------------------------------------------------------------
+! When egress is suppressed, inflow initially increases, then decreases to 0.
+! The inflow is non-zero for a specified duration of T_inflow (h).
+! The steady-state inflow is NTcells0/ave_residence_time per hour.
+! The total inflow in T_inflow is a specified multiple of NTcells0: expansion*NTcells0
+! The functional variation for t: 0 -> T_inflow is given by f(t)
+! We want the inflow quantities per timestep to add up to expansion*NTcells0
+!--------------------------------------------------------------------------------------
+subroutine setup_blocked_egress_inflow
+real :: t, fsum, a
+integer :: i, n
+
+eblock%k1 = 0.8
+eblock%k2 = 0.15
+eblock%expansion = 1.3
+eblock%duration = 24*60     ! min
+do i = 1,20
+    a = 1 + i*0.2
+    n = 0
+    fsum = 0
+    t = 0
+    do while (t < eblock%duration)
+        fsum = fsum + f_blocked_egress_inflow(t,a)
+        t = t + DELTA_T
+        n = n+1
+    enddo
+    write(*,'(2i6,4e12.3)') i,n,a,t,fsum,fsum/((eblock%expansion-1)*NTcells0)
+enddo
+end subroutine
+
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+subroutine blocked_egress_inflow(inflow)
+real :: inflow
+real :: scale, t
+
+t = istep*DELTA_T/60
+inflow = f_blocked_egress_inflow(t,eblock%amp)
+
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 ! Total T cell inflow and outflow are generated from the vascularity and baseline
 ! inflow, inflow0.
@@ -1511,8 +1576,14 @@ subroutine generate_traffic(inflow0)
 real :: inflow0
 real :: act, expansion, actfactor, tnow
 real :: inflow, outflow
-!real, parameter :: T1 = 8*60, T2 = 16*60, T3 = 24*60
 
+if (suppress_egress) then
+    call blocked_egress_inflow(inflow)
+    InflowTotal = inflow
+    OutflowTotal = 0
+    return
+endif
+    
 if (traffic_mode == TRAFFIC_MODE_1) then    ! naive
     write(*,*) 'generate_traffic: do not use TRAFFIC_MODE_1'
     stop
@@ -1614,6 +1685,7 @@ do idc = 1,NDC
 enddo
 get_DCactivity = a
 end function
+
 
 !--------------------------------------------------------------------------------------
 ! Interim

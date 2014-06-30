@@ -49,7 +49,7 @@ void Plot::mousePressEvent (QMouseEvent *event) {
 		int w = this->width();
 		int h = this->height();
 		QPixmap pixmap(w, h);
-		pixmap.fill(Qt::white); // Qt::transparent ?
+        pixmap.fill(Qt::white);
 
 		QwtPlotPrintFilter filter;
 		int options = QwtPlotPrintFilter::PrintAll;
@@ -64,6 +64,9 @@ void Plot::mousePressEvent (QMouseEvent *event) {
 			return;
 		}
 		pixmap.save(fileName,0,-1);
+
+        // Testing conversion to QImage, for qvideooutput
+        QImage image = pixmap.toImage();
 	}
 }
 

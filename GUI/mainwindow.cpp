@@ -33,13 +33,23 @@ Graphs *grph;
 int showingVTK;
 int recordfrom, recordto;
 int VTKbuffer[100];
-int TC_list[5*MAX_TC];
+//int TC_list[5*MAX_TC];
+int *TC_list=NULL;
 int nTC_list;
-int DC_list[5*MAX_DC];
+//int DC_list[5*MAX_DC];
+int *DC_list=NULL;
 int nDC_list;
-int bond_list[2*MAX_BOND];
+//int bond_list[2*MAX_BOND];
+int *bond_list=NULL;
 int nbond_list;
+double *FACS_data=NULL;
+int nFACS_vars=5;   // CFSE, CD69, S1PR1, avidity, stimulation
+int nFACS_cells=0;
+int nFACS_dim=0;
+
 QMutex mutex1, mutex2;
+
+bool redimflag;
 
 int summaryData[100];
 int NX, NY, NZ, NBY;
@@ -92,9 +102,9 @@ MainWindow::MainWindow(QWidget *parent)
     first = true;
 	started = false;
     firstVTK = true;
-    recording = 0;
+    recordingVTK = 0;
 	showingVTK = 0;
-    showingVTK += recording;
+    showingVTK += recordingVTK;
 	nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -117,6 +127,8 @@ MainWindow::MainWindow(QWidget *parent)
 	grph = new Graphs();
     setupGraphSelector();
     setGraphsActive();
+//    facs = new FACSplot(page_FACS);
+
 
     for (int i=0; i<MAX_DATA; i++)
         pGraph[i] = NULL;
@@ -127,6 +139,8 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_QMSG("did createActions");
     initDistPlots();
     LOG_QMSG("did initDistPlots");
+    initFACSPlot();
+    LOG_QMSG("did initFACSPlot");
     loadParams();
     LOG_QMSG("did loadParams");
     writeout();
@@ -143,7 +157,8 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, test_page);
     vtk->init();
 
-    videoOutput = new QVideoOutput(this, vtk->renWin);
+    videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
+    videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
 
     rect.setX(50);
     rect.setY(30);
@@ -169,6 +184,12 @@ MainWindow::MainWindow(QWidget *parent)
     */
     showmdiAreaSize();
     tabs->setCurrentIndex(0);
+
+//Testing
+    TC_list = (int *)malloc(5*MAX_TC*sizeof(int));
+    DC_list = (int *)malloc(5*MAX_DC*sizeof(int));
+    bond_list = (int *)malloc(2*MAX_BOND*sizeof(int));
+
 	goToInputs();
 }
 
@@ -211,8 +232,10 @@ void MainWindow::createActions()
     connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
     connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
     connect(action_save_snapshot, SIGNAL(triggered()), this, SLOT(saveSnapshot()));
-    connect(action_start_recording, SIGNAL(triggered()), this, SLOT(startRecorder()));
-    connect(action_stop_recording, SIGNAL(triggered()), this, SLOT(stopRecorder()));
+    connect(actionStart_recording_VTK, SIGNAL(triggered()), this, SLOT(startRecorderVTK()));
+    connect(actionStop_recording_VTK, SIGNAL(triggered()), this, SLOT(stopRecorderVTK()));
+    connect(actionStart_recording_FACS, SIGNAL(triggered()), this, SLOT(startRecorderFACS()));
+    connect(actionStop_recording_FACS, SIGNAL(triggered()), this, SLOT(stopRecorderFACS()));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -903,10 +926,11 @@ void MainWindow::goToInputs()
 {
     stackedWidget->setCurrentIndex(0);
 	showingVTK = 0;
-    showingVTK += recording;
+    showingVTK += recordingVTK;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
+    action_FACS->setEnabled(true);
 }
 
 //-------------------------------------------------------------
@@ -916,10 +940,11 @@ void MainWindow::goToOutputs()
 {
     stackedWidget->setCurrentIndex(1);    
 	showingVTK = 0;
-    showingVTK += recording;
+    showingVTK += recordingVTK;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
+    action_FACS->setEnabled(true);
 }
 
 //-------------------------------------------------------------
@@ -932,8 +957,9 @@ void MainWindow::goToVTK()
 		action_outputs->setEnabled(true);
 		action_inputs->setEnabled(true);
 		action_VTK->setEnabled(false);
-		showingVTK = 1;
-        showingVTK += recording;
+        action_FACS->setEnabled(true);
+        showingVTK = 1;
+        showingVTK += recordingVTK;
     }
 }
 
@@ -958,7 +984,7 @@ void MainWindow::playVTK()
 		save_image = false;
 	started = true;
 	showingVTK = 0;
-    showingVTK += recording;
+    showingVTK += recordingVTK;
     goToVTK();
 	if (!vtk->startPlayer(QFileInfo(fileName).absoluteFilePath(), timer, save_image)) {
 		LOG_MSG("startPlayer failed");
@@ -1017,55 +1043,131 @@ void MainWindow::setSavePosStart()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow:: startRecorder()
+bool MainWindow::getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName)
 {
     bool ok;
-    int nframes=0;
 
-    int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
+    int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), *nframes, 0, 10000, 1, &ok);
     if (ok) {
-        nframes = i;
+        *nframes = i;
     }
-    if (!ok || nframes == 0) return;
+    if (!ok || nframes == 0) {
+        return false;
+    }
 
     QStringList formatItems;
     formatItems << tr("avi") << tr("mov") << tr("mpg");
-    QString itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+    *itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
                                          tr("Video file format:"), formatItems, 0, false, &ok);
     QStringList codecItems;
     codecItems << tr("h264") << tr("mpeg4") << tr("mpeg");
-    QString itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+    *itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
                                               tr("Codec:"), codecItems, 0, false, &ok);
 
     const char *prompt;
-    if (itemFormat.contains("avi")) {
+    if (itemFormat->contains("avi")) {
         prompt = "Videos (*.avi)";
-    } else if (itemFormat.contains("mov")) {
+    } else if (itemFormat->contains("mov")) {
         prompt = "Videos (*.mov)";
-    } else if (itemFormat.contains("mpg")) {
+    } else if (itemFormat->contains("mpg")) {
         prompt = "Videos (*.mpg)";
     }
-    QString videoFileName = QFileDialog::getSaveFileName(this,
+    *videoFileName = QFileDialog::getSaveFileName(this,
                                                     tr("Save File"),
                                                     QString(),
                                                     tr(prompt));
-    videoOutput->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
-    action_start_recording->setEnabled(false);
-    action_stop_recording->setEnabled(true);
-    recording = 10;
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: startRecorderVTK()
+{
+//    bool ok;
+//    int nframes=0;
+
+//    int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
+//    if (ok) {
+//        nframes = i;
+//    }
+//    if (!ok || nframes == 0) return;
+
+//    QStringList formatItems;
+//    formatItems << tr("avi") << tr("mov") << tr("mpg");
+//    QString itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+//                                         tr("Video file format:"), formatItems, 0, false, &ok);
+//    QStringList codecItems;
+//    codecItems << tr("h264") << tr("mpeg4") << tr("mpeg");
+//    QString itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+//                                              tr("Codec:"), codecItems, 0, false, &ok);
+
+//    const char *prompt;
+//    if (itemFormat.contains("avi")) {
+//        prompt = "Videos (*.avi)";
+//    } else if (itemFormat.contains("mov")) {
+//        prompt = "Videos (*.mov)";
+//    } else if (itemFormat.contains("mpg")) {
+//        prompt = "Videos (*.mpg)";
+//    }
+//    QString videoFileName = QFileDialog::getSaveFileName(this,
+//                                                    tr("Save File"),
+//                                                    QString(),
+//                                                    tr(prompt));
+    bool ok;
+    int nframes=0;
+    QString itemFormat, itemCodec, videoFileName;
+
+    ok = getVideoFileInfo(&nframes, &itemFormat, &itemCodec, &videoFileName);
+    if (!ok) return;
+    videoVTK->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
+    actionStart_recording_VTK->setEnabled(false);
+    actionStop_recording_VTK->setEnabled(true);
+    recordingVTK = 10;
     started = true;
     goToVTK();
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow:: stopRecorder()
+void MainWindow:: stopRecorderVTK()
 {
-    videoOutput->stopRecorder();
-    action_start_recording->setEnabled(true);
-    action_stop_recording->setEnabled(false);
+    videoVTK->stopRecorder();
+    actionStart_recording_VTK->setEnabled(true);
+    actionStop_recording_VTK->setEnabled(false);
     showingVTK -= 10;
-    recording = 0;
+    recordingVTK = 0;
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: startRecorderFACS()
+{
+    bool ok;
+    int nframes=0;
+    QString itemFormat, itemCodec, videoFileName;
+
+    ok = getVideoFileInfo(&nframes, &itemFormat, &itemCodec, &videoFileName);
+    if (!ok) return;
+    videoFACS->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
+    actionStart_recording_FACS->setEnabled(false);
+    actionStop_recording_FACS->setEnabled(true);
+    LOG_QMSG("startRecorderFACS");
+    LOG_QMSG(videoFileName);
+//    recordingVTK = 10;
+//    started = true;
+//    goToVTK();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: stopRecorderFACS()
+{
+    videoFACS->stopRecorder();
+    actionStart_recording_FACS->setEnabled(true);
+    actionStop_recording_FACS->setEnabled(false);
+    LOG_QMSG("stopRecorderFACS");
+//    showingVTK -= 10;
+//    recordingVTK = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1131,7 +1233,7 @@ void MainWindow::runServer()
 		stackedWidget->setCurrentIndex(1);
 		showingVTK = 0;
 	}
-    showingVTK += recording;
+    showingVTK += recordingVTK;
     // Disable parts of the GUI
     action_run->setEnabled(false);
     action_pause->setEnabled(true);
@@ -1193,6 +1295,8 @@ void MainWindow::runServer()
     connect(exthread, SIGNAL(display(bool)), this, SLOT(displayScene(bool)));
 	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
     connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
+    connect(exthread, SIGNAL(redimension(int)), this, SLOT(redimensionCellArrays(int)));
+    connect(exthread, SIGNAL(facs_update()), this, SLOT(showFACS()));
     exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
@@ -1321,8 +1425,8 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isActive(i)) continue;
-        sprintf(msg,"i: %d isActive",i);
-        LOG_MSG(msg);
+//        sprintf(msg,"i: %d isActive",i);
+//        LOG_MSG(msg);
         if (grph->isTimeseries(i)) {
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Time (hours)");
@@ -1380,11 +1484,26 @@ void MainWindow::drawGraphs()
     }
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::redimensionCellArrays(int nbond_size)
+{
+    LOG_MSG("redimensionCellArrays");
+    nbond_list = nbond_size;
+    if (bond_list) {
+//        free(bond_list);
+        LOG_MSG("freed bond_list");
+    }
+//    if (!bond_list) bond_list = (int *)malloc(10*(nbond_size+1)*sizeof(int));
+    LOG_MSG("allocated bond_list");
+    redimflag = true;
+}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::displayScene(bool record)
 {
+//    LOG_MSG("displayScene");
 	bool redo = false;	// need to understand this
 	started = true;
 	mutex2.lock();
@@ -1392,12 +1511,12 @@ void MainWindow::displayScene(bool record)
 	bool fast = true;
 	vtk->get_cell_positions(fast);
     vtk->renderCells(redo);
-    if (videoOutput->record) {
-        videoOutput->recorder();
-    } else if (action_stop_recording->isEnabled()) {
+    if (videoVTK->record) {
+        videoVTK->recorder();
+    } else if (actionStop_recording_VTK->isEnabled()) {
 //        emit pause_requested();
-        action_start_recording->setEnabled(true);
-        action_stop_recording->setEnabled(false);
+        actionStart_recording_VTK->setEnabled(true);
+        actionStop_recording_VTK->setEnabled(false);
     }
     // Old-style image saving
     if (record) {
@@ -1478,11 +1597,11 @@ void MainWindow::showSummary()
             yscale = pGraph[i]->calc_yscale_ts(maxval);
 //            yscale = grph->get_yscale(i);
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
-//            if (k == PROFILE_GENERATION_LN) {
-//                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 20, 0);
+            if (k == PROFILE_GENERATION_LN) {
+                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 20, 0);
 //            } else {
 //                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 1.0, 0);
-//            }
+            }
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
             pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
@@ -1571,8 +1690,8 @@ void MainWindow::postConnection()
 		}
 	}
 
-    if (action_stop_recording->isEnabled()) {
-        stopRecorder();
+    if (actionStop_recording_VTK->isEnabled()) {
+        stopRecorderVTK();
     }
     action_run->setEnabled(true);
     action_pause->setEnabled(false);
@@ -1655,8 +1774,11 @@ void MainWindow::stopServer()
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
 	action_save_snapshot->setEnabled(true);
-    if (action_stop_recording->isEnabled()) {
-        stopRecorder();
+    if (actionStop_recording_VTK->isEnabled()) {
+        stopRecorderVTK();
+    }
+    if (actionStop_recording_FACS->isEnabled()) {
+        stopRecorderFACS();
     }
 }
 
@@ -2236,6 +2358,93 @@ void MainWindow::setGraphsActive()
 }
 
 //--------------------------------------------------------------------------------------------------------
+void MainWindow:: initFACSPlot()
+{
+    qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
+    qpFACS->setTitle("FACS");
+    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    qpFACS->replot();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Possible variables to plot against CFSE:
+//   CD69
+//   S1PR1
+//   avidity
+//   stimulation
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showFACS()
+{
+    double xmin, xmax, ymin, ymax, cfse, cd69, x, y;
+    int i, k;
+    int kvar;
+    QString xlabel, ylabel;
+
+    qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
+    qpFACS->clear();
+    qpFACS->setTitle("FACS");
+    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    xmin = 1.0e10;
+    xmax = -1.0e10;
+    ymin = 1.0e10;
+    ymax = -1.0e10;
+    if (radioButton_CD69->isChecked()) {
+        kvar = 1;
+        ylabel = "CD69";
+    } else if (radioButton_S1PR1->isChecked()) {
+            kvar = 2;
+            ylabel = "S1PR1";
+    } else if (radioButton_avidity->isChecked()) {
+            kvar = 3;
+            ylabel = "avidity";
+    } else if (radioButton_stimulation->isChecked()) {
+            kvar = 4;
+            ylabel = "stimulation";
+    }
+    for (i=0; i<nFACS_cells; i++) {
+//        double cfse = pow(2.,-i%8);
+//        double cd69 = i%7 + 0.5;
+//        d_x[i] = log(cfse)/log(2.);
+//        d_y[i] = cd69;
+//        xmin = min(xmin,x);
+//        xmax = max(xmax,x);
+//        ymin = min(ymin,y);
+        cfse = FACS_data[5*i];
+        cd69 = FACS_data[5*i+kvar];
+        x = log(cfse)/log(2.);
+        y = cd69;
+        ymax = max(ymax,y);
+        QwtPlotMarker* m = new QwtPlotMarker();
+        m->setSymbol( symbol );
+        m->setValue( QPointF( x,y ) );
+        m->attach( qpFACS );
+    }
+    xmin = -12.5;
+    xmax = 0.5;
+    ymax = 1.0;
+    qpFACS->setAxisScale(QwtPlot::yLeft, 0, ymax, 0);
+    qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);
+    qpFACS->setAxisScale(QwtPlot::xBottom, xmin, xmax, 0);
+    qpFACS->setAxisTitle(QwtPlot::xBottom, "CFSE");
+    qpFACS->replot();
+//    sprintf(msg,"x range: %f %f  y range: %f %f",xmin,xmax,ymin,ymax);
+//    LOG_MSG(msg);
+
+    // Create an image
+//    QImage image( qpFACS->canvas()->size(), QImage::Format_RGB32 );
+//    image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
+//    QPainter p( &image );
+//    qpFACS->drawCanvas( &p );
+//    p.drawImage( 0, 0, image );
+    if (videoFACS->record) {
+        videoFACS->recorder();
+    } else if (actionStop_recording_FACS->isEnabled()) {
+        actionStart_recording_FACS->setEnabled(true);
+        actionStop_recording_FACS->setEnabled(false);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow:: initDistPlots()
 {
@@ -2604,6 +2813,20 @@ void MainWindow::on_checkBox_EFFECTOR_FUNCTION_toggled(bool checked)
 void MainWindow::exitRuleChanged()
 {
 
+}
+
+//-------------------------------------------------------------
+// Switches to the FACS screen
+//-------------------------------------------------------------
+void MainWindow::on_action_FACS_triggered()
+{
+    stackedWidget->setCurrentIndex(3);
+    action_outputs->setEnabled(true);
+    action_inputs->setEnabled(true);
+    action_VTK->setEnabled(true);
+    action_FACS->setEnabled(false);
+//    showingVTK = 1;
+//    showingVTK += recording;
 }
 
 //------------------------------------------------------------------------------------------------------

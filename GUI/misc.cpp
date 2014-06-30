@@ -17,6 +17,16 @@
 
 LOG_USE();
 char msg[2048];
+bool alldone;
+
+class SleeperThread : public QThread
+{
+public:
+    static void msleep(unsigned long msecs)
+    {
+        QThread::msleep(msecs);
+    }
+};
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -150,7 +160,7 @@ void ExecThread::run()
 	std::string std_outfile = outfile_path.toStdString();
 	outfile = std_outfile.c_str();
 
-
+    alldone = false;
 	paused = false;
     record = false;
 //	LOG_MSG("execute called");
@@ -192,8 +202,10 @@ void ExecThread::run()
 			mutex1.lock();
 			get_summary(summaryData);
             getProfiles();
+            getFACS();
             mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals
+            emit facs_update();
 		}
 		if (stopped) break;
 		if (i%nt_vtk == 0) {
@@ -204,6 +216,7 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 	}
+    alldone = true;
     snapshot(record);
 	Sleep(10);
 	terminate_run(&res);
@@ -214,9 +227,15 @@ void ExecThread::run()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot(bool record)
 {
-	mutex2.lock();
-	get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
-	if (nTC_list > MAX_TC) {
+    int nTC_size, nDC_size, nbond_size;
+
+    mutex2.lock();
+//    get_scene_dimensions(&nTC_size,&nDC_size,&nbond_size);
+//    sprintf(msg,"nTC_size, nDC_size, nbond_size: %d %d %d",nTC_size, nDC_size, nbond_size);
+//    LOG_MSG(msg);
+    get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
+//    LOG_MSG("got scene");
+    if (nTC_list > MAX_TC) {
 		LOG_MSG("Error: MAX_TC exceeded");
 		exit(1);
 	}
@@ -228,8 +247,14 @@ void ExecThread::snapshot(bool record)
 		LOG_MSG("Error: MAX_BOND exceeded");
 		exit(1);
 	}
-	mutex2.unlock();
-    emit display(record); // Emit signal to update VTK display
+
+    mutex2.unlock();
+
+//    emit display(record); // Emit signal to update VTK display
+
+    if (showingVTK) {
+        emit display(record); // Emit signal to update VTK display
+    }
 }
 
 //-----------------------------------------------------------------------------------------
@@ -256,6 +281,19 @@ void ExecThread::getProfiles()
     get_profile_firstdccontacttime(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_DCBINDTIME;
     get_profile_dcbindtime(profile_x[k],profile_y[k],&profile_n[k]);
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::getFACS()
+{
+    get_nfacs(&nFACS_cells);
+    if (!FACS_data || nFACS_cells*nFACS_vars > nFACS_dim) {
+        if (FACS_data) free(FACS_data);
+        nFACS_dim = 3*nFACS_cells*nFACS_vars;
+        FACS_data = (double *)malloc(nFACS_dim*sizeof(double));
+    }
+    get_facs(FACS_data);
 }
 
 //-----------------------------------------------------------------------------------------

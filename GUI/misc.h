@@ -45,6 +45,7 @@ public:
 	void run();
     void snapshot(bool);
     void getProfiles();
+    void getFACS();
     void pause();
 	void unpause();
 	void stop();
@@ -56,6 +57,8 @@ signals:
     void display(bool);
 	void summary();
     void action_VTK();
+    void redimension(int);
+    void facs_update();
 };
 
 bool quitMessage(QString);

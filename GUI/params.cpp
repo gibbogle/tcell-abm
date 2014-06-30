@@ -221,7 +221,7 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "S1PR1 exit threshold",
 "S1PR1 level required for egress permission with EXIT_RULE 3"},
 
-{"NX", 100, 0, 0,
+{"NX", 150, 0, 0,
 "Lattice size",
 "Dimension of the lattice (number of sites in X, Y and Z directions).  Typically 4*BLOB_RADIUS is OK."},
 
