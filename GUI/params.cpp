@@ -6,7 +6,7 @@ Params::Params()
 	PARAM_SET params[] = {
 {"TC_AVIDITY_MEDIAN", 0.5, 0.1, 10.0,
 "TCR avidity median parameter",
-"TCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
+"TCR avidity has a lognormal distribution, described by the median and shape parameters. \n\
 (TCR stimulation rate is proportional to the product of TC avidity and DC antigen density.)"},
 
 {"TC_AVIDITY_SHAPE", 1.1, 1.01, 3.0,

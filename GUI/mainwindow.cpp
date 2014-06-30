@@ -27,7 +27,7 @@
 
 LOG_USE();
 
-Params *parm;	// I don't believe this is the right way, but it works
+Params *parm;	// I don't believe this is the right way, but it works!
 Graphs *grph;
 
 int showingVTK;
