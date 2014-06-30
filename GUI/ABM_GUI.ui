@@ -36,7 +36,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -490,7 +490,7 @@ padding: 8px
              <rect>
               <x>20</x>
               <y>360</y>
-              <width>171</width>
+              <width>211</width>
               <height>18</height>
              </rect>
             </property>
@@ -503,7 +503,7 @@ padding: 8px
              <rect>
               <x>20</x>
               <y>330</y>
-              <width>161</width>
+              <width>171</width>
               <height>18</height>
              </rect>
             </property>
@@ -978,7 +978,7 @@ padding: 8px
              <rect>
               <x>360</x>
               <y>300</y>
-              <width>201</width>
+              <width>251</width>
               <height>17</height>
              </rect>
             </property>
@@ -1004,7 +1004,7 @@ padding: 8px
              <rect>
               <x>400</x>
               <y>330</y>
-              <width>241</width>
+              <width>281</width>
               <height>21</height>
              </rect>
             </property>
@@ -1839,7 +1839,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>440</x>
               <y>290</y>
-              <width>121</width>
+              <width>141</width>
               <height>21</height>
              </rect>
             </property>
@@ -2171,8 +2171,8 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>50</x>
               <y>40</y>
-              <width>251</width>
-              <height>131</height>
+              <width>256</width>
+              <height>140</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_CD69">
@@ -2372,7 +2372,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>50</x>
               <y>20</y>
-              <width>171</width>
+              <width>201</width>
               <height>16</height>
              </rect>
             </property>
@@ -2385,7 +2385,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>350</x>
               <y>40</y>
-              <width>191</width>
+              <width>211</width>
               <height>81</height>
              </rect>
             </property>
@@ -2397,7 +2397,7 @@ p, li { white-space: pre-wrap; }
               <rect>
                <x>10</x>
                <y>0</y>
-               <width>171</width>
+               <width>201</width>
                <height>18</height>
               </rect>
              </property>
@@ -2416,7 +2416,7 @@ p, li { white-space: pre-wrap; }
               <rect>
                <x>10</x>
                <y>20</y>
-               <width>151</width>
+               <width>181</width>
                <height>18</height>
               </rect>
              </property>
@@ -2432,7 +2432,7 @@ p, li { white-space: pre-wrap; }
               <rect>
                <x>10</x>
                <y>40</y>
-               <width>141</width>
+               <width>171</width>
                <height>18</height>
               </rect>
              </property>
@@ -2468,7 +2468,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>350</x>
               <y>20</y>
-              <width>121</width>
+              <width>191</width>
               <height>16</height>
              </rect>
             </property>
@@ -2481,7 +2481,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>360</x>
               <y>140</y>
-              <width>161</width>
+              <width>201</width>
               <height>17</height>
              </rect>
             </property>
@@ -2500,7 +2500,7 @@ p, li { white-space: pre-wrap; }
               <x>20</x>
               <y>80</y>
               <width>301</width>
-              <height>74</height>
+              <height>82</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_3" columnstretch="0,0,0">
@@ -2656,7 +2656,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>390</x>
               <y>50</y>
-              <width>181</width>
+              <width>191</width>
               <height>41</height>
              </rect>
             </property>
@@ -2687,7 +2687,7 @@ p, li { white-space: pre-wrap; }
               <rect>
                <x>10</x>
                <y>20</y>
-               <width>161</width>
+               <width>181</width>
                <height>21</height>
               </rect>
              </property>
@@ -2746,7 +2746,7 @@ p, li { white-space: pre-wrap; }
               <x>810</x>
               <y>80</y>
               <width>311</width>
-              <height>152</height>
+              <height>169</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_2">
@@ -3145,7 +3145,7 @@ p, li { white-space: pre-wrap; }
               <x>390</x>
               <y>140</y>
               <width>331</width>
-              <height>152</height>
+              <height>169</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_8">
@@ -3424,7 +3424,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>270</x>
               <y>490</y>
-              <width>181</width>
+              <width>211</width>
               <height>16</height>
              </rect>
             </property>
@@ -3447,7 +3447,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>700</x>
               <y>490</y>
-              <width>161</width>
+              <width>181</width>
               <height>16</height>
              </rect>
             </property>
@@ -3492,7 +3492,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>20</x>
               <y>340</y>
-              <width>82</width>
+              <width>101</width>
               <height>18</height>
              </rect>
             </property>
@@ -3508,7 +3508,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>20</x>
               <y>360</y>
-              <width>82</width>
+              <width>111</width>
               <height>18</height>
              </rect>
             </property>
@@ -3524,7 +3524,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>390</x>
               <y>30</y>
-              <width>141</width>
+              <width>181</width>
               <height>16</height>
              </rect>
             </property>
@@ -3578,7 +3578,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>20</x>
               <y>20</y>
-              <width>131</width>
+              <width>161</width>
               <height>16</height>
              </rect>
             </property>
@@ -3650,7 +3650,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>660</x>
               <y>40</y>
-              <width>151</width>
+              <width>191</width>
               <height>16</height>
              </rect>
             </property>
@@ -3798,7 +3798,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QCheckBox" name="cbox_DC_INJECTION">
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>520</x>
               <y>120</y>
               <width>120</width>
               <height>21</height>
@@ -3854,7 +3854,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>380</x>
               <y>20</y>
-              <width>121</width>
+              <width>141</width>
               <height>21</height>
              </rect>
             </property>
@@ -3865,7 +3865,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="text_INPUT_FILE">
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>520</x>
               <y>20</y>
               <width>151</width>
               <height>20</height>
@@ -3875,7 +3875,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="line_SPECIAL_CASE">
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>520</x>
               <y>60</y>
               <width>21</width>
               <height>20</height>
@@ -3897,9 +3897,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QLabel" name="label_SPECIAL_CASE">
             <property name="geometry">
              <rect>
-              <x>530</x>
+              <x>550</x>
               <y>60</y>
-              <width>131</width>
+              <width>151</width>
               <height>21</height>
              </rect>
             </property>
@@ -3925,7 +3925,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>380</x>
               <y>80</y>
-              <width>111</width>
+              <width>131</width>
               <height>21</height>
              </rect>
             </property>
@@ -3939,7 +3939,7 @@ p, li { white-space: pre-wrap; }
             </property>
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>520</x>
               <y>80</y>
               <width>151</width>
               <height>20</height>
@@ -3949,7 +3949,7 @@ p, li { white-space: pre-wrap; }
            <widget class="QLineEdit" name="text_DC_INJECTION_FILE">
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>520</x>
               <y>140</y>
               <width>151</width>
               <height>20</height>
@@ -3970,7 +3970,7 @@ p, li { white-space: pre-wrap; }
              <rect>
               <x>380</x>
               <y>140</y>
-              <width>91</width>
+              <width>111</width>
               <height>21</height>
              </rect>
             </property>
@@ -4788,9 +4788,9 @@ p, li { white-space: pre-wrap; }
            <widget class="QMyLabel" name="label_DUMMY_IMAGE_BASENAME">
             <property name="geometry">
              <rect>
-              <x>500</x>
+              <x>460</x>
               <y>270</y>
-              <width>131</width>
+              <width>161</width>
               <height>21</height>
              </rect>
             </property>
@@ -5042,6 +5042,123 @@ p, li { white-space: pre-wrap; }
         </property>
        </widget>
       </widget>
+      <widget class="QWidget" name="page_FACS">
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>410</x>
+          <y>0</y>
+          <width>141</width>
+          <height>41</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>FACS page</string>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="groupBox_FACS">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>841</width>
+          <height>411</height>
+         </rect>
+        </property>
+        <property name="title">
+         <string/>
+        </property>
+        <widget class="QwtPlot" name="qwtPlot_FACS">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>571</width>
+           <height>391</height>
+          </rect>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_FACS_vars">
+         <property name="geometry">
+          <rect>
+           <x>610</x>
+           <y>40</y>
+           <width>111</width>
+           <height>101</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string/>
+         </property>
+         <widget class="QRadioButton" name="radioButton_CD69">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>10</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>CD69</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_S1PR1">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>30</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>S1PR1</string>
+          </property>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_avidity">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>50</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>avidity</string>
+          </property>
+         </widget>
+         <widget class="QRadioButton" name="radioButton_stimulation">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>70</y>
+            <width>82</width>
+            <height>17</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>stimulation</string>
+          </property>
+         </widget>
+        </widget>
+       </widget>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -5110,8 +5227,10 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>Movie</string>
     </property>
-    <addaction name="action_start_recording"/>
-    <addaction name="action_stop_recording"/>
+    <addaction name="actionStart_recording_VTK"/>
+    <addaction name="actionStop_recording_VTK"/>
+    <addaction name="actionStart_recording_FACS"/>
+    <addaction name="actionStop_recording_FACS"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -5143,6 +5262,7 @@ p, li { white-space: pre-wrap; }
    <addaction name="action_inputs"/>
    <addaction name="action_outputs"/>
    <addaction name="action_VTK"/>
+   <addaction name="action_FACS"/>
   </widget>
   <action name="action_saveAs">
    <property name="text">
@@ -5297,17 +5417,39 @@ p, li { white-space: pre-wrap; }
     <string>Show 2D gradient field</string>
    </property>
   </action>
-  <action name="action_start_recording">
+  <action name="actionStart_recording_VTK">
    <property name="text">
-    <string>Start recording</string>
+    <string>Start recording 3D</string>
    </property>
   </action>
-  <action name="action_stop_recording">
+  <action name="actionStop_recording_VTK">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Stop recording</string>
+    <string>Stop recording 3D</string>
+   </property>
+  </action>
+  <action name="action_FACS">
+   <property name="icon">
+    <iconset resource="icons.qrc">
+     <normaloff>:/icons/FACS_234.png</normaloff>:/icons/FACS_234.png</iconset>
+   </property>
+   <property name="text">
+    <string>FACS</string>
+   </property>
+  </action>
+  <action name="actionStart_recording_FACS">
+   <property name="text">
+    <string>Start recording FACS</string>
+   </property>
+  </action>
+  <action name="actionStop_recording_FACS">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop recording FACS</string>
    </property>
   </action>
  </widget>

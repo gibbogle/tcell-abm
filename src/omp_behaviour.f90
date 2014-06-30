@@ -2766,15 +2766,21 @@ subroutine AddExitPortal
 integer :: site(3)
 integer :: iexit
 
+if (dbug) write(nflog,*) 'ChoosePortalSite'
 call ChoosePortalSite(site)
+if (dbug) write(nflog,*) 'got site: ',site
+if (dbug) write(nflog,*) 'getExitNum'
 call getExitNum(iexit)
+if (dbug) write(nflog,*) 'got iexit: ',iexit
 Nexits = Nexits + 1
 if (lastexit > max_exits) then
 	write(logmsg,*) 'Error: AddExitPortal: too many exits: need to increase max_exits: ',max_exits
 	call logger(logmsg)
 	stop
 endif
+if (dbug) write(nflog,*) 'PlaceExitPortal: ',iexit,site
 call PlaceExitPortal(iexit,site)
+if (dbug) write(nflog,*) 'placed'
 end subroutine
 
 !---------------------------------------------------------------------
@@ -2855,13 +2861,20 @@ if (SURFACE_PORTALS) then
 		u(2) = rx*cos(theta)
 		u(3) = rx*sin(theta)
 		call getBoundarySite(u,site,ok)
-		if (.not.ok) cycle
-!		xex = site(1)
-!		yex = site(2)
-!		zex = site(3)
-		if (.not.portalOK(site)) cycle
+		if (.not.ok) then
+		    if (dbug) write(nflog,*) 'getBoundarySite not OK'
+		    cycle
+		endif
+		ok = portalOK(site)
+		if (.not.ok) then
+		    if (dbug) write(nflog,*) 'portalOK not OK'
+		    cycle
+		endif
 		call CheckSite(EXIT_SITE,site,ok)
-		if (.not.ok) cycle
+		if (.not.ok) then
+		    if (dbug) write(nflog,*) 'CheckSite not OK'
+		    cycle
+		endif
 !		if (use_DC) then
 !			if (tooNearDC(site,exit_DCprox)) then		! exit_DCprox is min distance in sites
 !				call logger('tooNearDC')
@@ -3194,16 +3207,19 @@ select case(sitetype)
 case(EXIT_SITE)
 	proxlimit = proximity_limit(EXIT_SITE,EXIT_SITE)
 	if (tooNearExit(site,proxlimit)) then	! too near another exit
+	    if (dbug) write(nflog,*) 'tooNearExit'
 		ok = .false.
 		return
 	endif
 	proxlimit = proximity_limit(EXIT_SITE,DC_SITE)
 	if (tooNearDC(site,proxlimit)) then	! too near a DC
+	    if (dbug) write(nflog,*) 'tooNearDC'
 		ok = .false.
 		return
 	endif
 	proxlimit = proximity_limit(EXIT_SITE,HEV_SITE)
 	if (tooNearHEV(site,proxlimit)) then	! too near an HEV
+	    if (dbug) write(nflog,*) 'tooNearHEV'
 		ok = .false.
 		return
 	endif

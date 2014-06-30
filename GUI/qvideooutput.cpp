@@ -31,7 +31,7 @@ LOG_USE();
 //! @param[in] parent : A parent object.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-QVideoOutput::QVideoOutput(QObject *parent, vtkRenderWindow *VTKrenWin)
+QVideoOutput::QVideoOutput(QObject *parent, int imageSource, vtkRenderWindow *VTKrenWin, QwtPlot *qwtplot)
 : QObject(parent)
 , swsContext(0x0)
 , formatContext(0x0)
@@ -47,8 +47,13 @@ QVideoOutput::QVideoOutput(QObject *parent, vtkRenderWindow *VTKrenWin)
 , w2i(0x0)
 , openedMediaFile(false)
 {
-   // Set renWin
-   renWin = VTKrenWin;
+   source = imageSource;
+   if (source == VTK_SOURCE) {
+       // Set renWin
+       renWin = VTKrenWin;
+   } else if (source == QWT_SOURCE) {
+       qp = qwtplot;
+   }
    // Init FFmpeg
    av_register_all();
 }
@@ -309,6 +314,8 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
     openedMediaFile = false;
     width = imwidth;
     height = imheight;
+    sprintf(msg,"width: %d  height: %d",width,height);
+    LOG_MSG(msg);
     // allocate the output media context
     if (record_codec.contains("h264")) {
         avformat_alloc_output_context2(&formatContext, NULL, "h264", filename.toAscii().data());
@@ -383,17 +390,53 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
 ////////////////////////////////////////////////////////////////////////////////
 //  QVideoOutput::newFrame
 //!
-//! @brief Adds new frame to ouput stream
+//! @brief Adds new frame to output stream
 //!
 //! @param[in]  image :
 //!
+
+/*
+// To create a QImage of the QwtPlot:
+
+virtual void YourPlot::drawCanvas( QPainter *painter )
+{
+    QImage image( canvas()->size(), QImage::QImage::Format_RGB32 );
+    image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
+
+    QPainter p( &image );
+    QwtPlot::drawCanvas( &p );
+    painter->drawImage( 0, 0, image );
+}
+
+// but ... look at plot::mousePressEvent(), which uses QPixmap:
+    int w = this->width();
+    int h = this->height();
+    QPixmap pixmap(w, h);
+    pixmap.fill(Qt::white);
+    QwtPlotPrintFilter filter;
+    int options = QwtPlotPrintFilter::PrintAll;
+    options &= ~QwtPlotPrintFilter::PrintBackground;
+    options |= QwtPlotPrintFilter::PrintFrameWithScales;
+    filter.setOptions(options);
+    this->print(pixmap, filter);
+
+// In QPixmap class there is a method QImage QPixmap::toImage()
+// to convert a pixmap to image
+
+// For individual points (flow cytometry data, CFSE):
+    QwtPlotMarker* m = new QwtPlotMarker();
+    m->setSymbol( QwtSymbol( QwtSymbol::Diamond, Qt::red, Qt::NoPen, QSize( 10, 10 ) ) );
+    m->setValue( QPointF( 1.5, 2.2 ) );
+    m->attach( plot );
+*/
+
 ////////////////////////////////////////////////////////////////////////////////
 bool QVideoOutput::newFrame(const QImage & image)
 {
 //    LOG_QMSG("newFrame");
    const int width  = image.width();
    const int height = image.height();
-   // write video frames
+   // write video frame
    for (int y = 0; y < height; y++)
    {
       const uint8_t * scanline = image.scanLine(y);
@@ -558,9 +601,6 @@ void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QStr
     record_codec = codec;
     record_nframes = nframes;
     record_it = 0;
-    //    framenum = 0;
-    //    LOG_MSG("set up pngwriter");
-    //    record_basename = "movie/frame";
 
     LOG_MSG("Started recording");
 }
@@ -571,8 +611,9 @@ void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QStr
 //-----------------------------------------------------------------------------------------
 void QVideoOutput::recorder()
 {
-//    char numstr[5];
-//    char filename[512];
+    int imwidth, imheight;
+    vtkImageData *id;
+    QImage im;
 
 //    sprintf(msg,"recorder: record_it: %d",record_it);
 //    LOG_MSG(msg);
@@ -581,15 +622,27 @@ void QVideoOutput::recorder()
         stopRecorder();
         return;
     }
-    vtkImageData *id = vtkImageData::New();
-    id = w2i->GetOutput();
-    w2i->Modified();	//important
-    id->Update();
-    int imwidth = id->GetDimensions()[0];
-    int imheight = id->GetDimensions()[1];
-    if (imwidth == 0) {
-        LOG_QMSG("ERROR: recorder: vtkImageData dimension = 0");
-        exit(1);
+    if (source == VTK_SOURCE) {
+        id = vtkImageData::New();
+        id = w2i->GetOutput();
+        w2i->Modified();	//important
+        id->Update();
+        imwidth = id->GetDimensions()[0];
+        imheight = id->GetDimensions()[1];
+        if (imwidth == 0) {
+            LOG_QMSG("ERROR: recorder: vtkImageData dimension = 0");
+            exit(1);
+        }
+    } else if (source == QWT_SOURCE) {
+        // Create an image
+        QImage image( qp->canvas()->size(), QImage::Format_RGB32 );
+        image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
+        QPainter p( &image );
+        qp->drawCanvas( &p );
+        p.drawImage( 0, 0, image );
+        im = image;
+        imwidth = im.width();
+        imheight = im.height();
     }
     record_it++;
     if (!isOpen()) {
@@ -599,7 +652,7 @@ void QVideoOutput::recorder()
         {
            // Open media file and prepare for recording
            QString fileName = tempFile->fileName();
-            bool recording = openMediaFile(imwidth, imheight, fileName.toAscii().data());
+           bool recording = openMediaFile(imwidth, imheight, fileName.toAscii().data());
             if (!recording) {
                 LOG_QMSG("ERROR: openMediaFile failed");
                 record = false;
@@ -607,20 +660,22 @@ void QVideoOutput::recorder()
             }
         }
     }
-    bool success = newVtkFrame(id);
-    if (!success) {
-        LOG_QMSG("ERROR: newVtkFrame failed");
-        record = false;
-        exit(1);
+    bool success;
+    if (source == VTK_SOURCE) {
+        success = newVtkFrame(id);
+        if (!success) {
+            LOG_QMSG("ERROR: newVtkFrame failed");
+            record = false;
+            exit(1);
+        }
+    } else if (source == QWT_SOURCE) {
+        success = newFrame(im);
+        if (!success) {
+            LOG_QMSG("ERROR: newFrame failed for QWT_SOURCE");
+            record = false;
+            exit(1);
+        }
     }
-//    sprintf(numstr,"%05d",framenum);
-//    strcpy(filename ,(record_basename + numstr + ".png").toStdString().c_str());
-//    pngwriter->SetFileName(filename);
-//    pngwriter->Write();
-//    sprintf(msg,"recorder: it: %d frame: %d filename: %s  id dimensions: %d %d",record_it,framenum,filename,id->GetDimensions()[0],id->GetDimensions()[1]);
-//    LOG_MSG(msg);
-//    framenum++;
-//    record_it++;
 }
 
 //-----------------------------------------------------------------------------------------

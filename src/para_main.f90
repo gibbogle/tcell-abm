@@ -142,7 +142,7 @@ do jstep = 1,Nsteps
 		ncog(1:2) = summaryData(6:7)
 		inflow = summaryData(10)
 		exits = summaryData(11)
-		write(*,'(5(a,i6))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits		
+		write(*,'(5(a,i8))') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog(1),' inflow: ',inflow,' nexits: ', exits		
 	endif
 enddo
 call terminate_run(0)

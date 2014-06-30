@@ -1318,7 +1318,7 @@ if (R < df) then
 	node_inflow = node_inflow + 1
 endif
 exfract = 1
-if (suppress_egress) then
+if (transient_egress_suppression) then
 	exfract = egressFraction(tnow)
 endif
 node_outflow = exfract*node_outflow
@@ -1607,7 +1607,7 @@ endif
 
 tnow = istep*DELTA_T
 exfract = 1
-if (suppress_egress) then
+if (transient_egress_suppression) then
 	exfract = egressFraction(tnow)
 endif
 
@@ -2102,7 +2102,6 @@ blob_changed = .false.
 tnow = istep*DELTA_T
 nadd_limit = 0.01*NTcells0
 nadd_total = nadd_sites
-
 if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTERVAL)) then
 !    write(*,*) 'balancer: ',istep
     if (dbug) write(nflog,*) 'balancer: nadd_total: ',nadd_total,nadd_limit,lastbalancetime,BALANCER_INTERVAL
@@ -2136,10 +2135,10 @@ if ((abs(nadd_total) > nadd_limit) .or. (tnow > lastbalancetime + BALANCER_INTER
     if (dbug) write(nflog,*) 'nadd_total: ',nadd_total
     if (nadd_total > 0) then
         n = nadd_total
-	    if (dbug) write(nflog,*) 'call add_sites: ',n
+	    if (dbug) write(nflog,*) 'call addSites: ',n
         call addSites(n,ok)
         if (.not.ok) return
-	    if (dbug) write(nflog,*) 'did add_sites'
+	    if (dbug) write(nflog,*) 'did addSites'
         blob_changed = .true.
     elseif (nadd_total < 0) then
         n = -nadd_total
@@ -2205,6 +2204,9 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 		if (Nexits < Nexits0) then
 			last_portal_update_time = tnow
 			do k = 1,Nexits0 - Nexits
+			    if (dbug) then
+			        write(nflog,*) 'AddExitPortal: ',k
+			    endif
 				call AddExitPortal()
 			enddo
 !			write(*,*) '-------------------------------------'
@@ -2214,6 +2216,9 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 !			write(*,*) '--------------------------'
 		elseif (Nexits > Nexits0) then
 			last_portal_update_time = tnow
+		    if (dbug) then
+		        write(nflog,*) 'RemoveExitPortals: ',Nexits,Nexits0,Nexits - Nexits0
+		    endif
 			call removeExitPortals(Nexits - Nexits0)
 !			write(*,*) '-------------------------------------'
 !			write(*,*) 'Set Nexits to base steady-state level'
@@ -2233,11 +2238,17 @@ if (use_portal_egress .and. use_traffic .and. tnow - last_portal_update_time > 6
 !       write(nflog,*) 'added: Nexits: ',naddex, Nexits
 !        write(logmsg,*) 'add: Nexits: ',naddex, NTcells, Nexits, requiredExitPortals(NTcells),istep
 !        call logger(logmsg) 
+        if (dbug) then
+            write(nflog,*) 'dexit > 0: ',dexit
+        endif
         do k = 1,naddex
             call AddExitPortal()
         enddo
     elseif (dexit < 0) then
         nremex = -dexit
+        if (dbug) then
+            write(nflog,*) 'dexit < 0: ',dexit
+        endif
 		last_portal_update_time = tnow
         call removeExitPortals(nremex)
     endif
@@ -2258,7 +2269,7 @@ integer, allocatable :: t(:), bdrylist(:,:)
 real, allocatable :: r2list(:)
 
 ok = .true.
-!write(logmsg,'(a,i5,i7,f8.2)') 'add_sites: ',n,Nsites,Radius
+!write(logmsg,'(a,i5,i7,f8.2)') 'addSites: ',n,Nsites,Radius
 !call logger(logmsg)
 r2 = Radius*Radius
 maxblist = 4*PI*r2*0.1*Radius
@@ -2269,7 +2280,7 @@ allocate(r2list(maxblist))
 r2max = 1.3*r2
 r2min = 0.8*r2
 
-!write(*,*) 'add_sites: r2min,r2max: ',r2min,r2max
+!write(*,*) 'addSites: r2min,r2max: ',r2min,r2max
 k = 0
 do z = 2,NZ-1
     z2 = (z-z0)*(z-z0)
@@ -2304,7 +2315,7 @@ enddo
 nb = k
 !write(*,*) 'bdry sites: ',nb,maxblist
 if (nb < n) then
-    write(logmsg,'(a,2i8)') 'Error: add_sites: insufficient candidate sites: ',nb,n
+    write(logmsg,'(a,2i8,a)') 'Error: addSites: insufficient candidate sites: ',nb,n,' Increase lattice size NX'
     call logger(logmsg)
     ok = .false.
     return
@@ -2375,6 +2386,7 @@ do iexit = 1,lastexit
 	nin1 = neighbourhoodCount(site1)
 	if (nin1 < 27) then
 		! need to move the portal inwards, choose the site with jump closest to -u direction
+		kmin = 0
 		pmin = 0
 		do k = 1,27
 			if (k == 14) cycle
@@ -2387,6 +2399,7 @@ do iexit = 1,lastexit
 				kmin = k
 			endif
 		enddo
+		if (kmin == 0) cycle
 		site2 = site1 + jumpvec(:,kmin)
 	else
 		! may need to move portal outwards - try a new site
@@ -2991,7 +3004,7 @@ do istep = 1,nsteps
 !    call generate_traffic(inflow0)
 	Fin = Fin0*vascularity*DELTA_T
 	Fout = NTcells*DELTA_T/(Tres*60)
-    if (suppress_egress) then
+    if (transient_egress_suppression) then
 		exfract = egressFraction(tnow)
 		Fout = exfract*Fout
 	endif
@@ -4058,7 +4071,7 @@ integer,allocatable :: cnt(:)
 real :: dx
 
 !call logger('get_profile_cd69')
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4096,7 +4109,7 @@ integer :: i, k, kcell
 integer,allocatable :: cnt(:)
 real :: dx
 
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4128,7 +4141,7 @@ integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, stim
 
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4164,7 +4177,7 @@ integer :: i, k, kcell
 integer,allocatable :: cnt(:)
 real :: dx
 
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4196,7 +4209,7 @@ integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, avid
 
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4231,7 +4244,7 @@ integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, avid
 
-n = 20
+n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4301,7 +4314,7 @@ integer :: i, k, kcell
 integer,allocatable :: cnt(:)
 real :: dx, t
 
-n = 20
+n = nprofilebins
 dx = 300.0/n
 allocate(cnt(n))
 cnt = 0
@@ -4350,6 +4363,54 @@ else
 	y(1:n) = 0
 endif
 cp%bincount(1:n) = 0
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_nFACS(n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_nfacs
+use, intrinsic :: iso_c_binding
+integer(c_int) :: n
+integer :: k, kcell, region
+type (cog_type), pointer :: p
+
+n = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region == LYMPHNODE) n = n+1
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_FACS(facs_data) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_facs
+use, intrinsic :: iso_c_binding
+real(c_double) :: facs_data(*)
+integer :: i, k, kcell, region
+type (cog_type), pointer :: p
+
+k = 0
+do i = 1,lastcogID
+    kcell = cognate_list(i)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
+	k = k+1
+	facs_data(k) = p%CFSE
+	k = k+1
+	facs_data(k) = p%CD69
+	k = k+1
+	facs_data(k) = p%S1PR1
+	k = k+1
+	facs_data(k) = p%avidity
+	k = k+1
+	facs_data(k) = p%stimulation
+enddo
 end subroutine
 
 !-------------------------------------------------------------------------------- 
@@ -4478,6 +4539,7 @@ real :: Tcell_diam = 0.9
 real :: DC_diam = 1.8
 integer :: gen, bnd(2)
 
+!write(nflog,*) 'get_scene'
 ! DC section
 if (NDC > 0) then
 	k = 0
@@ -4497,6 +4559,7 @@ if (NDC > 0) then
     enddo
     nDC_list = k
 endif
+!write(nflog,*) 'nDC_list: ',nDC_list
 
 if (.not.IV_SHOW_NONCOGNATE) then
 	! T cell section
@@ -4507,6 +4570,7 @@ if (.not.IV_SHOW_NONCOGNATE) then
 			call get_stage(cellist(kcell)%cptr,stage,region)
 			if (region /= LYMPHNODE) cycle
 			k = k+1
+!		    write(nflog,*) 'Another T cell: ',k
 			j = 5*(k-1)
 			site = cellist(kcell)%site
 			ctype = cellist(kcell)%ctype
@@ -4535,6 +4599,8 @@ if (.not.IV_SHOW_NONCOGNATE) then
 		endif
 	enddo
     nTC_list = k
+!    write(nflog,*) 'nTC_list: ',nTC_list
+
 	! Bond section
 	k = 0
 	do kc = 1,lastcogID
@@ -4546,6 +4612,7 @@ if (.not.IV_SHOW_NONCOGNATE) then
 				if (idc /= 0) then
 					if (DClist(idc)%capable) then
 						k = k+1
+!	                    write(nflog,*) 'Another bond: ',k
 						j = 2*(k-1)
 						dcsite = DClist(idc)%site
 	!                    dcstate = mod(idc,2) + 1
@@ -4553,6 +4620,7 @@ if (.not.IV_SHOW_NONCOGNATE) then
 	!                    write(nfpos,'(a,i8,3i4,4i4)') 'Node: ',nd, site, dcsite-site, dcstate
 !						write(nfpos,'(a2,2i5)') 'B ',kc-1,idc-1
 						bond_list(j+1) = kc-1
+!						write(nflog,*) 'put bond_list(j+1)'
 						bond_list(j+2) = idc-1
 					endif
 				endif
@@ -4560,6 +4628,8 @@ if (.not.IV_SHOW_NONCOGNATE) then
 		endif
 	enddo
 	nbond_list = k
+!    write(nflog,*) 'nbond_list: ',nbond_list
+    
 else
 	! T cell section
 	k = 0
@@ -4599,6 +4669,7 @@ else
 		TC_list(j+5) = itcstate
 	enddo
 	nTC_list = k
+    
 	! Bond section
 	k = 0
 	do kcell = 1,nlist
@@ -4622,7 +4693,37 @@ else
 	enddo
 	nbond_list = k
 endif
+!call logger('get_scene done')
 
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! The values returned, for setting the size of arrays TC_list[] etc. in the GUI, are not
+! the precise numbers, rather they are upper bounds.
+! This code assumes that only cognate cells will be displayed.
+!-----------------------------------------------------------------------------------------
+subroutine get_scene_dimensions(nTCsize, nDCsize, nbondsize) bind(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_scene_dimensions
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nTCsize, nDCsize, nbondsize
+integer :: k, kcell, site(3), jb, idc
+
+nTCsize = lastcogID
+nDCsize = NDC
+	k = 0
+	do kcell = 1,nlist
+		if (cellist(kcell)%ID == 0) cycle  ! gap
+		site = cellist(kcell)%site
+		do jb = 1,2
+			idc = cellist(kcell)%DCbound(jb)
+			if (idc /= 0) then
+				if (DClist(idc)%capable) then
+					k = k+1
+				endif
+			endif
+		enddo
+	enddo
+	nbondsize = k
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4720,7 +4821,7 @@ logical :: ok
 
 res = 0
 dbug = .false.
-!if (istep > 4*60*40) dbug = .true.
+!if (istep >= 11760) dbug = .true.
 ok = .true.
 istep = istep + 1
 tnow = istep*DELTA_T
@@ -4791,29 +4892,25 @@ if (.not.ok) then
 endif
 
 if (use_DC .and. NDCalive > 0) then
-	if (dbug) write(nflog,*) 'call binder: ',cellist(8)%DCbound(1)
     call binder(ok)
     if (.not.ok) then
 		call logger('binder returned error')
 		res = -2
 		return
 	endif
-	if (dbug) write(nflog,*) 'did binder: ',cellist(8)%DCbound(1)
     if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-		if (dbug) write(nflog,*) 'call update_DCstate: ',cellist(8)%DCbound(1)
         call update_DCstate(ok)
         if (.not.ok) then
 			call logger('update_DCstate returned error')
 			res = -3
 			return
 		endif
-		if (dbug) write(nflog,*) 'did update_DCstate: ',cellist(8)%DCbound(1)
     endif
 endif
 if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
-	if (dbug) write(nflog,*) 'call updater: ',cellist(8)%DCbound(1)
+	if (dbug) write(nflog,*) 'call updater: '
     call updater(ok)
-	if (dbug) write(nflog,*) 'did updater: ',cellist(8)%DCbound(1)
+	if (dbug) write(nflog,*) 'did updater: '
     if (.not.ok) then
 		call logger('updater returned error')
 		res = -4
@@ -4847,9 +4944,9 @@ if (use_traffic) then
 endif
 if (dbug) call check_xyz(3)
 
-if (dbug) write(nflog,*) 'call balancer: ',cellist(8)%DCbound(1)
+if (dbug) call logger('call balancer: ')
 call balancer(ok)
-if (dbug) write(nflog,*) 'did balancer: ',cellist(8)%DCbound(1)
+if (dbug) call logger('did balancer: ')
 if (.not.ok) then
 	call logger('balancer returned error')
 	res = -6
@@ -4933,16 +5030,16 @@ subroutine setup_proximity_limits
 proximity_limit(BDRY_SITE,BDRY_SITE) = 0
 proximity_limit(EXIT_SITE,BDRY_SITE) = 0
 proximity_limit(HEV_SITE,BDRY_SITE) = 2
-proximity_limit(DC_SITE,BDRY_SITE) = 3
+proximity_limit(DC_SITE,BDRY_SITE) = 3      ! was 3
 
-proximity_limit(EXIT_SITE,EXIT_SITE) = 6
+proximity_limit(EXIT_SITE,EXIT_SITE) = 4    ! was 6
 proximity_limit(HEV_SITE,EXIT_SITE) = 4
-proximity_limit(DC_SITE,EXIT_SITE) = 4
+proximity_limit(DC_SITE,EXIT_SITE) = 2      ! was 4
 
 proximity_limit(HEV_SITE,HEV_SITE) = 5
-proximity_limit(DC_SITE,HEV_SITE) = 3
+proximity_limit(DC_SITE,HEV_SITE) = 2
 
-proximity_limit(DC_SITE,DC_SITE) = 5
+proximity_limit(DC_SITE,DC_SITE) = 2        ! was 5
 
 proximity_limit(BDRY_SITE,EXIT_SITE) = proximity_limit(EXIT_SITE,BDRY_SITE)
 proximity_limit(BDRY_SITE,HEV_SITE) = proximity_limit(HEV_SITE,BDRY_SITE)
@@ -5031,6 +5128,7 @@ call sleeper(2)
 end subroutine
 
 
+
 !-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run.
 ! ncpu = the number of processors to use
@@ -5109,6 +5207,9 @@ else
 endif
 if (.not.ok) return
 
+!call setup_blocked_egress_inflow
+!stop
+
 if (use_HEV_portals) then
 	call PlaceHEVPortals(ok)
 	if (.not.ok) return
@@ -5171,7 +5272,7 @@ if (vary_vascularity) then
 	call initialise_vascularity
 endif
 if (inflammation_level == 0) then
-	suppress_egress = .false.
+	transient_egress_suppression = .false.
 elseif (EGRESS_SUPPRESSION_TIME2 - EGRESS_SUPPRESSION_TIME1 <  EGRESS_SUPPRESSION_RAMP) then
 	write(logmsg,*) 'ERROR: EGRESS_SUPPRESSION_RAMP too big'
 	call logger(logmsg)
