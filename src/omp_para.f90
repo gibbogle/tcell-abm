@@ -3765,7 +3765,9 @@ logical :: ok
 integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), n, error
 integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
 integer :: nDCtime, naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
-real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM, totstim(2), totstimrate(2), totDCtime, t
+integer :: noDCcontact, noDCcontactfraction, noDCcontacttime
+real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
+real :: entrytime, totstim(2), totstimrate(2), totDCtime, t, totnoDCtime
 logical :: activated
 type (cog_type), pointer :: p
 integer :: nst(FINISHED), nearDC
@@ -3787,17 +3789,20 @@ ncog = 0
 ntot_LN = 0
 nbnd = 0
 nst = 0
+noDCcontact = 0
 stim = 0
 totstim = 0
 totstimrate = 0
 nDCtime = 0
 totDCtime = 0
+totnoDCtime = 0
 IL2sig = 0
 gendist = 0
 div_gendist = 0
 nDCSOI = 0
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
+    entrytime = cellist(kcell)%entrytime
     p => cellist(kcell)%cptr
     if (associated(p)) then
 		stype = COG_TYPE_TAG
@@ -3823,6 +3828,10 @@ do kcell = 1,nlist
 		if (cellist(kcell)%DCbound(1) > 0 .or. cellist(kcell)%DCbound(2) > 0) then
 			nbnd = nbnd + 1
 		endif
+		if (p%firstDCtime == 0) then
+			noDCcontact = noDCcontact + 1
+			totnoDCtime = totnoDCtime + (tnow - entrytime)
+		endif
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3839,9 +3848,9 @@ do kcell = 1,nlist
 			div_gendist(gen) = div_gendist(gen) + 1
         endif
         max_TCR = max(p%stimulation,max_TCR)
-		if (p%firstDCtime > 0) then
+		if (gen == 1 .and. p%firstDCtime > 0 .and. (tnow-p%firstDCtime) <= 60) then
 			nDCtime = nDCtime + 1
-			t = p%firstDCtime - cellist(kcell)%entrytime
+			t = p%firstDCtime - entrytime
 			totDCtime = totDCtime + t
 		endif
     elseif (stype == NONCOG_TYPE_TAG) then
@@ -3996,9 +4005,21 @@ else
 	nDCSOI = 0
 endif
 
-summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+if (ncog(1) > 0) then
+	noDCcontactfraction = 1000*noDCcontact/ncog(1)
+else
+	noDCcontactfraction = 0
+endif
+
+if (noDCcontact > 0) then
+	noDCcontacttime = totnoDCtime/noDCcontact
+else
+	noDCcontacttime = 0
+endif
+
+summaryData(1:24) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
-	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
+	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, noDCcontactfraction, noDCcontacttime /)
 
 write(nfout,'(13i10,$)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen
@@ -4011,6 +4032,8 @@ write(nfout,'(f10.1,$)') .001*naveDCtraveltime
 write(nfout,'(f10.1,$)') .001*naveDCbindtime
 write(nfout,'(f10.3,$)') .001*nbndfraction
 write(nfout,'(f10.1,$)') .001*nDCSOI
+write(nfout,'(f10.3,$)') .001*noDCcontactfraction
+write(nfout,'(f10.1,$)') noDCcontacttime
 write(nfout,*)
 
 write(logmsg,'(13i10)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
@@ -4054,6 +4077,8 @@ write(nfout,'(a10,$)') '  T_travel'
 write(nfout,'(a10,$)') '    T_bind'
 write(nfout,'(a10,$)') ' Bnd_fract'
 write(nfout,'(a10,$)') '  N_DC_SOI'
+write(nfout,'(a10,$)') ' No_DC_frc'
+write(nfout,'(a10,$)') '   T_no_DC'
 write(nfout,*)
 end subroutine
 
@@ -4310,10 +4335,11 @@ real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, gen
 integer,allocatable :: cnt(:)
-real :: dx, t
+real :: dx, t, tnow
 
+tnow = istep*DELTA_T
 n = nprofilebins
 dx = 300.0/n
 allocate(cnt(n))
@@ -4322,12 +4348,14 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
-    if (p%firstDCtime == 0) cycle
-    t = (p%firstDCtime - cellist(kcell)%entrytime)
-!    write(nflog,*) 'get_profile_firstDCcontacttime: ',t
-    i = min(int(t/dx + 1),n)
-    i = max(i,1)
-    cnt(i) = cnt(i) + 1
+	gen = get_generation(p)
+!    if (p%firstDCtime == 0) cycle
+	if (gen == 1 .and. p%firstDCtime > 0 .and. (tnow-p%firstDCtime) <= 60) then
+		t = (p%firstDCtime - cellist(kcell)%entrytime)
+		i = min(int(t/dx + 1),n)
+		i = max(i,1)
+		cnt(i) = cnt(i) + 1
+	endif
 enddo
 nc = max(1,sum(cnt))
 !write(nflog,*) 'get_profile_firstDCcontacttime: ',nc
