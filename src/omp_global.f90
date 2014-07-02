@@ -415,6 +415,7 @@ type cog_type
 	real :: dietime			! time that the cell dies
 	real :: dividetime		! time that the cell divides
 	real :: stagetime		! time that a cell can pass to next stage
+	real :: totalDCtime		! total DC contact time
 	real :: stimrate        ! rate of TCR stimulation
 	real :: CD69            ! level of CD69 expression
 	real :: S1PR1           ! level of S1PR1 expression
@@ -2542,6 +2543,9 @@ end function
 ! Generate a random value for CFSE from a distribution with mean = average
 ! In the simplest case we can allow a uniform distribution about the average.
 ! Multiplying factor in the range (1-a, 1+a)
+! Better to make it a Gaussian distribution: 
+!  = average*(1+s*R)
+! where R = N(0,1), s = std deviation
 !-----------------------------------------------------------------------------------------
 real function generate_CFSE(average)
 real :: average

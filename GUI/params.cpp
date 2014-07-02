@@ -456,15 +456,45 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 {"DUMMY_BINDTIME_PLOT", 0, 0, 0,
 "Normalized (pMHC*avidity)",
 "In the UNSTAGED case the stimulation rate is simply x = (normalized pMHC)*(normalised avidity), and the binding duration is a Hill function of x. \n\
- Note that the normalised value is the actual value divided by the specified upper limit."}
+ Note that the normalised value is the actual value divided by the specified upper limit."},
+
+// Time-series plots
+    {"nDC",                     1, 0,1,"",""},
+    {"ntot_LN",                 1, 0,1,"",""},
+    {"ncogseed",                1, 0,1,"",""},
+    {"ncog_LN",                 1, 0,1,"",""},
+    {"ncog_PER",                1, 0,1,"",""},
+    {"nbnd",                    0, 0,1,"",""},
+    {"nexits",                  0, 0,1,"",""},
+    {"nteffgen0",               0, 0,1,"",""},
+    {"nteffgen",                0, 0,1,"",""},
+    {"act",                     1, 0,1,"",""},
+    {"stim_LN",                 1, 0,1,"",""},
+    {"stim_PER",                0, 0,1,"",""},
+    {"stimrate_LN",             1, 0,1,"",""},
+    {"DCcontact_time",          0, 0,1,"",""},
+    {"DCtravel_time",           0, 0,1,"",""},
+    {"DCbind_time",             0, 0,1,"",""},
+    {"Bound_fraction",          0, 0,1,"",""},
+    {"nDC_SOI",                 0, 0,1,"",""},
+// Profile plots
+    {"CD69",                    0, 0,1,"",""},
+    {"S1PR1",                   1, 0,1,"",""},
+    {"Stimulation",             1, 0,1,"",""},
+    {"Stimulation rate",        1, 0,1,"",""},
+    {"Avidity LN",              1, 0,1,"",""},
+    {"Avidity PER",             0, 0,1,"",""},
+    {"Generation LN",           0, 0,1,"",""},
+    {"DC contact time (min)",   0, 0,1,"",""},
+    {"DC bind time (min)",      0, 0,1,"",""}
 
 
 };
-	nParams = sizeof(params)/sizeof(PARAM_SET);
-	workingParameterList = new PARAM_SET[nParams];
-	for (int i=0; i<nParams; i++) {
-		workingParameterList[i] = params[i];
-	}
+    nParams = sizeof(params)/sizeof(PARAM_SET);
+    workingParameterList = new PARAM_SET[nParams];
+    for (int i=0; i<nParams; i++) {
+        workingParameterList[i] = params[i];
+    }
 }
 
 

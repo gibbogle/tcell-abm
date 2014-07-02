@@ -127,12 +127,11 @@ MainWindow::MainWindow(QWidget *parent)
 	grph = new Graphs();
     setupGraphSelector();
     setGraphsActive();
-//    facs = new FACSplot(page_FACS);
-
 
     for (int i=0; i<MAX_DATA; i++)
         pGraph[i] = NULL;
     LOG_QMSG("did Graphs");
+
 	createLists();
     LOG_QMSG("did createLists");
     createActions();
@@ -875,13 +874,13 @@ void MainWindow::loadResultFile()
     }
 	// Now add the result set to the list
 	result_list.append(R);
-	if (nGraphCases == 0) {
-		if (show_outputdata)
-			box_outputData = 0;
-		initializeGraphs(R);
-        drawGraphs();
-		goToOutputs();
-	}
+//	if (nGraphCases == 0) {
+//		if (show_outputdata)
+//			box_outputData = 0;
+//		initializeGraphs(R);
+//        drawGraphs();
+//		goToOutputs();
+//	}
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1329,11 +1328,8 @@ void MainWindow::preConnection()
     sprintf(msg,"allocate pData: nGraphs: %d nsteps: %d",grph->nGraphs,nsteps);
     LOG_MSG(msg);
     for (int i=0; i<grph->nGraphs; i++) {
- //       if (!grph->isActive(i)) continue;
- //       if (grph->isTimeseries(i)) {
-            newR->pData[i] = new double[nsteps];
-            newR->pData[i][0] = 0;
- //       }
+        newR->pData[i] = new double[nsteps];
+        newR->pData[i][0] = 0;
 	}
     LOG_MSG("preconnection: Allocated result set arrays");
 
@@ -1371,11 +1367,6 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
     setGraphsActive();
-//    int non_ts = 0;
-//    if (field->isConcPlot()) non_ts++;
-//    if (field->isVolPlot()) non_ts++;
-//    if (field->isOxyPlot()) non_ts++;
-//    grph->makeGraphList(non_ts);
     grph->makeGraphList();
     LOG_QMSG("did makeGraphList");
     nGraphs = grph->nGraphs;
@@ -1387,30 +1378,32 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     QString tag;
     QString title;
     QString yAxisTitle;
+    int k = 0;
     for (int i=0; i<nGraphs; i++) {
-//        if (grph->isTimeseries(i)) {
-          if (grph->isActive(i)) {
+        if (grph->isActive(i)) {
             tag = grph->get_tag(i);
             title = grph->get_title(i);
             yAxisTitle = grph->get_yAxisTitle(i);
+            k++;
+        } else {
+            tag = "";
+            title = "";
+            yAxisTitle = "";
+        }
+        if (k > maxGraphs) break;
             if (pGraph[i] != NULL) {
                 pGraph[i]->deleteLater();
                 pGraph[i] = NULL;
             }
-            if (pGraph[i] == NULL) {
-                pGraph[i] = new Plot(tag,R->casename);
-                pGraph[i]->setTitle(title);
-                pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
-            }
-        }
+            pGraph[i] = new Plot(tag,R->casename);
+            pGraph[i]->setTitle(title);
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
     }
     LOG_QMSG("did setTitles");
 
-//	nGraphCases = 1;
-//	graphResultSet[0] = R;
-
 	for (int i=0; i<nGraphs; i++) {
 //        if (grph->isTimeseries(i)) {
+            LOG_QMSG("addSubWindow: " + grph->get_tag(i));
             mdiArea->addSubWindow(pGraph[i]);
             pGraph[i]->show();
 //        }
@@ -2328,9 +2321,8 @@ void MainWindow::setupGraphSelector()
         QString text = grph->tsGraphs[i].title;
         cbox_ts[i] = new QCheckBox;
         cbox_ts[i]->setText(text);
-        cbox_ts[i]->setObjectName("checkBox_"+grph->tsGraphs[i].tag);
+        cbox_ts[i]->setObjectName("cbox_"+grph->tsGraphs[i].tag);
         cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
-//        vbox->addWidget(cbox_ts[i]);
         grid->addWidget(cbox_ts[i],row,col);
     }
 //    groupBox_graphselect->setLayout(vbox);
@@ -2349,9 +2341,6 @@ void MainWindow::setupGraphSelector()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setGraphsActive()
 {
-//    field->setConcPlot(checkBox_conc->isChecked());
-//    field->setVolPlot(checkBox_vol->isChecked());
-//    field->setOxyPlot(checkBox_oxy->isChecked());
     for (int i=0; i<grph->n_tsGraphs; i++) {
         grph->tsGraphs[i].active = cbox_ts[i]->isChecked();
     }

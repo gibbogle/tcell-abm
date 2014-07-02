@@ -39,6 +39,7 @@ public:
 	double get_scaling(int);
     double get_yscale(int);
     double get_xscale(double xmax);
+    void set_activity(int, bool);
     bool isActive(int);
     bool isTimeseries(int);
     bool isProfile(int);

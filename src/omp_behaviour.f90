@@ -1235,6 +1235,7 @@ if (revised_staging) then
 else
     p1%stagetime = tnow
 endif
+p1%totalDCtime = 0		! reset summation of DC contact time
 if (region == LYMPHNODE) then
 	site = cellist(kcell)%site
 	indx = occupancy(site(1),site(2),site(3))%indx
@@ -1269,6 +1270,7 @@ p2%stimrate = p1%stimrate
 p2%status = p1%status
 cellist(icnew)%ID = cellist(kcell)%ID               ! the progeny cell inherits the parent's ID
 cellist(icnew)%entrytime = cellist(kcell)%entrytime ! and entrytime
+p2%firstDCtime = p1%firstDCtime						! and first DC contact time
 if (revised_staging) then
     p2%stagetime = tnow + dividetime(gen,ctype)
 else
@@ -1904,6 +1906,7 @@ else
     cell%cptr%dietime = tnow + TClifetime(cell%cptr)
     cell%cptr%dividetime = tnow
     cell%cptr%stagetime = BIG_TIME
+    cell%cptr%totalDCtime = 0
 	cell%cptr%cnt = 0
 
 ! Maintain cognate_list at start or if we are running on a single node
@@ -3599,6 +3602,7 @@ do kcell = 1,nlist
 !					endif
 					p%stimulation = min(p%stimulation, STIMULATION_LIMIT)
 					DClist(idc)%stimulation = DClist(idc)%stimulation + dstim
+					p%totalDCtime = p%totalDCtime + DELTA_T
 				else    ! unbind T cell from incapable DC
 					idc = cellist(kcell)%DCbound(k)
 					DClist(idc)%nbound = DClist(idc)%nbound - 1

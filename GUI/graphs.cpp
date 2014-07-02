@@ -123,7 +123,7 @@ PROFILE_S1PR1, true, 0, 1, 1.0, false},
 "",  //Fraction",
 PROFILE_STIM, true, 0, 1, 1.0, false},
 
-{"Stimulation Rate",
+{"Stimulation rate",
 "Stim Rate Profile (LN)",
 "",  //Fraction",
 PROFILE_STIMRATE, false, 0, 1, 1.0, false},
@@ -143,12 +143,12 @@ PROFILE_AVIDITY_PER, false, 0, 1, 1.0, false},
 "",  //Fraction",
 PROFILE_GENERATION_LN, false, 0, 1, 1.0, false},
 
-{"DC Contact Time (min)",
+{"DC contact time (min)",
 "First DC Contact Time Profile",
 "",  //Fraction",
 PROFILE_FIRSTDCCONTACTTIME, false, 0, 1, 1.0, false},
 
-{"DC Bind Time (min)",
+{"DC bind time (min)",
 "DC Bind Time Profile",
 "",  //Fraction",
 PROFILE_DCBINDTIME, false, 0, 1, 1.0, false}
@@ -224,6 +224,11 @@ double Graphs::get_xscale(double xmax) {
     return double(n);
 }
 
+void Graphs::set_activity(int k, bool activity)
+{
+    graphList[k].active = activity;
+}
+
 bool Graphs::isActive(int k)
 {
 	return graphList[k].active;
@@ -254,14 +259,10 @@ void Graphs::makeGraphList()
             k--;
             graphList[k] = tsGraphs[i];
             nts++;
-//            if (nts == maxGraphs - non_ts) break;
             if (nts == maxGraphs) break;
         }
     }
-//    int ndummy = maxGraphs - nts - non_ts;
     int ndummy = maxGraphs - nts;
-//    sprintf(msg,"nts: %d  ndummy: %d",nts,ndummy);
-//    LOG_MSG(msg);
     for (k=0; k<ndummy; k++) {
         graphList[k].active = false;
         graphList[k].ts = true;
@@ -270,12 +271,6 @@ void Graphs::makeGraphList()
         graphList[k].title = "";
         graphList[k].yAxisTitle = "";
     }
-//    for (k=ndummy; k<ndummy + non_ts; k++) {
-//        graphList[k].tag = "non_ts";
-//        graphList[k].active = true;
-//        graphList[k].ts = false;
-//        graphList[k].scaling = 1;
-//    }
     nGraphs = maxGraphs;
 //    sprintf(msg,"nGraphs: %d",nGraphs);
 //    LOG_MSG(msg);
