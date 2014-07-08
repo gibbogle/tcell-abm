@@ -1235,7 +1235,6 @@ if (revised_staging) then
 else
     p1%stagetime = tnow
 endif
-p1%totalDCtime = 0		! reset summation of DC contact time
 if (region == LYMPHNODE) then
 	site = cellist(kcell)%site
 	indx = occupancy(site(1),site(2),site(3))%indx
@@ -1271,6 +1270,7 @@ p2%status = p1%status
 cellist(icnew)%ID = cellist(kcell)%ID               ! the progeny cell inherits the parent's ID
 cellist(icnew)%entrytime = cellist(kcell)%entrytime ! and entrytime
 p2%firstDCtime = p1%firstDCtime						! and first DC contact time
+p2%totalDCtime = p1%totalDCtime						! and total DC contact time
 if (revised_staging) then
     p2%stagetime = tnow + dividetime(gen,ctype)
 else

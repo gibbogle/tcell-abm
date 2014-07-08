@@ -261,6 +261,8 @@ logical, parameter :: use_ODE_diffusion = .false.	! for general case, use ODE sy
 logical, parameter :: USE_DC_SECRETION = .false.
 logical, parameter :: USE_ORIGINAL_CODE = .not.USE_GENERAL_CODE	! simple case, fixed secretion into DC neighborhood
 
+real, parameter :: CFSE_std = 0.05
+
 ! Data above this line almost never change
 !==============================================================================================================
 
@@ -412,10 +414,10 @@ type cog_type
 	real :: avidity			! level of TCR avidity with DC
 	real :: stimulation		! TCR stimulation level
     real :: firstDCtime     ! time of first contact with antigen on a DC at a level to generate TCR signalling
+    real :: totalDCtime		! total time spent in contact with DC (progeny inherit parent's total)
 	real :: dietime			! time that the cell dies
 	real :: dividetime		! time that the cell divides
 	real :: stagetime		! time that a cell can pass to next stage
-	real :: totalDCtime		! total DC contact time
 	real :: stimrate        ! rate of TCR stimulation
 	real :: CD69            ! level of CD69 expression
 	real :: S1PR1           ! level of S1PR1 expression
@@ -2548,13 +2550,16 @@ end function
 ! where R = N(0,1), s = std deviation
 !-----------------------------------------------------------------------------------------
 real function generate_CFSE(average)
-real :: average
+real :: average, std
 integer :: kpar = 0
 real :: R
-real, parameter :: a = 0.1
 
-R = par_uni(kpar)
-generate_CFSE = (1 - a + 2*a*R)*average
+! Uniform distribution
+!R = par_uni(kpar)
+!generate_CFSE = (1 - a + 2*a*R)*average
+! Gaussian distribution
+R = par_rnor(kpar)	! N(0,1)
+generate_CFSE = (1 + CFSE_std*R)*average
 end function
 
 !-----------------------------------------------------------------------------------------

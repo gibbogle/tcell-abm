@@ -36,7 +36,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>5</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -3658,6 +3658,48 @@ p, li { white-space: pre-wrap; }
              <string>label_FACS_INTERVAL</string>
             </property>
            </widget>
+           <widget class="QLineEdit" name="lineEdit_summary_interval">
+            <property name="geometry">
+             <rect>
+              <x>220</x>
+              <y>0</y>
+              <width>31</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>60</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_mins">
+            <property name="geometry">
+             <rect>
+              <x>260</x>
+              <y>0</y>
+              <width>41</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>mins</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_summary_interval">
+            <property name="geometry">
+             <rect>
+              <x>125</x>
+              <y>0</y>
+              <width>91</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Summary interval:</string>
+            </property>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_run">
            <attribute name="title">
@@ -5169,7 +5211,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1519</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

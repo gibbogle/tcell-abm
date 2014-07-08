@@ -477,6 +477,10 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
     {"DCbind_time",             0, 0,1,"",""},
     {"Bound_fraction",          0, 0,1,"",""},
     {"nDC_SOI",                 0, 0,1,"",""},
+    {"noDC_contact",            0, 0,1,"",""},
+    {"noDC_contacttime",        0, 0,1,"",""},
+    {"totDC_contacttime_LN",    0, 0,1,"",""},
+    {"totDC_contacttime_PER",   0, 0,1,"",""},
 // Profile plots
     {"CD69",                    0, 0,1,"",""},
     {"S1PR1",                   1, 0,1,"",""},
