@@ -9,9 +9,10 @@ Graphs::Graphs()
 {
     GRAPH_SET tsGraphSet[] = {
 
-//        summaryData(1:22) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+//        summaryData(1:26) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 //            nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen, nact, navestim(1), navestim(2), navestimrate(1), &
-//            naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI /)
+//            navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI &
+//            noDCcontactfraction, noDCcontacttime, navetotalDCtime(1), navetotalDCtime(2) /)
 
 //{"dummy",
 //"",
@@ -108,6 +109,28 @@ Graphs::Graphs()
 "",
 21, false, 0, .001, 0, true},
 
+{"noDC_contact",
+"Fraction no DC Contact",
+"",
+22, false, 0, .001, 0, true},
+
+{"noDC_contacttime",
+"Time of no DC Contact",
+"",
+23, false, 0, 1, 0, true},
+
+{"totDC_contacttime_LN",
+"Total DC Contact Time (LN)",
+"",
+24, false, 0, 1, 0, true},
+
+{"totDC_contacttime_PER",
+"Total DC Contact Time (PER)",
+"",
+25, false, 0, 1, 0, true},
+
+
+
 {"CD69",
 "CD69 Profile",
 "",  //Fraction",
@@ -117,6 +140,11 @@ PROFILE_CD69, false, 0, 1, 1.0, false},
 "S1PR1 Profile",
 "",  //Fraction",
 PROFILE_S1PR1, true, 0, 1, 1.0, false},
+
+{"CFSE",
+"CFSE Profile (log)",
+"",  //Fraction",
+PROFILE_CFSE, false, 0, 1, 1.0, false},
 
 {"Stimulation",
 "Stimulation Profile (LN)",

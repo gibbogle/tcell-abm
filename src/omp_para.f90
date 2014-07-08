@@ -3764,10 +3764,11 @@ integer(c_int) :: summaryData(*)
 logical :: ok
 integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), n, error
 integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
-integer :: nDCtime, naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
-integer :: noDCcontact, noDCcontactfraction, noDCcontacttime
+integer :: nfirstDCtime, navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
+integer :: noDCcontact, noDCcontactfraction
 real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
-real :: entrytime, totstim(2), totstimrate(2), totDCtime, t, totnoDCtime
+real :: entrytime, totstim(2), totstimrate(2)
+real ::totfirstDCtime, t, totnoDCtime, totDCtime(2),noDCcontacttime, avetotalDCtime(2)
 logical :: activated
 type (cog_type), pointer :: p
 integer :: nst(FINISHED), nearDC
@@ -3793,9 +3794,10 @@ noDCcontact = 0
 stim = 0
 totstim = 0
 totstimrate = 0
-nDCtime = 0
-totDCtime = 0
+nfirstDCtime = 0
+totfirstDCtime = 0
 totnoDCtime = 0
+totDCtime = 0
 IL2sig = 0
 gendist = 0
 div_gendist = 0
@@ -3832,6 +3834,7 @@ do kcell = 1,nlist
 			noDCcontact = noDCcontact + 1
 			totnoDCtime = totnoDCtime + (tnow - entrytime)
 		endif
+		totDCtime(region) = totDCtime(region) + p%totalDCtime
         nst(stage) = nst(stage) + 1
         stim(stage) = stim(stage) + p%stimulation
         IL2sig(stage) = IL2sig(stage) + get_IL2store(p)
@@ -3849,9 +3852,9 @@ do kcell = 1,nlist
         endif
         max_TCR = max(p%stimulation,max_TCR)
 		if (gen == 1 .and. p%firstDCtime > 0 .and. (tnow-p%firstDCtime) <= 60) then
-			nDCtime = nDCtime + 1
+			nfirstDCtime = nfirstDCtime + 1
 			t = p%firstDCtime - entrytime
-			totDCtime = totDCtime + t
+			totfirstDCtime = totfirstDCtime + t
 		endif
     elseif (stype == NONCOG_TYPE_TAG) then
         noncog = noncog + 1
@@ -3967,10 +3970,10 @@ do i = 1,2
 		navestimrate(i) = 0
 	endif
 enddo
-if (nDCtime > 0) then
-	naveDCtime = (1000.*totDCtime)/nDCtime
+if (nfirstDCtime > 0) then
+	navefirstDCtime = (1000.*totfirstDCtime)/nfirstDCtime
 else
-	naveDCtime = 0
+	navefirstDCtime = 0
 endif
 !write(nflog,*) 'First DC contact: ',nDCtime,totDCtime,naveDCtime
 
@@ -4016,24 +4019,34 @@ if (noDCcontact > 0) then
 else
 	noDCcontacttime = 0
 endif
+do region = 1,2
+	if (ncog(region) > 0) then
+		avetotalDCtime(region) = totDCtime(region)/ncog(region)
+	else
+		avetotalDCtime(region) = 0
+	endif
+enddo
 
-summaryData(1:24) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+summaryData(1:26) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
-	naveDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, noDCcontactfraction, noDCcontacttime /)
+	navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, &
+	noDCcontactfraction, int(noDCcontacttime), int(avetotalDCtime(1)), int(avetotalDCtime(2)) /)
 
-write(nfout,'(13i10,$)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
+write(nfout,'(f10.2,12i10,$)') tnow/60, istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
 	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen
 write(nfout,'(f10.1,$)') .001*nact
 write(nfout,'(f10.3,$)') .001*navestim(1)
 write(nfout,'(f10.3,$)') .001*navestim(2)
 write(nfout,'(f10.3,$)') .001*navestimrate(1)
-write(nfout,'(f10.1,$)') .001*naveDCtime
+write(nfout,'(f10.1,$)') .001*navefirstDCtime
 write(nfout,'(f10.1,$)') .001*naveDCtraveltime
 write(nfout,'(f10.1,$)') .001*naveDCbindtime
 write(nfout,'(f10.3,$)') .001*nbndfraction
 write(nfout,'(f10.1,$)') .001*nDCSOI
 write(nfout,'(f10.3,$)') .001*noDCcontactfraction
 write(nfout,'(f10.1,$)') noDCcontacttime
+write(nfout,'(f10.1,$)') avetotalDCtime(1)
+write(nfout,'(f10.1,$)') avetotalDCtime(2)
 write(nfout,*)
 
 write(logmsg,'(13i10)') int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
@@ -4079,6 +4092,8 @@ write(nfout,'(a10,$)') ' Bnd_fract'
 write(nfout,'(a10,$)') '  N_DC_SOI'
 write(nfout,'(a10,$)') ' No_DC_frc'
 write(nfout,'(a10,$)') '   T_no_DC'
+write(nfout,'(a10,$)') '   DC_T_LN'
+write(nfout,'(a10,$)') '  DC_T_PER'
 write(nfout,*)
 end subroutine
 
@@ -4149,6 +4164,44 @@ enddo
 nc = max(1,sum(cnt))
 do i = 1,n
     x(i) = (i - 0.5)*dx
+    y(i) = cnt(i)/real(nc)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_profile_CFSE(x,y,n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_profile_cfse
+use, intrinsic :: iso_c_binding
+real(c_double) :: x(*)
+real(c_double) :: y(*)
+integer(c_int) :: n, nc
+type (cog_type), pointer :: p
+integer :: i, k, kcell
+integer,allocatable :: cnt(:)
+real :: dx, cfse, logcfse
+integer, parameter :: maxdiv = 20
+
+n = nprofilebins
+dx = (maxdiv+1.)/n
+allocate(cnt(n))
+cnt = 0
+do k = 1,lastcogID
+    kcell = cognate_list(k)
+    if (kcell == 0) cycle
+    p => cellist(kcell)%cptr
+    cfse = p%CFSE
+    logcfse = log(cfse)/log(2.)
+    i = min(int((logcfse + maxdiv + 0.5)/dx + 1),n)
+!    write(nflog,'(i4,4e12.4,i3)') k,cfse,logcfse,dx,(logcfse + maxdiv + 0.5),i
+    i = max(i,1)
+    cnt(i) = cnt(i) + 1
+enddo
+!write(nflog,*) 'get_profile_CFSE:'
+!write(nflog,'(20i6)') cnt
+nc = max(1,sum(cnt))
+do i = 1,n
+    x(i) = i*dx - maxdiv - 0.5
     y(i) = cnt(i)/real(nc)
 enddo
 end subroutine

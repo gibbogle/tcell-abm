@@ -53,6 +53,7 @@ public:
 	int nsteps;
 	bool paused;
 	bool stopped;
+    int summary_interval;
 signals:
     void display(bool);
 	void summary();

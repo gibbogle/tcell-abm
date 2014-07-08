@@ -198,7 +198,7 @@ void ExecThread::run()
 		simulate_step(&res);
 		if (res == 1) break;
 		if (stopped) break;
-		if (i%240 == 0) {
+        if (i%summary_interval == 0) {
 			mutex1.lock();
 			get_summary(summaryData);
             getProfiles();
@@ -267,6 +267,8 @@ void ExecThread::getProfiles()
     get_profile_cd69(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_S1PR1;
     get_profile_s1pr1(profile_x[k],profile_y[k],&profile_n[k]);
+    k = PROFILE_CFSE;
+    get_profile_cfse(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_STIM;
     get_profile_stim(profile_x[k],profile_y[k],&profile_n[k]);
     k = PROFILE_STIMRATE;

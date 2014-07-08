@@ -1300,6 +1300,7 @@ void MainWindow::runServer()
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
 	exthread->stopped = false;
+    exthread->summary_interval = 4*lineEdit_summary_interval->text().toInt();
 	exthread->start();
 }
 
@@ -1592,8 +1593,8 @@ void MainWindow::showSummary()
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
             if (k == PROFILE_GENERATION_LN) {
                 pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 20, 0);
-//            } else {
-//                pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, 1.0, 0);
+            } else if (k == PROFILE_CFSE){
+                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
             }
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
