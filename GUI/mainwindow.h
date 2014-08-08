@@ -138,6 +138,9 @@ public slots:
     void redimensionCellArrays(int nbond_size);
     bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
 
+signals:
+    void facs_update();
+
 private:
     void createActions();
 	void createLists();
