@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>5</number>
+           <number>3</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -5158,6 +5158,9 @@ p, li { white-space: pre-wrap; }
           <property name="checked">
            <bool>true</bool>
           </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
          </widget>
          <widget class="QRadioButton" name="radioButton_S1PR1">
           <property name="geometry">
@@ -5171,6 +5174,9 @@ p, li { white-space: pre-wrap; }
           <property name="text">
            <string>S1PR1</string>
           </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
          </widget>
          <widget class="QRadioButton" name="radioButton_avidity">
           <property name="geometry">
@@ -5184,6 +5190,9 @@ p, li { white-space: pre-wrap; }
           <property name="text">
            <string>avidity</string>
           </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
          </widget>
          <widget class="QRadioButton" name="radioButton_stimulation">
           <property name="geometry">
@@ -5197,6 +5206,9 @@ p, li { white-space: pre-wrap; }
           <property name="text">
            <string>stimulation</string>
           </property>
+          <attribute name="buttonGroup">
+           <string>buttonGroup_FACS_PLOT</string>
+          </attribute>
          </widget>
         </widget>
        </widget>
@@ -5335,7 +5347,7 @@ p, li { white-space: pre-wrap; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/001_29.png</normaloff>:/icons/001_29.png</iconset>
    </property>
    <property name="text">
@@ -5350,7 +5362,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_run">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/001_59.png</normaloff>:/icons/001_59.png</iconset>
    </property>
    <property name="text">
@@ -5362,7 +5374,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_inputs">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/001_45.png</normaloff>:/icons/001_45.png</iconset>
    </property>
    <property name="text">
@@ -5374,7 +5386,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_outputs">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/Display2.png</normaloff>:/icons/Display2.png</iconset>
    </property>
    <property name="text">
@@ -5389,7 +5401,7 @@ p, li { white-space: pre-wrap; }
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/cell2.png</normaloff>:/icons/cell2.png</iconset>
    </property>
    <property name="text">
@@ -5401,7 +5413,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_pause">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset resource="../../ecell-abm/GUI/icons.qrc">
      <normaloff>:/icons/001_07.png</normaloff>:/icons/001_07.png</iconset>
    </property>
    <property name="text">
@@ -5474,7 +5486,7 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="action_FACS">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/FACS_234.png</normaloff>:/icons/FACS_234.png</iconset>
    </property>
    <property name="text">
@@ -5536,9 +5548,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>spin_SEED1</tabstop>
   <tabstop>spin_SEED2</tabstop>
  </tabstops>
- <resources>
-  <include location="icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>line_SPECIAL_CASE</sender>
@@ -5583,5 +5593,6 @@ p, li { white-space: pre-wrap; }
   <buttongroup name="buttonGroup_SPECIES"/>
   <buttongroup name="buttonGroup_STAGED_CONTACT_RULE"/>
   <buttongroup name="buttonGroup_EXIT_RULE"/>
+  <buttongroup name="buttonGroup_FACS_PLOT"/>
  </buttongroups>
 </ui>

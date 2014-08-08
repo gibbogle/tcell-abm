@@ -219,6 +219,7 @@ void MainWindow::createActions()
     connect(buttonGroup_STAGED_CONTACT_RULE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
     connect(buttonGroup_ACTIVATION_MODE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
     connect(buttonGroup_EXIT_RULE, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    connect(buttonGroup_FACS_PLOT, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
     for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
@@ -1296,6 +1297,7 @@ void MainWindow::runServer()
     connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
     connect(exthread, SIGNAL(redimension(int)), this, SLOT(redimensionCellArrays(int)));
     connect(exthread, SIGNAL(facs_update()), this, SLOT(showFACS()));
+    connect(this, SIGNAL(facs_update()), this, SLOT(showFACS()));
     exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
@@ -2365,10 +2367,10 @@ void MainWindow:: initFACSPlot()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
-    double xmin, xmax, ymin, ymax, cfse, cd69, x, y;
+    double xmin, xmax, ymin, ymax, cfse, cvar, x, y;
     int i, k;
     int kvar;
-    QString xlabel, ylabel;
+    QString ylabel;
 
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
     qpFACS->clear();
@@ -2391,41 +2393,42 @@ void MainWindow::showFACS()
             kvar = 4;
             ylabel = "stimulation";
     }
+    //    xmin = -12.5;
+    //    xmax = 0.5;
+    //    ymin = 0;
+    //    ymax = 1;
+    xmin = 0.1;
+    xmax = 1500;
+    ymin = 0.1;
     for (i=0; i<nFACS_cells; i++) {
-//        double cfse = pow(2.,-i%8);
-//        double cd69 = i%7 + 0.5;
-//        d_x[i] = log(cfse)/log(2.);
-//        d_y[i] = cd69;
-//        xmin = min(xmin,x);
-//        xmax = max(xmax,x);
-//        ymin = min(ymin,y);
         cfse = FACS_data[5*i];
-        cd69 = FACS_data[5*i+kvar];
-        x = log(cfse)/log(2.);
-        y = cd69;
-        ymax = max(ymax,y);
-        QwtPlotMarker* m = new QwtPlotMarker();
-        m->setSymbol( symbol );
-        m->setValue( QPointF( x,y ) );
-        m->attach( qpFACS );
+        cvar = FACS_data[5*i+kvar];
+//        x = log(cfse)/log(2.);
+//        y = cd69;
+        x = 1000*cfse;
+        y = max(cvar,1.01*ymin);
+        ymax = max(y,ymax);
+        if (x >= xmin) {
+            QwtPlotMarker* m = new QwtPlotMarker();
+            m->setSymbol( symbol );
+            m->setValue( QPointF( x,y ) );
+            m->attach( qpFACS );
+        }
     }
-    xmin = -12.5;
-    xmax = 0.5;
-    ymax = 1.0;
-    qpFACS->setAxisScale(QwtPlot::yLeft, 0, ymax, 0);
+    qpFACS->setAxisScale(QwtPlot::yLeft, ymin, ymax, 0);
     qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);
+    qpFACS->setAxisScaleEngine(QwtPlot::yLeft, new QwtLog10ScaleEngine);
+    qpFACS->setAxisMaxMinor(QwtPlot::yLeft, 10);
+    qpFACS->setAxisMaxMajor(QwtPlot::yLeft, 5);
     qpFACS->setAxisScale(QwtPlot::xBottom, xmin, xmax, 0);
     qpFACS->setAxisTitle(QwtPlot::xBottom, "CFSE");
+    qpFACS->setAxisScaleEngine(QwtPlot::xBottom, new QwtLog10ScaleEngine);
+    qpFACS->setAxisMaxMinor(QwtPlot::xBottom, 10);
+    qpFACS->setAxisMaxMajor(QwtPlot::xBottom, 5);
     qpFACS->replot();
 //    sprintf(msg,"x range: %f %f  y range: %f %f",xmin,xmax,ymin,ymax);
 //    LOG_MSG(msg);
 
-    // Create an image
-//    QImage image( qpFACS->canvas()->size(), QImage::Format_RGB32 );
-//    image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
-//    QPainter p( &image );
-//    qpFACS->drawCanvas( &p );
-//    p.drawImage( 0, 0, image );
     if (videoFACS->record) {
         videoFACS->recorder();
     } else if (actionStop_recording_FACS->isEnabled()) {
