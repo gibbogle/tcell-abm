@@ -30,7 +30,11 @@ LOG_USE();
 Params *parm;	// I don't believe this is the right way, but it works!
 Graphs *grph;
 
-int showingVTK;
+bool showingVTK;
+bool recordingVTK;
+bool showingFACS;
+bool recordingFACS;
+
 int recordfrom, recordto;
 int VTKbuffer[100];
 //int TC_list[5*MAX_TC];
@@ -102,10 +106,11 @@ MainWindow::MainWindow(QWidget *parent)
     first = true;
 	started = false;
     firstVTK = true;
-    recordingVTK = 0;
-	showingVTK = 0;
-    showingVTK += recordingVTK;
-	nGraphCases = 0;
+    recordingVTK = false;
+    showingVTK = false;
+    recordingFACS = false;
+    showingFACS = false;
+    nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
 	}
@@ -209,6 +214,7 @@ void MainWindow::createActions()
     connect(action_inputs, SIGNAL(triggered()), SLOT(goToInputs()));
     connect(action_outputs, SIGNAL(triggered()), SLOT(goToOutputs()));
 	connect(action_VTK, SIGNAL(triggered()), SLOT(goToVTK()));
+    connect(action_FACS, SIGNAL(triggered()), SLOT(goToFACS()));
     connect(action_run, SIGNAL(triggered()), SLOT(runServer()));
     connect(action_pause, SIGNAL(triggered()), SLOT(pauseServer()));
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
@@ -925,12 +931,12 @@ double MainWindow::getMaximum(RESULT_SET *R, double *x)
 void MainWindow::goToInputs()
 {
     stackedWidget->setCurrentIndex(0);
-	showingVTK = 0;
-    showingVTK += recordingVTK;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(true);
+    showingVTK = false;
+    showingFACS = false;
 }
 
 //-------------------------------------------------------------
@@ -939,12 +945,12 @@ void MainWindow::goToInputs()
 void MainWindow::goToOutputs()
 {
     stackedWidget->setCurrentIndex(1);    
-	showingVTK = 0;
-    showingVTK += recordingVTK;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(true);
+    showingVTK = false;
+    showingFACS = false;
 }
 
 //-------------------------------------------------------------
@@ -952,19 +958,34 @@ void MainWindow::goToOutputs()
 //-------------------------------------------------------------
 void MainWindow::goToVTK()
 {
-    if (started) {
+//    if (started) {
 		stackedWidget->setCurrentIndex(2);
 		action_outputs->setEnabled(true);
 		action_inputs->setEnabled(true);
 		action_VTK->setEnabled(false);
         action_FACS->setEnabled(true);
-        showingVTK = 1;
-        showingVTK += recordingVTK;
-    }
+        showingVTK = true;
+        showingFACS = false;
+//    }
+}
+
+//-------------------------------------------------------------
+// Switches to the FACS screen
+//-------------------------------------------------------------
+void MainWindow::goToFACS()
+{
+    stackedWidget->setCurrentIndex(3);
+    action_outputs->setEnabled(true);
+    action_inputs->setEnabled(true);
+    action_VTK->setEnabled(true);
+    action_FACS->setEnabled(false);
+    showingVTK = false;
+    showingFACS = true;
 }
 
 //-------------------------------------------------------------
 // Load and play stored cell position data
+// Currently disabled
 //-------------------------------------------------------------
 void MainWindow::playVTK()
 {
@@ -983,8 +1004,6 @@ void MainWindow::playVTK()
 	else
 		save_image = false;
 	started = true;
-	showingVTK = 0;
-    showingVTK += recordingVTK;
     goToVTK();
 	if (!vtk->startPlayer(QFileInfo(fileName).absoluteFilePath(), timer, save_image)) {
 		LOG_MSG("startPlayer failed");
@@ -1083,36 +1102,6 @@ bool MainWindow::getVideoFileInfo(int *nframes, QString *itemFormat, QString *it
 //--------------------------------------------------------------------------------------------------------
 void MainWindow:: startRecorderVTK()
 {
-//    bool ok;
-//    int nframes=0;
-
-//    int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
-//    if (ok) {
-//        nframes = i;
-//    }
-//    if (!ok || nframes == 0) return;
-
-//    QStringList formatItems;
-//    formatItems << tr("avi") << tr("mov") << tr("mpg");
-//    QString itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
-//                                         tr("Video file format:"), formatItems, 0, false, &ok);
-//    QStringList codecItems;
-//    codecItems << tr("h264") << tr("mpeg4") << tr("mpeg");
-//    QString itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
-//                                              tr("Codec:"), codecItems, 0, false, &ok);
-
-//    const char *prompt;
-//    if (itemFormat.contains("avi")) {
-//        prompt = "Videos (*.avi)";
-//    } else if (itemFormat.contains("mov")) {
-//        prompt = "Videos (*.mov)";
-//    } else if (itemFormat.contains("mpg")) {
-//        prompt = "Videos (*.mpg)";
-//    }
-//    QString videoFileName = QFileDialog::getSaveFileName(this,
-//                                                    tr("Save File"),
-//                                                    QString(),
-//                                                    tr(prompt));
     bool ok;
     int nframes=0;
     QString itemFormat, itemCodec, videoFileName;
@@ -1122,7 +1111,7 @@ void MainWindow:: startRecorderVTK()
     videoVTK->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     actionStart_recording_VTK->setEnabled(false);
     actionStop_recording_VTK->setEnabled(true);
-    recordingVTK = 10;
+    recordingVTK = true;
     started = true;
     goToVTK();
 }
@@ -1134,8 +1123,7 @@ void MainWindow:: stopRecorderVTK()
     videoVTK->stopRecorder();
     actionStart_recording_VTK->setEnabled(true);
     actionStop_recording_VTK->setEnabled(false);
-    showingVTK -= 10;
-    recordingVTK = 0;
+    recordingVTK = false;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1153,9 +1141,8 @@ void MainWindow:: startRecorderFACS()
     actionStop_recording_FACS->setEnabled(true);
     LOG_QMSG("startRecorderFACS");
     LOG_QMSG(videoFileName);
-//    recordingVTK = 10;
-//    started = true;
-//    goToVTK();
+    recordingFACS = true;
+    goToFACS();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1165,9 +1152,8 @@ void MainWindow:: stopRecorderFACS()
     videoFACS->stopRecorder();
     actionStart_recording_FACS->setEnabled(true);
     actionStop_recording_FACS->setEnabled(false);
+    recordingFACS = false;
     LOG_QMSG("stopRecorderFACS");
-//    showingVTK -= 10;
-//    recordingVTK = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1227,20 +1213,21 @@ void MainWindow::runServer()
 	}
 	
     // Display the outputs screen
-	if (stackedWidget->currentIndex() == 2) {
-		showingVTK = 1;
-	} else {
-		stackedWidget->setCurrentIndex(1);
-		showingVTK = 0;
-	}
-    showingVTK += recordingVTK;
+    if (showingVTK) {
+        goToVTK();
+    } else if(showingFACS) {
+        goToFACS();
+    } else {
+        goToOutputs();
+    }
     // Disable parts of the GUI
     action_run->setEnabled(false);
     action_pause->setEnabled(true);
     action_stop->setEnabled(true);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
-	action_save_snapshot->setEnabled(false);
+    action_FACS->setEnabled(true);
+    action_save_snapshot->setEnabled(false);
     tab_T->setEnabled(false);
     tab_DC->setEnabled(false);
     tab_TCR->setEnabled(false);
@@ -1292,12 +1279,12 @@ void MainWindow::runServer()
         recordto = -1;
     }
 	exthread = new ExecThread(inputFile);
-    connect(exthread, SIGNAL(display(bool)), this, SLOT(displayScene(bool)));
+    connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
 	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
     connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
-    connect(exthread, SIGNAL(redimension(int)), this, SLOT(redimensionCellArrays(int)));
     connect(exthread, SIGNAL(facs_update()), this, SLOT(showFACS()));
     connect(this, SIGNAL(facs_update()), this, SLOT(showFACS()));
+    connect(exthread, SIGNAL(redimension(int)), this, SLOT(redimensionCellArrays(int)));
     exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
@@ -1497,32 +1484,30 @@ void MainWindow::redimensionCellArrays(int nbond_size)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::displayScene(bool record)
+void MainWindow::displayScene()
 {
 //    LOG_MSG("displayScene");
 	bool redo = false;	// need to understand this
 	started = true;
-	mutex2.lock();
-//	bool fast = cbox_fastdisplay->isChecked();
+//	mutex2.lock();
 	bool fast = true;
 	vtk->get_cell_positions(fast);
     vtk->renderCells(redo);
     if (videoVTK->record) {
         videoVTK->recorder();
     } else if (actionStop_recording_VTK->isEnabled()) {
-//        emit pause_requested();
         actionStart_recording_VTK->setEnabled(true);
         actionStop_recording_VTK->setEnabled(false);
     }
     // Old-style image saving
-    if (record) {
-        sprintf(msg,"record: framenum: %d",framenum);
-        LOG_MSG(msg);
-        QString basename = lineEdit_recordFileName->text();
-        vtk->record(basename, framenum);
-        framenum++;
-    }
-    mutex2.unlock();
+//    if (record) {
+//        sprintf(msg,"record: framenum: %d",framenum);
+//        LOG_MSG(msg);
+//        QString basename = lineEdit_recordFileName->text();
+//        vtk->record(basename, framenum);
+//        framenum++;
+//    }
+//    mutex2.unlock();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1622,13 +1607,12 @@ void MainWindow::outputData(QString qdata)
 		}
 		vtk->read_cell_positions(cellfile, vtkfile, savepos);
 		started = true;
-		if (showingVTK > 0 || firstVTK) {
+        if (showingVTK > 0 || firstVTK) {
 			firstVTK = false;
 			bool redo = false;
-			if (showingVTK == 1) {
-				redo = true;
-//				showingVTK = 2;
-			} 
+//			if (showingVTK == 1) {
+//				redo = true;
+//			}
             vtk->renderCells(redo);
 		} 
 	    posdata = true;
@@ -1756,7 +1740,7 @@ void MainWindow::stopServer()
 			LOG_MSG("was paused, runServer before stopping");
 			runServer();
 		}
-        exthread->snapshot(false);
+        exthread->snapshot();
 		exthread->stop();
 		sleep(1);		// delay for Fortran to wrap up (does this help?)
 		if (use_CPORT1) {
@@ -2360,10 +2344,8 @@ void MainWindow:: initFACSPlot()
 
 //--------------------------------------------------------------------------------------------------------
 // Possible variables to plot against CFSE:
-//   CD69
-//   S1PR1
-//   avidity
-//   stimulation
+//   dVdt
+//   oxygen
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
@@ -2811,16 +2793,16 @@ void MainWindow::exitRuleChanged()
 //-------------------------------------------------------------
 // Switches to the FACS screen
 //-------------------------------------------------------------
-void MainWindow::on_action_FACS_triggered()
-{
-    stackedWidget->setCurrentIndex(3);
-    action_outputs->setEnabled(true);
-    action_inputs->setEnabled(true);
-    action_VTK->setEnabled(true);
-    action_FACS->setEnabled(false);
-//    showingVTK = 1;
-//    showingVTK += recording;
-}
+//void MainWindow::on_action_FACS_triggered()
+//{
+//    stackedWidget->setCurrentIndex(3);
+//    action_outputs->setEnabled(true);
+//    action_inputs->setEnabled(true);
+//    action_VTK->setEnabled(true);
+//    action_FACS->setEnabled(false);
+////    showingVTK = 1;
+////    showingVTK += recording;
+//}
 
 //------------------------------------------------------------------------------------------------------
 // This should be used for any radioButtonGroups

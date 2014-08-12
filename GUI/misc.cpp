@@ -17,7 +17,6 @@
 
 LOG_USE();
 char msg[2048];
-bool alldone;
 
 class SleeperThread : public QThread
 {
@@ -146,7 +145,7 @@ void ExecThread::run()
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
     int len_infile, len_outfile, k;
-    bool record;
+//    bool record;
     bool first = true;
 
     LOG_MSG("Invoking DLL...");
@@ -160,15 +159,10 @@ void ExecThread::run()
 	std::string std_outfile = outfile_path.toStdString();
 	outfile = std_outfile.c_str();
 
-    alldone = false;
 	paused = false;
-    record = false;
-//	LOG_MSG("execute called");
+//    record = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-//	LOG_MSG("execute returned");
 	get_dimensions(&NX,&NY,&NZ);
-//	sprintf(msg,"exthread: nsteps: %d",nsteps);
-//	LOG_MSG(msg);
 	mutex1.lock();
 	get_summary(summaryData);
     getProfiles();
@@ -177,18 +171,18 @@ void ExecThread::run()
 
 	for (int i=1; i<= nsteps; i++) {
 		bool updated = false;
-        if (recordfrom >= 0 && i >= recordfrom-1 && i <= recordto) {
-            record = true;
-//            if (showingVTK==0) emit(action_VTK());
-            if (first) {
-                first = false;
-                emit(action_VTK());
-            }
-        } else {
-            record = false;
-        }
+//        if (recordfrom >= 0 && i >= recordfrom-1 && i <= recordto) {
+//            record = true;
+//            LOG_MSG("record = true");
+//            if (first) {
+//                first = false;
+//                emit(action_VTK());
+//            }
+//        } else {
+//            record = false;
+//        }
 		if (paused && !updated) {
-            snapshot(record);
+            snapshot();
 			updated = true;
 		}
 		while(paused || leftb) {
@@ -202,22 +196,25 @@ void ExecThread::run()
 			mutex1.lock();
 			get_summary(summaryData);
             getProfiles();
-            getFACS();
+            if (showingFACS || recordingFACS) {
+                getFACS();
+            }
             mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals
-            emit facs_update();
+            if (showingFACS || recordingFACS) {
+                emit facs_update();
+            }
 		}
 		if (stopped) break;
 		if (i%nt_vtk == 0) {
-            if (record || showingVTK != 0) {
-                snapshot(record);
+            if (showingVTK || recordingVTK) {
+                snapshot();
 				Sleep(10);
 			}
 		}
 		if (stopped) break;
 	}
-    alldone = true;
-    snapshot(record);
+    snapshot();
 	Sleep(10);
 	terminate_run(&res);
 	return;
@@ -225,7 +222,7 @@ void ExecThread::run()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void ExecThread::snapshot(bool record)
+void ExecThread::snapshot()
 {
     int nTC_size, nDC_size, nbond_size;
 
@@ -234,7 +231,6 @@ void ExecThread::snapshot(bool record)
 //    sprintf(msg,"nTC_size, nDC_size, nbond_size: %d %d %d",nTC_size, nDC_size, nbond_size);
 //    LOG_MSG(msg);
     get_scene(&nTC_list,TC_list,&nDC_list,DC_list,&nbond_list,bond_list);
-//    LOG_MSG("got scene");
     if (nTC_list > MAX_TC) {
 		LOG_MSG("Error: MAX_TC exceeded");
 		exit(1);
@@ -247,14 +243,9 @@ void ExecThread::snapshot(bool record)
 		LOG_MSG("Error: MAX_BOND exceeded");
 		exit(1);
 	}
-
     mutex2.unlock();
 
-//    emit display(record); // Emit signal to update VTK display
-
-    if (showingVTK) {
-        emit display(record); // Emit signal to update VTK display
-    }
+    emit display(); // Emit signal to update VTK display
 }
 
 //-----------------------------------------------------------------------------------------
