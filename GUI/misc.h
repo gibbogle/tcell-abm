@@ -34,6 +34,7 @@ signals:
 	 void sh_disconnected();
 	 void sh_output(QString);
 	 void sh_error(QString);
+     void facs_update();
 };
 
 class ExecThread: public QThread
@@ -43,7 +44,7 @@ class ExecThread: public QThread
 public:
 	ExecThread(QString);
 	void run();
-    void snapshot(bool);
+    void snapshot();
     void getProfiles();
     void getFACS();
     void pause();
@@ -55,7 +56,7 @@ public:
 	bool stopped;
     int summary_interval;
 signals:
-    void display(bool);
+    void display();
 	void summary();
     void action_VTK();
     void redimension(int);

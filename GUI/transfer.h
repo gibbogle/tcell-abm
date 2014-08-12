@@ -4,8 +4,10 @@
 #include <QMutex.h>
 #include "profile.h"
 
-extern int showingVTK;
-extern int recordfrom, recordto;
+extern bool showingVTK;
+extern bool recordingVTK;
+extern bool showingFACS;
+extern bool recordingFACS;
 
 #define MAX_TC 100000
 #define MAX_DC 20000

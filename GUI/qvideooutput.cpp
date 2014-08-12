@@ -51,9 +51,13 @@ QVideoOutput::QVideoOutput(QObject *parent, int imageSource, vtkRenderWindow *VT
    if (source == VTK_SOURCE) {
        // Set renWin
        renWin = VTKrenWin;
+       LOG_MSG("created videoVTK");
    } else if (source == QWT_SOURCE) {
        qp = qwtplot;
+       LOG_MSG("created videoFACS");
    }
+   record_it = 0;
+   record = false;
    // Init FFmpeg
    av_register_all();
 }
@@ -175,6 +179,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     ret = avcodec_open2(c, codec, NULL);
     if (ret < 0)
     {
+        sprintf(msg, "Could not open video codec: %s\n", av_err2str(ret));
+        LOG_MSG(msg);
        fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
        return false;
     }
@@ -182,6 +188,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     frame = avcodec_alloc_frame();
     if (!frame)
     {
+        sprintf(msg, "Could not allocate video frame\n");
+        LOG_MSG(msg);
        fprintf(stderr, "Could not allocate video frame\n");
        return false;
     }
@@ -189,6 +197,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     ret = avpicture_alloc(&dstPicture, c->pix_fmt, c->width, c->height);
     if (ret < 0)
     {
+        sprintf(msg, "Could not allocate picture: %s\n", av_err2str(ret));
+        LOG_MSG(msg);
         fprintf(stderr, "Could not allocate picture: %s\n", av_err2str(ret));
         return false;
     }
@@ -615,13 +625,9 @@ void QVideoOutput::recorder()
     vtkImageData *id;
     QImage im;
 
-//    sprintf(msg,"recorder: record_it: %d",record_it);
-//    LOG_MSG(msg);
-    if (record_it > record_nframes) {
-        record = false;
-        stopRecorder();
-        return;
-    }
+    sprintf(msg,"recorder: record_it: %d",record_it);
+    LOG_MSG(msg);
+    if (!record) return;
     if (source == VTK_SOURCE) {
         id = vtkImageData::New();
         id = w2i->GetOutput();
@@ -637,9 +643,10 @@ void QVideoOutput::recorder()
         // Create an image
         QImage image( qp->canvas()->size(), QImage::Format_RGB32 );
         image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
-        QPainter p( &image );
-        qp->drawCanvas( &p );
-        p.drawImage( 0, 0, image );
+//        QPainter p( &image );
+//        qp->drawCanvas( &p );
+//        p.drawImage( 0, 0, image );
+        qp->print(image);
         im = image;
         imwidth = im.width();
         imheight = im.height();
@@ -676,6 +683,11 @@ void QVideoOutput::recorder()
             exit(1);
         }
     }
+    if (record_it > record_nframes) {
+        record = false;
+        stopRecorder();
+        return;
+    }
 }
 
 //-----------------------------------------------------------------------------------------
@@ -684,6 +696,7 @@ void QVideoOutput::recorder()
 void QVideoOutput::stopRecorder()
 {
     LOG_QMSG("stopRecorder");
+    if (!record) return;
     record = false;
     closeMediaFile();
     LOG_QMSG("Closed media file");

@@ -87,7 +87,7 @@ private slots:
     void on_cbox_record_toggled(bool);
 	void on_action_show_gradient2D_triggered();
 	void on_action_show_gradient3D_triggered();
-    void on_action_FACS_triggered();
+//    void on_action_FACS_triggered();
     void on_line_SPECIAL_CASE_textEdited(QString);
     void on_checkBox_FACS_PLOT_toggled(bool checked);
     void on_checkBox_EFFECTOR_FUNCTION_toggled(bool checked);
@@ -103,6 +103,7 @@ private slots:
     void goToInputs();
     void goToOutputs();
     void goToVTK();
+    void goToFACS();
     void runServer();
     void pauseServer();
     void stopServer();
@@ -128,7 +129,7 @@ public slots:
     void postConnection();
 	void timer_update();
 	void errorPopup(QString);
-    void displayScene(bool);
+    void displayScene();
 	void showSummary();
     void showFACS();
     void startRecorderVTK();
@@ -275,7 +276,6 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
-    int recordingVTK;
 
 	RESULT_SET *newR;
 
