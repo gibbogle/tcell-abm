@@ -599,11 +599,11 @@ bool QVideoOutput::flushVideo(AVStream *stream)
 //-----------------------------------------------------------------------------------------
 void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QString codec, int nframes)
 {
-    if (w2i == 0) {
-        w2i = vtkWindowToImageFilter::New();
-        w2i->SetInput(renWin);	//the render window
-//        pngwriter = vtkSmartPointer<vtkPNGWriter>::New();
-//        pngwriter->SetInputConnection(w2i->GetOutputPort());
+    if (source == VTK_SOURCE) {
+        if (w2i == 0) {
+            w2i = vtkWindowToImageFilter::New();
+            w2i->SetInput(renWin);	//the render window
+        }
     }
     record = true;
     record_fileName = videoFileName;
@@ -641,7 +641,8 @@ void QVideoOutput::recorder()
         }
     } else if (source == QWT_SOURCE) {
         // Create an image
-        QImage image( qp->canvas()->size(), QImage::Format_RGB32 );
+//        QImage image( qp->canvas()->size(), QImage::Format_RGB32 );
+        QImage image( qp->size(), QImage::Format_RGB32 );
         image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
 //        QPainter p( &image );
 //        qp->drawCanvas( &p );
@@ -683,8 +684,7 @@ void QVideoOutput::recorder()
             exit(1);
         }
     }
-    if (record_it > record_nframes) {
-        record = false;
+    if (record_it == record_nframes) {
         stopRecorder();
         return;
     }

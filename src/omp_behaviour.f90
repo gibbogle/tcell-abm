@@ -638,6 +638,7 @@ CTYPE_FRACTION(CD4) = 1 - CTYPE_FRACTION(CD8)
 ave_residence_time = CTYPE_FRACTION(CD4)*residence_time(CD4) + CTYPE_FRACTION(CD8)*residence_time(CD8)
 chemo(CCL3)%use_secretion = (useCCL3_0 == 1)
 IV_SHOW_NONCOGNATE = (shownoncog == 1)
+use_halve_CD69 = (halveCD69 == 1)
 IN_VITRO = (invitro == 1)
 if (.not.IN_VITRO) then
 	IV_SHOW_NONCOGNATE = .false.
@@ -1178,7 +1179,7 @@ integer :: kcell, site2(3), freeslot
 logical :: ok
 integer :: icnew, ctype, gen, region, site(3), indx(2)
 integer :: iseq, tag, kfrom, kto
-real :: tnow, cfse0
+real :: tnow, cfse0, cd80
 type(cog_type), pointer :: p1, p2
 !real :: IL_state(CYT_NP)
 logical :: cognate, effector, effector1, effector2
@@ -1227,6 +1228,8 @@ endif
 ctype = cellist(kcell)%ctype
 cfse0 = p1%CFSE
 p1%CFSE = generate_CFSE(cfse0/2)
+cd80 = p1%CD8
+p1%CD8 = generate_CD8(cd80,0.1)
 tag = 0
 p1%dietime = tnow + TClifetime(p1)
 p1%dividetime = tnow
@@ -1265,6 +1268,7 @@ p2%stimulation = p1%stimulation
 p2%CD69 = p1%CD69
 p2%S1PR1 = p1%S1PR1
 p2%CCR7 = p1%CCR7
+p2%CD8 = generate_CD8(cd80,0.1)
 p2%stimrate = p1%stimrate
 p2%status = p1%status
 cellist(icnew)%ID = cellist(kcell)%ID               ! the progeny cell inherits the parent's ID
@@ -1900,6 +1904,7 @@ else
     ! to chemotaxis and exit until it has received enough TCR signal to drive CD69 high.
     cell%cptr%CD69 = 0
     cell%cptr%S1PR1 = 0
+    cell%cptr%CD8 = generate_CD8(1.0,CD8_std)
     cell%cptr%CFSE = generate_CFSE(1.0)
 !	cell%cptr%DCchemo = BASE_DCchemo
 	cell%cptr%firstDCtime = 0

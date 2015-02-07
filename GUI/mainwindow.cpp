@@ -47,7 +47,7 @@ int nDC_list;
 int *bond_list=NULL;
 int nbond_list;
 double *FACS_data=NULL;
-int nFACS_vars=5;   // CFSE, CD69, S1PR1, avidity, stimulation
+int nFACS_vars=6;   // CFSE, CD69, CD8, S1PR1, avidity, stimulation
 int nFACS_cells=0;
 int nFACS_dim=0;
 
@@ -66,9 +66,9 @@ int profile_n[20];
 
 //#define NO_USE_PGRAPH true
 
+/*
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
-
 //--------------------------------------------------------------------------------------------------------
 // Redefines mousePressEvent for QMyLabel, which extends QLabel.  This is used to display info about
 // a model parameter.
@@ -85,6 +85,7 @@ void QMyLabel::mousePressEvent (QMouseEvent *event) {
 	}
     emit labelClicked(text);
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -161,9 +162,6 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, test_page);
     vtk->init();
 
-    videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
-    videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
-
     rect.setX(50);
     rect.setY(30);
 #ifdef __DISPLAY768
@@ -194,7 +192,9 @@ MainWindow::MainWindow(QWidget *parent)
     DC_list = (int *)malloc(5*MAX_DC*sizeof(int));
     bond_list = (int *)malloc(2*MAX_BOND*sizeof(int));
 
-	goToInputs();
+    videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
+    videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
+    goToInputs();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1108,12 +1108,12 @@ void MainWindow:: startRecorderVTK()
 
     ok = getVideoFileInfo(&nframes, &itemFormat, &itemCodec, &videoFileName);
     if (!ok) return;
+    goToVTK();
     videoVTK->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     actionStart_recording_VTK->setEnabled(false);
     actionStop_recording_VTK->setEnabled(true);
     recordingVTK = true;
     started = true;
-    goToVTK();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1136,13 +1136,13 @@ void MainWindow:: startRecorderFACS()
 
     ok = getVideoFileInfo(&nframes, &itemFormat, &itemCodec, &videoFileName);
     if (!ok) return;
+    goToFACS();
     videoFACS->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     actionStart_recording_FACS->setEnabled(false);
     actionStop_recording_FACS->setEnabled(true);
+    recordingFACS = true;
     LOG_QMSG("startRecorderFACS");
     LOG_QMSG(videoFileName);
-    recordingFACS = true;
-    goToFACS();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -2080,19 +2080,6 @@ void MainWindow::changeParam()
 		} else if (wname.contains("rbut_")) {
 			QRadioButton *radioButton = (QRadioButton *)w;
             QString wtag = wname.mid(5);
-            int rbutton_case;
-//            wtag = parse_rbutton(wtag,&rbutton_case);
-//			if (radioButton->isChecked()) {
-//                LOG_QMSG("isChecked");
-//				for (int k=0; k<parm->nParams; k++) {
-//					PARAM_SET p = parm->get_param(k);
-//					if (wtag.compare(p.tag) == 0) {
-//						parm->set_value(k,rbutton_case);
-//                        LOG_QMSG("set_value");
-//                        break;
-//                    }
-//                }
-//			}
             for (int k=0; k<parm->nParams; k++) {
                 PARAM_SET p = parm->get_param(k);
                 if (wtag.compare(p.tag) == 0) {
@@ -2338,26 +2325,29 @@ void MainWindow:: initFACSPlot()
 {
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
     qpFACS->setTitle("FACS");
-    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    QwtSymbol symbol = QwtSymbol( QwtSymbol::Rect, Qt::blue, Qt::NoPen, QSize( 2,2 ) );
     qpFACS->replot();
+    connect((QObject *)groupBox_FACS,SIGNAL(groupBoxClicked(QString)),this,SLOT(processGroupBoxClick(QString)));
 }
 
 //--------------------------------------------------------------------------------------------------------
 // Possible variables to plot against CFSE:
-//   dVdt
-//   oxygen
+//   CD69, S1PR1, CD8, avidity, stimulation
+// Note: nFACS_vars must be set to 1 + the number of variables (CFSE is 0)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
     double xmin, xmax, ymin, ymax, cfse, cvar, x, y;
     int i, k;
     int kvar;
+    double scaling;
     QString ylabel;
 
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
     qpFACS->clear();
     qpFACS->setTitle("FACS");
-    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 2,4 ) );
+    QwtSymbol symbol = QwtSymbol( QwtSymbol::Rect, Qt::blue, Qt::NoPen, QSize( 2,2 ) );
     xmin = 1.0e10;
     xmax = -1.0e10;
     ymin = 1.0e10;
@@ -2365,31 +2355,44 @@ void MainWindow::showFACS()
     if (radioButton_CD69->isChecked()) {
         kvar = 1;
         ylabel = "CD69";
+        scaling = 1.0e4;
+        ymin = 1;
+        ymax = 1.0e4;
     } else if (radioButton_S1PR1->isChecked()) {
             kvar = 2;
             ylabel = "S1PR1";
-    } else if (radioButton_avidity->isChecked()) {
+            scaling = 1.0e4;
+            ymin = 1;
+            ymax = 1.0e4;
+    } else if (radioButton_CD8->isChecked()) {
             kvar = 3;
-            ylabel = "avidity";
-    } else if (radioButton_stimulation->isChecked()) {
+            ylabel = "CD8";
+            scaling = 0.1e4;
+            ymin = 1;
+            ymax = 1.0e4;
+    } else if (radioButton_avidity->isChecked()) {
             kvar = 4;
+            ylabel = "avidity";
+            scaling = 1;
+            ymin = 0.001;
+            ymax = 1;
+    } else if (radioButton_stimulation->isChecked()) {
+            kvar = 5;
             ylabel = "stimulation";
+            scaling = 1;
+            ymin = 0.001;
+            ymax = 1;
     }
-    //    xmin = -12.5;
-    //    xmax = 0.5;
-    //    ymin = 0;
-    //    ymax = 1;
-    xmin = 0.1;
-    xmax = 1500;
-    ymin = 0.1;
+    xmin = 1;
+    xmax = 15000;
     for (i=0; i<nFACS_cells; i++) {
-        cfse = FACS_data[5*i];
-        cvar = FACS_data[5*i+kvar];
+        cfse = FACS_data[nFACS_vars*i];
+        cvar = scaling*FACS_data[nFACS_vars*i+kvar];
 //        x = log(cfse)/log(2.);
 //        y = cd69;
-        x = 1000*cfse;
+        x = 10000*cfse;
         y = max(cvar,1.01*ymin);
-        ymax = max(y,ymax);
+//        ymax = max(y,ymax);
         if (x >= xmin) {
             QwtPlotMarker* m = new QwtPlotMarker();
             m->setSymbol( symbol );
@@ -2419,6 +2422,51 @@ void MainWindow::showFACS()
     }
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::processGroupBoxClick(QString text)
+{
+    LOG_QMSG("processGroupBoxClick: " + text);
+    QwtPlot *plot;
+
+//    if (text.compare("Histo") == 0) {
+//        LOG_MSG("save Histo plot");
+//        bool use_HistoBar = radioButton_histotype_1->isChecked();
+//        if (use_HistoBar) {
+//            plot = qpHistoBar;
+//            qpHistoLine->hide();
+//        } else {
+//            plot = qpHistoLine;
+//            qpHistoBar->hide();
+//        }
+    if (text.compare("FACS") == 0) {
+        LOG_MSG("save FACS plot");
+        plot = qpFACS;
+    } else {
+        return;
+    }
+
+    int w = plot->width();
+    int h = plot->height();
+    QPixmap pixmap(w, h);
+    pixmap.fill(Qt::white); // Qt::transparent ?
+
+    QwtPlotPrintFilter filter;
+    int options = QwtPlotPrintFilter::PrintAll;
+    options &= ~QwtPlotPrintFilter::PrintBackground;
+    options |= QwtPlotPrintFilter::PrintFrameWithScales;
+    filter.setOptions(options);
+
+    plot->print(pixmap, filter);
+
+//		QString fileName = getImageFile();
+    QString fileName = QFileDialog::getSaveFileName(0,"Select image file", ".",
+        "Image files (*.png *.jpg *.tif *.bmp)");
+    if (fileName.isEmpty()) {
+        return;
+    }
+    pixmap.save(fileName,0,-1);
+}
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow:: initDistPlots()
