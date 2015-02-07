@@ -228,8 +228,24 @@ endif
 
 max_nlist = 1.5*NX*NY*NZ
 
+if (allocated(occupancy)) then
+	ok = .false.
+	call logger("Error: array allocated: occupancy")
+	return
+endif
 allocate(occupancy(NX,NY,NZ))
+if (allocated(cellist)) then
+	ok = .false.
+	call logger("Error: array allocated: cellist")
+	return
+endif
+write(nflog,*) 'max_nlist: ',max_nlist
 allocate(cellist(max_nlist))
+if (allocated(gaplist)) then
+	ok = .false.
+	call logger("Error: array allocated: gaplist")
+	return
+endif
 allocate(gaplist(max_ngaps))
 allocate(nz_sites(NZ))
 allocate(nz_totsites(NZ))
@@ -4487,6 +4503,8 @@ do i = 1,lastcogID
 	facs_data(k) = p%CD69
 	k = k+1
 	facs_data(k) = p%S1PR1
+	k = k+1
+	facs_data(k) = p%CD8
 	k = k+1
 	facs_data(k) = p%avidity
 	k = k+1

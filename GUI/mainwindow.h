@@ -138,7 +138,7 @@ public slots:
     void stopRecorderFACS();
     void redimensionCellArrays(int nbond_size);
     bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
-
+    void processGroupBoxClick(QString);
 signals:
     void facs_update();
 

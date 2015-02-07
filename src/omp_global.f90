@@ -262,6 +262,7 @@ logical, parameter :: USE_DC_SECRETION = .false.
 logical, parameter :: USE_ORIGINAL_CODE = .not.USE_GENERAL_CODE	! simple case, fixed secretion into DC neighborhood
 
 real, parameter :: CFSE_std = 0.05
+real, parameter :: CD8_std = 0.25
 
 ! Data above this line almost never change
 !==============================================================================================================
@@ -422,6 +423,7 @@ type cog_type
 	real :: CD69            ! level of CD69 expression
 	real :: S1PR1           ! level of S1PR1 expression
 	real :: CCR7            ! level of CCR7 expression
+	real :: CD8             ! level of CD8 expression
 	real :: CFSE			! level of CFSE label
     real :: IL_state(CYT_NP)    ! receptor model state variable values
     real :: IL_statep(CYT_NP)   ! receptor model state variable time derivative values
@@ -2560,6 +2562,18 @@ real :: R
 ! Gaussian distribution
 R = par_rnor(kpar)	! N(0,1)
 generate_CFSE = (1 + CFSE_std*R)*average
+end function
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+real function generate_CD8(average, std)
+real :: average, std
+integer :: kpar = 0
+real :: R
+
+! Gaussian distribution
+R = par_rnor(kpar)	! N(0,1)
+generate_CD8 = (1 + ((CD8_std + std)/2)*R)*(3 + average)/4
 end function
 
 !-----------------------------------------------------------------------------------------
