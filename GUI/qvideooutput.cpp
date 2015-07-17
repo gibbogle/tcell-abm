@@ -330,9 +330,12 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
     if (record_codec.contains("h264")) {
         avformat_alloc_output_context2(&formatContext, NULL, "h264", filename.toAscii().data());
     } else if (record_codec.contains("mpeg4")) {
-        avformat_alloc_output_context2(&formatContext, NULL, "mpeg4", filename.toAscii().data());
+        avformat_alloc_output_context2(&formatContext, NULL, "mp4", filename.toAscii().data());
+    } else if (record_codec.contains("mpeg")) {
+        avformat_alloc_output_context2(&formatContext, NULL, "mpeg", filename.toAscii().data());
     } else {
         avformat_alloc_output_context2(&formatContext, NULL, NULL, filename.toAscii().data());     // => default = mpeg4
+        LOG_MSG("Using default codec");
     }
    if (!formatContext)
    {
@@ -613,6 +616,7 @@ void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QStr
     record_it = 0;
 
     LOG_MSG("Started recording");
+    LOG_QMSG(codec);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -712,6 +716,13 @@ void QVideoOutput::stopRecorder()
         LOG_MSG(msg);
     } else if (fileName.isNull() == false) {
        QFile::copy(tempFile->fileName(), fileName);
+//        QFile::copy(tempFile->fileName(), "zzz.avi");
+//        char cmd[1024];
+//        sprintf(cmd,"ffmpeg -i %s -vcodec mpeg4 -y %s",tempFile->fileName().toStdString().c_str(), fileName.toStdString().c_str());
+//        LOG_MSG(cmd);
+//        int res = system(cmd);
+//        sprintf(msg,"Result code: %d",res);
+//        LOG_MSG(msg);
     }
     delete tempFile;
     tempFile = 0x0;
