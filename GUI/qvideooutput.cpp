@@ -715,7 +715,8 @@ void QVideoOutput::stopRecorder()
         sprintf(msg,"Result code: %d",res);
         LOG_MSG(msg);
     } else if (fileName.isNull() == false) {
-       QFile::copy(tempFile->fileName(), fileName);
+        QFile::remove(fileName);
+        QFile::copy(tempFile->fileName(), fileName);
 //        QFile::copy(tempFile->fileName(), "zzz.avi");
 //        char cmd[1024];
 //        sprintf(cmd,"ffmpeg -i %s -vcodec mpeg4 -y %s",tempFile->fileName().toStdString().c_str(), fileName.toStdString().c_str());

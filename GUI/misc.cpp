@@ -243,7 +243,7 @@ void ExecThread::snapshot()
 		LOG_MSG("Error: MAX_BOND exceeded");
 		exit(1);
 	}
-    mutex2.unlock();
+//    mutex2.unlock();
 
     emit display(); // Emit signal to update VTK display
 }

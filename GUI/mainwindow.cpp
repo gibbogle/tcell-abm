@@ -1507,7 +1507,7 @@ void MainWindow::displayScene()
 //        vtk->record(basename, framenum);
 //        framenum++;
 //    }
-//    mutex2.unlock();
+    mutex2.unlock();
 }
 
 //--------------------------------------------------------------------------------------------------------

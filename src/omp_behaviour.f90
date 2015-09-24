@@ -1246,7 +1246,7 @@ if (ctype == CD8 .and. use_CD8_effector_switch .and. .not.effector) then
     call effector_switch(effector1, effector2)
     p1%effector = effector1
 endif
-call create_Tcell(icnew,cellist(icnew),site2,ctype,cognate,gen,tag,POST_DIVISION,region,.true.,ok)
+call create_Tcell(kcell,icnew,cellist(icnew),site2,ctype,cognate,gen,tag,POST_DIVISION,region,.true.,ok)
 if (.not.ok) return
 
 p2 => cellist(icnew)%cptr
@@ -1839,20 +1839,25 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Create a new T cell.
+! kcell0 is the parent cell
 ! We need to give a progeny cell (the result of cell division) the same ID as its parent.
 ! This implies that there needs to be a flag to indicate that the cell results from division.
 ! Need to check what is being done with CD69, S1PR1
 !-----------------------------------------------------------------------------------------
-subroutine create_Tcell(kcell,cell,site,ctype,cognate,gen,tag,stage,region,dividing,ok)
+subroutine create_Tcell(kcell0,kcell,cell,site,ctype,cognate,gen,tag,stage,region,dividing,ok)
 type(cell_type) :: cell
-integer :: kcell, site(3), ctype, gen, tag, stage, region
+integer :: kcell0,kcell, site(3), ctype, gen, tag, stage, region
 logical :: cognate, dividing, ok
 integer :: stype, cogID, i
 real :: tnow, param1, param2, R
+type(cog_type), pointer :: p0
 integer :: kpar = 0
 
 ok = .true.
 tnow = istep*DELTA_T
+if (kcell0 > 0) then
+	p0 => cellist(kcell0)%cptr
+endif
 !stype = struct_type(ctype)
 !write(*,*) 'create_Tcell: ',kcell,ctype,stype
 cell%entrytime = tnow
@@ -1873,7 +1878,9 @@ else
     call set_activation(cell%cptr,0)
     call set_generation(cell%cptr,gen)
     call set_stage_region(cell%cptr,stage,region)
-    if (fix_avidity) then
+    if (dividing) then
+		cell%cptr%avidity = p0%avidity
+    elseif (fix_avidity) then
         i = mod(navid,avidity_nlevels)
         navid = navid + 1
         cell%cptr%avidity = avidity_level(i+1)
@@ -1996,7 +2003,7 @@ endif
 if (dbug) then
     write(*,'(a,9i7,L2)') 'add_Tcell: ',istep,kcell,site,ctype,gen,stage,region,cognate
 endif
-call create_Tcell(kcell,cellist(kcell),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
+call create_Tcell(0,kcell,cellist(kcell),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
 if (.not.ok) return
 
 indx = occupancy(site(1),site(2),site(3))%indx
@@ -2374,7 +2381,7 @@ if (FAST) then
         ncogseed(ctype) = ncogseed(ctype) + 1
         tag = 0
         k = id
-        call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
+        call create_Tcell(0,k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
         if (.not.ok) return
         occupancy(x,y,z)%indx(1) = k
         if (id == ncog) exit
@@ -2442,7 +2449,7 @@ do x = 1,NX
 				else
 	                k = permc(id)
 	            endif
-                call create_Tcell(k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
+                call create_Tcell(0,k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
                 if (.not.ok) return
                 occupancy(x,y,z)%indx(1) = k
 ! Redundant - in create_Tcell()
@@ -4043,6 +4050,8 @@ end function
 ! the level of TCR stimulation, up to a limiting value.
 ! HYPOTHESIS: bind time should also increase with level of stimulation rate,
 ! i.e. CT_HILL should be combined with CT_HENRICKSON - but how?
+! Note: in the UNSTAGED case, the stimrate_norm value passed is used - this is the 
+! normalised stimulation rate = a*d
 !--------------------------------------------------------------------------------------
 real function get_bindtime(p,signal,ctype,pMHC,stimrate_norm,kpar)
 type(cog_type), pointer :: p
