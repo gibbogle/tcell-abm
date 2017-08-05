@@ -578,6 +578,7 @@ end subroutine
 ! the high CD69 level keeps S1PR1 expression low, making the cell
 ! insensitive to the chemotactic influence of S1P, and thus reducing
 ! the probability of cell exit.
+! When CD69 falls, S1PR1 rises, enabling egress.
 ! NEEDED:
 ! Need a model for the decrease in CD69 with time, or (more likely) 
 ! number of divisions.  How does continuing TCR signalling combine
@@ -585,14 +586,17 @@ end subroutine
 !---------------------------------------------------------------------
 subroutine S1PR1_update(CD69,S1PR1,stimrate,dt)
 real :: CD69, S1PR1, stimrate, dt
+real :: dCD69dt, dS1PR1dt
 
 !zp(1) = KC1*(1-CD69)*TCR - KC2*CD69;
 !zp(2) = KS1*(1-S1PR1) - KS2*CD69*S1PR1;
 
-CD69 = CD69 + (K1_CD69*(1-CD69)*stimrate - K2_CD69*CD69)*dt
+dCD69dt = (K1_CD69*(1-CD69)*stimrate - K2_CD69*CD69)
+CD69 = CD69 + dCD69dt*dt
 CD69 = max(CD69,0.0)
 CD69 = min(CD69,1.0)
-S1PR1 = S1PR1 + (K1_S1PR1*(1-S1PR1) - K2_S1PR1*CD69*S1PR1)*dt
+dS1PR1dt = (K1_S1PR1*(1-S1PR1) - K2_S1PR1*CD69*S1PR1)
+S1PR1 = S1PR1 + dS1PR1dt*dt
 S1PR1 = max(S1PR1,0.0)
 S1PR1 = min(S1PR1,1.0)
 end subroutine

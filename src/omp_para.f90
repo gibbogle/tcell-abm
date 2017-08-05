@@ -922,7 +922,7 @@ subroutine binder(ok)
 logical :: ok
 integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc
 integer :: nadd, nsub, nu, nb, nc, nbt, nbc, nt
-real :: tnow, bindtime, pMHC, stimrate, t_travel, ttravel
+real :: tnow, bindtime, pMHC, stimrate, t_travel, ttravel, S
 logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
@@ -953,6 +953,9 @@ do kcell = 1,nlist
 		nc = nc+1
 		call get_region(cog_ptr,region)
 		if (region /= LYMPHNODE) cycle
+        S = cog_ptr%stimulation
+    else
+		S = 0
 	endif
 
     ! Handle unbinding first
@@ -1022,7 +1025,7 @@ do kcell = 1,nlist
 		            ok = .false.
 	                return
                 endif
-                bound = bindDC(idc,kpar)    ! This just means the all-cell limit of the DC has not been reached
+                bound = bindDC(idc,S,kpar)    ! Permission to bind, based on Pb(n) where n = current occupancy level
                 cell%signalling = .false.
                 if (FAST .and. (par_uni(kpar) > fast_bind_prob)) then
 					bound = .false.
@@ -1503,6 +1506,7 @@ elseif (exit_rule == EXIT_STIM_THRESHOLD) then
         endif
     endif
 elseif (exit_rule == EXIT_S1PR1_THRESHOLD) then
+!	write(nflog,'(a,2f8.3)') 'cell_exit: S1PR1, EXIT_S1PR1_THRESHOLD: ',p%S1PR1, S1PR1_EXIT_THRESHOLD
     if (p%S1PR1 > S1PR1_EXIT_THRESHOLD) then
         exitOK = .true.
     else
@@ -1558,10 +1562,13 @@ end function
 ! time for CD4 cells.  For CD8 cells the exit probability is reduced, so that the exit probs
 ! are in inverse ratio to the residence times.
 !   Pe(1)/Pe(2) = Tres(2)/Tres(1)
+!
+! If computed_outflow then with FAST the outflow computed by generate_traffic is achieved, 
+! as when not FAST.
 !-----------------------------------------------------------------------------------------
 subroutine portal_traffic(ok)
 logical :: ok
-integer :: iexit, esite(3), esite0(3),site(3), i, j, k, slot, indx(2), kcell, ne, ipermex, ihr, nv, ihev, it
+integer :: iexit, esite(3), esite0(3),site(3), i, j, k, slot, indx(2), kcell, nex, ipermex, ihr, nv, ihev, it
 integer :: x, y, z, ctype, gen, region, node_inflow, node_outflow, net_inflow, iloop, nloops, nbrs, tag, site0(3)
 integer :: ncogin, noncogin
 real(DP) :: R, df, cogin, p_CD4
@@ -1570,12 +1577,13 @@ logical :: central, egress_possible, use_full_neighbourhood, tagcell
 integer, allocatable :: permex(:)
 integer :: kpar = 0
 real :: tnow, ssfract, exfract
-real :: exit_prob(2)
+!real :: exit_prob(2)
 
 ok = .true.
 region = LYMPHNODE
 node_inflow = InflowTotal
 node_outflow = OutflowTotal
+!write(nflog,'(a,2f8.2)') 'portal_traffic: InflowTotal,OutflowTotal: ',InflowTotal,OutflowTotal
 df = InflowTotal - node_inflow
 R = par_uni(kpar)
 if (R < df) then
@@ -1750,7 +1758,7 @@ check_inflow = check_inflow + node_inflow
 
 ! Outflow
 ! Need to preserve (for now) the code that was used to simulate the adoptive transfer expt,
-! i.e. using L_selectin.  In this case:
+! i.e. using L_selectin.  In this case: 
 !    exit_prob = 1
 !    use_exit_chemotaxis = false
 !    computed_outflow = false
@@ -1761,13 +1769,13 @@ if (L_selectin) then
 	use_full_neighbourhood = .false.
 	nbrs = 1
 else
-	exit_prob(1) = 0.02		! TESTING------------------ (0.02 works when chemo_K_exit = 0)
-	exit_prob(2) = exit_prob(1)*residence_time(CD4)/residence_time(CD8)
+!	exit_prob(1) = 0.07		! TESTING------------------ (0.02 works when chemo_K_exit = 0)
+!	exit_prob(2) = exit_prob(1)*residence_time(CD4)/residence_time(CD8)
 	use_full_neighbourhood = .true.
 	nbrs = 26
 endif
 
-ne = 0
+nex = 0
 if (lastexit > max_exits) then
 	write(logmsg,'(a,2i4)') 'Error: portal_traffic: lastexit > max_exits: ',lastexit, max_exits
 	call logger(logmsg)
@@ -1779,6 +1787,7 @@ do k = 1,lastexit
 	permex(k) = k
 enddo
 call permute(permex,lastexit,kpar)
+
 do iloop = 1,nloops
 do ipermex = 1,lastexit
 	iexit = permex(ipermex)
@@ -1843,8 +1852,9 @@ do ipermex = 1,lastexit
 				endif		
 				if (egress_possible) then	
 					call cell_exit(kcell,slot,esite,left)
+!					write(nflog,*) 'cell_exit: egress possible: kcell,left: ',kcell,left
 					if (left) then
-						ne = ne + 1
+						nex = nex + 1
 						check_egress(iexit) = check_egress(iexit) + 1
 						if (evaluate_residence_time) then
 							if (cellist(kcell)%tag == RES_TAGGED_CELL) then
@@ -1871,16 +1881,16 @@ do ipermex = 1,lastexit
 								call end_log_path(kcell,2)
 							endif
 						endif
-						if (ne == node_outflow .and. computed_outflow) exit
+						if (nex == node_outflow .and. computed_outflow) exit
 					endif
 				endif
 			endif
 		enddo
 	enddo
 	
-	if (ne == node_outflow .and. computed_outflow) exit
+	if (nex == node_outflow .and. computed_outflow) exit
 enddo
-if (ne == node_outflow .and. computed_outflow) exit
+if (nex == node_outflow .and. computed_outflow) exit
 enddo
 deallocate(permex)
 
@@ -1893,14 +1903,15 @@ if (FAST) then
     return
 endif
    
-net_inflow = node_inflow - ne
+net_inflow = node_inflow - nex
 nadd_sites = nadd_sites + net_inflow
 total_in = total_in + node_inflow
-total_out = total_out + ne
+total_out = total_out + nex
+total_out_gen = total_out_gen + node_outflow
 NTcells = NTcells + net_inflow
 NTcellsPer = NTcellsPer + node_outflow
 Radius = (NTcells*3/(4*PI))**0.33333
-	!write(*,'(a,4i8)') 'portal_traffic: ',node_inflow,ne,net_inflow,NTcells 
+!write(nflog,'(a,4i8)') 'portal_traffic: total_out,gen,nex,NTcells',total_out,total_out_gen,nex,NTcells 
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1923,7 +1934,10 @@ tnow = istep*DELTA_T
 if (retain_tagged_cells .and. cellist(kcell)%tag == TAGGED_CELL) then
 	if (tnow - cellist(kcell)%entrytime < t_log_DCvisits) return
 endif
-if (cellist(kcell)%DCbound(1) /= 0) return     ! MUST NOT BE BOUND TO A DC!!!!!!!!!!!!!!!
+if (cellist(kcell)%DCbound(1) /= 0) then
+	write(nflog,*) 'cell_exit: kcell bound to DC: ',kcell
+	return     ! MUST NOT BE BOUND TO A DC!!!!!!!!!!!!!!!
+endif
 if (evaluate_residence_time .or. track_DCvisits) then
     cognate = .false.
 elseif (associated(cellist(kcell)%cptr)) then
@@ -1933,6 +1947,7 @@ elseif (associated(cellist(kcell)%cptr)) then
     gen = get_generation(p)
     ctype = cellist(kcell)%ctype
     if (.not.exitOK(p,ctype)) then
+!		write(nflog,*) 'cell_exit: cognate not exitOK: ',kcell
         return
     endif
 else
@@ -3001,7 +3016,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine vascular_test
 integer :: nsteps = 10.0*24*60/DELTA_T
-real :: inflow0, act, tnow, exfract, nsum, Fin0, Fin, Fout, Tres
+real :: act, tnow, exfract, nsum, Fin0, Fin, Fout, Tres
 
 Tres = 24
 NTcells0 = 100000
@@ -3803,7 +3818,6 @@ allocate(div_gendist(TC_MAX_GEN))
 tnow = istep*DELTA_T
 noncog = 0
 ncog = 0
-ntot_LN = 0
 nbnd = 0
 nst = 0
 noDCcontact = 0
@@ -3818,6 +3832,11 @@ IL2sig = 0
 gendist = 0
 div_gendist = 0
 nDCSOI = 0
+if (FAST) then
+	ntot_LN = 0
+else
+	ntot_LN = NTcells
+endif
 do kcell = 1,nlist
     if (cellist(kcell)%ID == 0) cycle
     entrytime = cellist(kcell)%entrytime
@@ -3832,8 +3851,8 @@ do kcell = 1,nlist
 		region = LYMPHNODE
 		activated = .false.
 	endif
-	if (region == LYMPHNODE) then
-	    ntot_LN = ntot_LN + 1
+	if (FAST .and. region == LYMPHNODE) then
+		ntot_LN = ntot_LN + 1		! correct for FAST
 	endif
     ctype = cellist(kcell)%ctype
 !    stype = struct_type(ctype)
@@ -3967,7 +3986,7 @@ totalres%dN_EffCogTCGen = 0
 totalres%dN_Dead = 0
 
 !if (save_DCbinding) then
-!    ncog = sum(dcbind(0:MAX_COG_BIND))
+!    ncog = sum(dcbind(0:MAX_COG_BIND)) 
 !    write(*,'(21i6)') dcbind(0:MAX_COG_BIND)
 !    write(*,*) 'ncog: ',ncog
 !    write(nfdcbind,'(f8.2,i6,30f7.4)') tnow,ncog,dcbind(0:MAX_COG_BIND)/real(ncog) 
@@ -4114,6 +4133,7 @@ write(nfout,*)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! These profile calculations should be limited to cells still in the LN
 !-----------------------------------------------------------------------------------------
 subroutine get_profile_CD69(x,y,n) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_profile_cd69
@@ -4122,7 +4142,7 @@ real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx
 
@@ -4135,6 +4155,8 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
     i = min(int(p%CD69/dx + 1),n)
     i = max(i,1)
     cnt(i) = cnt(i) + 1
@@ -4161,7 +4183,7 @@ real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, region, locnt
 integer,allocatable :: cnt(:)
 real :: dx
 
@@ -4169,13 +4191,19 @@ n = nprofilebins
 dx = 1.0/n
 allocate(cnt(n))
 cnt = 0
+locnt = 0
 do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
     i = min(int(p%S1PR1/dx + 1),n)
     i = max(i,1)
     cnt(i) = cnt(i) + 1
+    if (p%S1PR1 < S1PR1_EXIT_THRESHOLD) then
+		locnt = locnt + 1
+	endif
 enddo
 nc = max(1,sum(cnt))
 do i = 1,n
@@ -4193,7 +4221,7 @@ real(c_double) :: x(*)
 real(c_double) :: y(*)
 integer(c_int) :: n, nc
 type (cog_type), pointer :: p
-integer :: i, k, kcell
+integer :: i, k, kcell, region
 integer,allocatable :: cnt(:)
 real :: dx, cfse, logcfse
 integer, parameter :: maxdiv = 20
@@ -4206,6 +4234,8 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
     cfse = p%CFSE
     logcfse = log(cfse)/log(2.)
     i = min(int((logcfse + maxdiv + 0.5)/dx + 1),n)
@@ -4265,7 +4295,7 @@ subroutine get_profile_stimrate(x,y,n) BIND(C)
 use, intrinsic :: iso_c_binding
 real(c_double) :: x(*)
 real(c_double) :: y(*)
-integer(c_int) :: n, nc
+integer(c_int) :: n, nc, region
 type (cog_type), pointer :: p
 integer :: i, k, kcell
 integer,allocatable :: cnt(:)
@@ -4279,6 +4309,8 @@ do k = 1,lastcogID
     kcell = cognate_list(k)
     if (kcell == 0) cycle
     p => cellist(kcell)%cptr
+	call get_region(p,region)
+	if (region /= LYMPHNODE) cycle
     i = min(int(p%stimrate/dx + 1),n)
     i = max(i,1)
     cnt(i) = cnt(i) + 1
@@ -4916,6 +4948,7 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: hour, kpar=0
 real :: tnow
+real(8) :: t0
 logical :: ok
 
 res = 0
@@ -4943,11 +4976,11 @@ if (mod(istep,240) == 0) then
     Radius = (NTcells*3/(4*PI))**0.33333
 !    write(nflog,'(a,i6,a,i7,a,i6,a,i7,a,i6)') 'istep: ',istep,' NTcells: ',NTcells,' ncogleft: ',ncogleft,' nleft: ',nleft,' ngaps: ',ngaps
     if (log_traffic) then
-        write(nftraffic,'(5i8,3f8.3)') istep, NTcells, Nexits, total_in, total_out, &
-                InflowTotal, vascularity
+        write(nftraffic,'(6i8,2f8.3)') istep, NTcells, Nexits, total_in, total_out, total_out_gen, InflowTotal, vascularity
     endif
     total_in = 0
     total_out = 0
+    total_out_gen = 0
     if (TAGGED_LOG_PATHS) then
 		call add_log_paths
 	endif
@@ -4955,6 +4988,8 @@ if (mod(istep,240) == 0) then
 		call make_split(.true.)
 		call UpdateSSFields
 	endif
+	write(nflog,'(a,3e12.3)') 'timer: mover, updater, traffic: ',timer(1:3)
+	timer = 0
 endif
 if (FACS_INTERVAL > 0) then
 	if (mod(istep,FACS_INTERVAL*240) == 0) then
@@ -4982,7 +5017,9 @@ if (use_traffic .and. mod(istep,SCANNER_INTERVAL) == 0) then
 	if (dbug) write(nflog,*) 'did scanner'
 endif
 if (dbug) write(nflog,*) 'call mover'
+t0 = wtime()
 call mover(ok)
+timer(1) = timer(1) + wtime() - t0
 if (dbug) write(nflog,*) 'did mover'
 if (.not.ok) then
 	call logger("mover returned error")
@@ -4990,6 +5027,7 @@ if (.not.ok) then
 	return
 endif
 
+t0 = wtime()
 if (use_DC .and. NDCalive > 0) then
     call binder(ok)
     if (.not.ok) then
@@ -5016,10 +5054,12 @@ if (.not.track_DCvisits .and. .not.evaluate_residence_time) then
 		return
 	endif
 endif
-
+timer(2) = timer(2) + wtime() - t0
+t0 = wtime()
 if (use_traffic) then
     if (vary_vascularity) then	! There is a problem with this system
         call vascular
+	    call generate_traffic	!(inflow0)
     endif
     if (use_portal_egress) then
 		if (dbug) write(nflog,*) 'call portal_traffic'
@@ -5041,6 +5081,7 @@ if (use_traffic) then
 		endif
     endif
 endif
+timer(3) = timer(3) + wtime() - t0
 if (dbug) call check_xyz(3)
 
 if (dbug) call logger('call balancer: ')
@@ -5415,6 +5456,12 @@ firstDC_dist = 0
 ! For DCinflux calculation
 DCinflux_dn_last = 0
 
+! For checking traffic
+total_in = 0
+total_out = 0
+total_out_gen = 0
+
+
 call SetupChemo
 if (USE_DC_CHEMOTAXIS .and. USE_CHEMOKINE_GRADIENT) then
 	if (USE_ORIGINAL_CODE) then	! use ode_diffuse_secretion
@@ -5444,6 +5491,7 @@ endif
 
 firstSummary = .true.
 initialized = .true.
+timer = 0
 
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',NTcells0
 call logger(logmsg)

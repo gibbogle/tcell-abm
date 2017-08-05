@@ -294,8 +294,20 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "When a cell divides, the level of CD69 expression is halved."},
 
 {"CD8_EFFECTOR_PROB", 0, 0, 0,
-"Probability of effector switch on division (0-1)",
+"Prob of effector switch on division",
 "When a CD8 cell divides, it can switch to effector function with DC killing capability."},
+
+{"USE_DESENSITISATION", 0, 0, 1,
+"Use desensitisation?",
+"Probability of forming a stable interaction with a DC is a function of T cell activation level."},
+
+{"DESENS_STIM_THRESH", 0.5, 0, 0,
+"Desensitisation stimulation threshold",
+"Binding probability factor = 1 for S < stimulation threshold, ramping down to 0 when S = stimulation limit"},
+
+{"DESENS_STIM_LIMIT", 1.0, 0, 0,
+"Desensitisation stimulation limit",
+"Binding probability factor = 1 for S < stimulation threshold, ramping down to 0 when S = stimulation limit"},
 
 {"EXIT_RULE", 2, 0, 0,
 "Cell egress control rule",
@@ -314,6 +326,18 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "CD8 T cell residence time",
 "CD8 T cell residence time (based on no DCs).\n\
 [hours]"},
+
+{"EXIT_PROB_CD4", 0.05, 0, 0,
+"CD4 T cell exit probability",
+"Exit probability for a CD4 T cell at an exit portal"},
+
+{"EXIT_PROB_CD8", 0.05, 0, 0,
+"CD8 T cell exit probability",
+"Exit probability for a CD8 T cell at an exit portal"},
+
+{"SIMULATE_PERIPHERY", 0, 0, 1,
+"Simulate proliferation in the periphery?",
+"Simulate proliferation in the periphery"},
 
 {"INFLAMM_DAYS1", 3.5, 0, 0,
 "Inflammation plateau duration",

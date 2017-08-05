@@ -472,7 +472,7 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, halveCD69
+integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, halveCD69, usedesens, simperiphery
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -509,16 +509,16 @@ read(nfcell,*) DC_LIFETIME_MEAN				! days
 read(nfcell,*) DC_LIFETIME_SHAPE 			! days
 !read(nfcell,*) DC_ACTIV_TAPER				! time (hours) over which DC activity decays to zero
 read(nfcell,*) DC_BIND_DELAY				! delay after unbinding before next binding (min)
-!read(nfcell,*) DC_BIND_ALFA					! binding prob parameter
+!read(nfcell,*) DC_BIND_ALFA				! binding prob parameter
 !read(nfcell,*) DC_MULTIBIND_PROB			! reducing factor to bind prob for each current DC binding
-!read(nfcell,*) DC_DENS_BY_STIM              ! rate of reduction of density by TCR stimulation
+!read(nfcell,*) DC_DENS_BY_STIM             ! rate of reduction of density by TCR stimulation
 read(nfcell,*) DC_DENS_HALFLIFE             ! base half-life of DC activity (hours)
-read(nfcell,*) MAX_TC_BIND						! number of T cells that can bind to a DC
+read(nfcell,*) MAX_TC_BIND					! number of T cells that can bind to a DC
 read(nfcell,*) MAX_COG_BIND					! number of cognate T cells that can bind to a DC simultaneously
 
-!read(nfcell,*) optionA                      ! 1,2
-!read(nfcell,*) optionB                      ! 1,2,3
-!read(nfcell,*) optionC                      ! 1,2
+!read(nfcell,*) optionA                     ! 1,2
+!read(nfcell,*) optionB                     ! 1,2,3
+!read(nfcell,*) optionC                     ! 1,2
 !read(nfcell,*) IL2_PRODUCTION_TIME			! duration of IL2/CD25 production
 
 read(nfcell,*) IL2_THRESHOLD			    ! stimulation needed to initiate IL-2/CD25 production
@@ -581,9 +581,15 @@ read(nfcell,*) useDCchemo					! use DC chemotaxis
 read(nfcell,*) cognateonly				    ! simulate only cognate cells
 read(nfcell,*) halveCD69				    ! halve CD69 on cell division
 read(nfcell,*) CD8_effector_prob            ! probability of CD8 effector switch on division
+read(nfcell,*) usedesens					! use DC-binding desensitisation
+read(nfcell,*) desens_stim_thresh			! desensitisation stimulation threshold
+read(nfcell,*) desens_stim_limit			! desensitisation stimulation limit
 read(nfcell,*) EXIT_RULE					! rule controlling egress of cognate cells
 read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours -> inflow rate
 read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
+read(nfcell,*) exit_prob(CD4)
+read(nfcell,*) exit_prob(CD8)
+read(nfcell,*) simperiphery				! simulate proliferation in the periphery (0/1)
 ! Vascularity parameters
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
@@ -647,6 +653,8 @@ DC_INJECTION = (DCsinjected == 1)
 USE_TRAFFIC = (usetraffic == 1)
 use_exit_chemotaxis = (useexitchemo == 1)
 use_HEV_portals = (usehev == 1)
+use_desensitisation = (usedesens == 1)
+simulate_periphery = (simperiphery == 1)
 !receptor(CCR1)%strength = chemo_K_DC
 if (useDCchemo == 1 .and. receptor(CCR1)%strength > 0) then
 	use_DC_chemotaxis = .true.
@@ -995,7 +1003,7 @@ write(nfout,'(a,f6.2)') 'XFOLLICLE: ',XFOLLICLE
 write(nfout,'(a,f6.2)') 'INLET_R_FRACTION: ',INLET_R_FRACTION
 write(nfout,'(a,i4)') 'NGEN_EXIT: ',NGEN_EXIT
 write(nfout,'(a,L)') 'L_selectin: ',L_selectin
-!write(nfout,'(a,L)') 'SIMULATE_PERIPHERY: ',SIMULATE_PERIPHERY
+write(nfout,'(a,L)') 'SIMULATE_PERIPHERY: ',simulate_periphery
 write(nfout,*)
 end subroutine
 
@@ -1280,6 +1288,7 @@ if (revised_staging) then
 else
     p2%stagetime = tnow
 endif
+!write(nflog,'(a,4i6,2e12.3)') 'cell_division: ',kcell,icnew,cellist(kcell)%ID,gen,p1%CD69,p1%S1PR1
 
 if (use_cytokines) then
     do iseq = 1,Ncytokines
@@ -2389,91 +2398,91 @@ if (FAST) then
     nlist = k
 else
 
-if (IN_VITRO) then
-	nzlim = 1
-	n2Dsites = n2Dsites - NDC*NDCsites
-else
-	nzlim = NZ
-	allocate(permc(nlist))
-	do k = 1,nlist
-	    permc(k) = k
-	enddo
-	call permute(permc,nlist,kpar)
-endif
-done = .false.
-do while (.not.done)
-do x = 1,NX
-    do y = 1,NY
-	    do z = 1,nzlim
-	        if (occupancy(x,y,z)%indx(1) == 0) then ! vacant site, not OUTSIDE_TAG or DC
-				if (IN_VITRO) then	! populate a specified fraction of the dish area
-					if (id == IV_NTCELLS) then
-						done = .true.
-						exit
-					endif
-		            R = par_uni(kpar)
-		            if (R > iv_fraction) cycle
-				endif
-                id = id+1
-                lastID = id
-                site = (/x,y,z/)
-                gen = 1
-                stage = NAIVE
-                region = LYMPHNODE
-                call select_cell_type(ctype,cognate,kpar)
-		        tag = 0
-                cnt(ctype) = cnt(ctype) + 1
-                if (evaluate_residence_time) then
-	                cognate = .false.
-                elseif (calibrate_motility) then
-	                cognate = .false.
-                    if (taggable(site)) then
-						tag = TAGGED_CELL
-	                    ntagged = ntagged + 1
-					endif
-			    elseif (track_DCvisits) then
-	                cognate = .false.
-					if (DC_CHEMO_NOTRAFFIC) then	! cells are tagged initially
-			            R = par_uni(kpar)
-			            if (R < DC_CHEMO_FRACTION) then
-							tag = TAGGED_CELL
+	if (IN_VITRO) then
+		nzlim = 1
+		n2Dsites = n2Dsites - NDC*NDCsites
+	else
+		nzlim = NZ
+		allocate(permc(nlist))
+		do k = 1,nlist
+			permc(k) = k
+		enddo
+		call permute(permc,nlist,kpar)
+	endif
+	done = .false.
+	do while (.not.done)
+	do x = 1,NX
+		do y = 1,NY
+			do z = 1,nzlim
+				if (occupancy(x,y,z)%indx(1) == 0) then ! vacant site, not OUTSIDE_TAG or DC
+					if (IN_VITRO) then	! populate a specified fraction of the dish area
+						if (id == IV_NTCELLS) then
+							done = .true.
+							exit
 						endif
-				    endif
-			    else
-                    if (cognate) then
-                        ncogseed(ctype) = ncogseed(ctype) + 1
-                    endif
-                endif
-                if (IN_VITRO) then
-					k = id
-				else
-	                k = permc(id)
-	            endif
-                call create_Tcell(0,k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
-                if (.not.ok) return
-                occupancy(x,y,z)%indx(1) = k
-! Redundant - in create_Tcell()
-!                if (track_DCvisits .and. DC_CHEMO_NOTRAFFIC .and. tag == TAGGED_CELL) then
-!					R = par_uni(kpar)
-!					if (R < HI_CHEMO_FRACTION) then
-!						cellist(k)%DCchemo = HI_CHEMO
-!					else
-!						cellist(k)%DCchemo = LO_CHEMO
-!					endif
-!				endif
-            endif
-	    enddo
-	    if (done) exit
-    enddo
-    if (done) exit
-enddo
-if (.not.IN_VITRO) done = .true.
-enddo
-if (.not.IN_VITRO) then
-	deallocate(permc)
-endif
-nlist = id	! this is already the case for 3D blob
-NTcells = nlist
+						R = par_uni(kpar)
+						if (R > iv_fraction) cycle
+					endif
+					id = id+1
+					lastID = id
+					site = (/x,y,z/)
+					gen = 1
+					stage = NAIVE
+					region = LYMPHNODE
+					call select_cell_type(ctype,cognate,kpar)
+					tag = 0
+					cnt(ctype) = cnt(ctype) + 1
+					if (evaluate_residence_time) then
+						cognate = .false.
+					elseif (calibrate_motility) then
+						cognate = .false.
+						if (taggable(site)) then
+							tag = TAGGED_CELL
+							ntagged = ntagged + 1
+						endif
+					elseif (track_DCvisits) then
+						cognate = .false.
+						if (DC_CHEMO_NOTRAFFIC) then	! cells are tagged initially
+							R = par_uni(kpar)
+							if (R < DC_CHEMO_FRACTION) then
+								tag = TAGGED_CELL
+							endif
+						endif
+					else
+						if (cognate) then
+							ncogseed(ctype) = ncogseed(ctype) + 1
+						endif
+					endif
+					if (IN_VITRO) then
+						k = id
+					else
+						k = permc(id)
+					endif
+					call create_Tcell(0,k,cellist(k),site,ctype,cognate,gen,tag,stage,region,.false.,ok)
+					if (.not.ok) return
+					occupancy(x,y,z)%indx(1) = k
+	! Redundant - in create_Tcell()
+	!                if (track_DCvisits .and. DC_CHEMO_NOTRAFFIC .and. tag == TAGGED_CELL) then
+	!					R = par_uni(kpar)
+	!					if (R < HI_CHEMO_FRACTION) then
+	!						cellist(k)%DCchemo = HI_CHEMO
+	!					else
+	!						cellist(k)%DCchemo = LO_CHEMO
+	!					endif
+	!				endif
+				endif
+			enddo
+			if (done) exit
+		enddo
+		if (done) exit
+	enddo
+	if (.not.IN_VITRO) done = .true.
+	enddo
+	if (.not.IN_VITRO) then
+		deallocate(permc)
+	endif
+	nlist = id	! this is already the case for 3D blob
+	NTcells = nlist
 
 endif
 
@@ -3540,7 +3549,7 @@ end function
 subroutine updater(ok)
 logical :: ok
 integer :: kcell, ctype, stype, region, iseq, tag, kfrom, kto, k, ncog, ntot
-integer :: site(3), site2(3), freeslot, indx(2), status, DC(2), idc
+integer :: site(3), site2(3), freeslot, indx(2), status, DC(2), idc, ID
 real :: C(N_CYT), mrate(N_CYT), tnow, dstim, S, cyt_conc, mols_pM, Ctemp, dstimrate, stimrate
 logical :: divide_flag, producing, first, dbg, unbound, flag, flag1
 !logical, save :: first = .true.
@@ -3558,7 +3567,8 @@ tnow = istep*DELTA_T
 mols_pM = L_um3*M_pM/(NTcells*Vc*Navo)
 
 do kcell = 1,nlist
-    if (cellist(kcell)%ID == 0) cycle
+	ID = cellist(kcell)%ID
+    if (ID == 0) cycle
     ntot = ntot + 1
     if (dbg) write(*,*) 'kcell: ',kcell
     ctype = cellist(kcell)%ctype
@@ -3705,7 +3715,12 @@ do kcell = 1,nlist
 			! normalized stimulation of approx. 1  This is easier than adjusting K1_CD69
 			call S1PR1_update(p%CD69,p%S1PR1,p%stimrate/TC_STIM_RATE_CONSTANT,DELTA_T)
 	!        call S1PR1_update(p%CD69,p%S1PR1,p%stimrate,DELTA_T)
+!			if (istep > 80*60*4 .and. p%S1PR1 < 0.25) then
+!				write(nflog,'(a,3i6,3e12.3)') 'kcell,ID,gen,CD69,S1PR1,dS/dt: ',kcell,ID,get_generation(p),p%CD69,p%S1PR1,p%stimrate/TC_STIM_RATE_CONSTANT
+!			endif
 		endif
+	elseif (.not.simulate_periphery) then	! do not simulate cell division in the periphery
+		cycle
 	endif
 
 ! Stage transition
@@ -3725,7 +3740,7 @@ do kcell = 1,nlist
 			else
 				call get_free_slot(occupancy,NX,site,site2,freeslot)
 			endif
-		else
+		else		! cell in the periphery
 			site2 = 0
 			freeslot = -1
 !			call logger("T cell divides in the periphery")

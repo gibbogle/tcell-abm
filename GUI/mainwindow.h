@@ -160,7 +160,11 @@ private:
 	void disableUseExitChemotaxis();
 	void enableUseDCChemotaxis();
 	void disableUseDCChemotaxis();
-	void writeout();
+    void enableUseDesensitisation();
+    void disableUseDesensitisation();
+    void enableSimulatePeriphery();
+    void disableSimulatePeriphery();
+    void writeout();
 	void execute_para();
 	void init_VTK();
 	void read_cell_positions();

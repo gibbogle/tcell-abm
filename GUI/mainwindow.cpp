@@ -441,7 +441,27 @@ void MainWindow::loadParams()
 							if (use_DC_chemotaxis)
 								disableUseDCChemotaxis();
 						}
-					} else if (qsname.startsWith("rbut_")) {
+                        bool use_desens = qsname.contains("USE_DESENSITISATION");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_desens)
+                                enableUseDesensitisation();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_desens)
+                                disableUseDesensitisation();
+                        }
+                        bool sim_periphery = qsname.contains("SIMULATE_PERIPHERY");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (sim_periphery)
+                                enableSimulatePeriphery();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (sim_periphery)
+                                disableSimulatePeriphery();
+                        }
+                    } else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
 						if (p.value == rbutton_case) {
 							w_rb->setChecked(true);
@@ -663,7 +683,27 @@ void MainWindow::reloadParams()
 							if (use_DC_chemotaxis)
 								disableUseDCChemotaxis();
 						}
-					} else if (qsname.startsWith("rbut_")) {
+                        bool use_desens = qsname.contains("USE_DESENSITISATION");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_desens)
+                                enableUseDesensitisation();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_desens)
+                                disableUseDesensitisation();
+                        }
+                        bool sim_periphery = qsname.contains("SIMULATE_PERIPHERY");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (sim_periphery)
+                                enableSimulatePeriphery();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (sim_periphery)
+                                disableSimulatePeriphery();
+                        }
+                    } else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
 						if (p.value == rbutton_case) {
 							w_rb->setChecked(true);
@@ -2034,7 +2074,7 @@ void MainWindow::changeParam()
 			if (checkBox->isChecked()) {
 				v = 1;
 				if (use_exit_chemotaxis)
-					enableUseExitChemotaxis();
+                    enableUseExitChemotaxis();
 			} else {
 				v = 0;
 				if (use_exit_chemotaxis)
@@ -2050,6 +2090,26 @@ void MainWindow::changeParam()
 				if (use_DC_chemotaxis)
 					disableUseDCChemotaxis();
 			}
+            bool use_desens = wname.contains("USE_DESENSITISATION");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_desens)
+                    enableUseDesensitisation();
+            } else {
+                v = 0;
+                if (use_desens)
+                    disableUseDesensitisation();
+            }
+            bool sim_periphery = wname.contains("SIMULATE_PERIPHERY");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (sim_periphery)
+                    enableSimulatePeriphery();
+            } else {
+                v = 0;
+                if (sim_periphery)
+                    disableSimulatePeriphery();
+            }
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {
@@ -2258,6 +2318,46 @@ void MainWindow::disableUseDCChemotaxis()
 			w->setEnabled(false);
 		}
 	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDesensitisation()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DESENS")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDesensitisation()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DESENS")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+// No need for this at the moment
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableSimulatePeriphery()
+{
+}
+
+//--------------------------------------------------------------------------------------------------------
+// No need for this at the moment
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableSimulatePeriphery()
+{
 }
 
 //--------------------------------------------------------------------------------------------------------

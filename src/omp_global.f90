@@ -371,7 +371,7 @@ integer, parameter :: CYT_NP = 0    !IL2_NP
 logical, parameter :: CD25_SWITCH = .true.
 !-------------------------------------------------------------
 ! PERIPHERY parameters 
-!logical, parameter :: SIMULATE_PERIPHERY = .false.
+logical :: simulate_periphery
 !integer, parameter :: PERI_GENERATION = 2   ! (not used with USE_PORTAL_EGRESS)
 !real, parameter :: PERI_PROBFACTOR = 10
 !-------------------------------------------------------------
@@ -482,8 +482,8 @@ type occupancy_type
     integer :: indx(2)
     integer :: exitnum				! > 0 => index of closest exit, = 0 => no close exit, < 0 => an exit
     integer :: hevnum				! > 0 => HEV
-    real :: chemo_conc				! DC chemokine concentration
-    real :: chemo_grad(3)			! DC chemokine gradient vector
+!    real :: chemo_conc				! DC chemokine concentration
+!    real :: chemo_grad(3)			! DC chemokine gradient vector
     integer :: DC_nbdry
     integer :: isrc					! index into source list
 end type
@@ -620,6 +620,7 @@ logical :: suppress_egress
 real :: CD8_effector_prob
 
 real :: RESIDENCE_TIME(2)                  ! T cell residence time in hours -> inflow rate
+real :: exit_prob(2)
 ! Vascularity parameters
 real :: Inflammation_days1              ! Days of plateau level - parameters for VEGF_MODEL = 1
 real :: Inflammation_days2              ! End of inflammation
@@ -794,7 +795,7 @@ real :: firstDC_dist(2,2,10000)
 ! Miscellaneous data
 type(exit_type), allocatable :: exitlist(:)
 integer :: max_exits        ! size of the exitlist(:) array
-integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T cell
+integer :: nbindmax, nbind1, nbind2   ! these parameters control the prob of a T cell binding to a DC
 real :: CD69_threshold				! level of CD69 below which egress can occur
 real :: last_portal_update_time		! time that the number of exit portals was last updated
 real :: DCinflux_dn_last                ! used in the calculation of DCinflux
@@ -805,7 +806,7 @@ integer :: navid = 0
 integer ::  Nsteps, nsteps_per_min, istep
 integer :: Mnodes
 integer :: IDtest
-integer :: total_in, total_out
+integer :: total_in, total_out, total_out_gen
 integer :: nIL2thresh = 0           ! to store times to IL2 threshold
 real :: tIL2thresh = 0
 integer :: ndivided(MMAX_GEN) = 0   ! to store times between divisions
@@ -814,8 +815,8 @@ real :: DCdecayrate                 ! base rate of depletion of DC activity (/mi
 real :: TCRdecayrate                ! rate of decay of integrated TCR stimulation (/min)
 real :: max_TCR = 0
 real :: avidity_level(MAX_AVID_LEVELS)  ! discrete avidity levels for use with fix_avidity
+real :: inflow0
 logical :: vary_vascularity			! to allow inflammation to change vascularity (false if VEGF_MODEL = 0)
-
 integer :: check_egress(1000)		! for checking traffic
 integer :: check_inflow
 
@@ -844,13 +845,34 @@ logical :: USE_PORTAL_EGRESS			! use fixed exit portals rather than random exit 
 logical :: BLOB_PORTALS					! egress to the sinus at portals throughout the blob
 logical :: SURFACE_PORTALS				! egress to the sinus at portals on the blob surface
 
+logical :: use_desensitisation			! S level influences bind probability Pb
+real :: desens_stim_thresh				! normalised stimulation desensitisation probability ramp params
+real :: desens_stim_limit
+
+integer :: kcell_now
 integer :: idbug = 0
 logical :: dbug = .false.
+
+! Timer
+real(8) :: timer(6)
 
 !DEC$ ATTRIBUTES DLLEXPORT :: ntravel, N_TRAVEL_COG, N_TRAVEL_DC, N_TRAVEL_DIST, k_travel_cog, k_travel_dc
 !DEC$ ATTRIBUTES DLLEXPORT :: travel_dc, travel_cog, travel_dist
 !DEC$ ATTRIBUTES DLLEXPORT :: nsteps	!istep
 contains
+
+!-----------------------------------------------------------------------------------------
+! WTIME returns a reading of the wall clock time.
+!-----------------------------------------------------------------------------------------
+real(8) function wtime()
+!DEC$ ATTRIBUTES DLLEXPORT :: wtime
+  integer :: clock_max, clock_rate, clock_reading
+
+  call system_clock ( clock_reading, clock_rate, clock_max )
+  wtime = real(clock_reading,kind=DP)/clock_rate
+end function
+
+
 
 !---------------------------------------------------------------------
 ! Uniform randomly generates an integer I: n1 <= I <= n2
@@ -1137,7 +1159,7 @@ end function
 subroutine initial_binding
 integer :: kcell, site(3), dc(0:3), k, idc
 real(DP) :: R
-real :: bindtime
+real :: bindtime, S
 type(cell_type) :: tcell
 integer :: kpar=0
 logical :: cognate
@@ -1153,11 +1175,10 @@ do kcell = 1,nlist
             idc = dc(k)
             if (.not.DClist(idc)%capable) cycle
             if (cognate .and. DClist(idc)%ncogbound == MAX_COG_BIND) cycle
-            if (bindDC(idc,kpar)) then
-!                call random_number(R)
+            S = 0
+            if (bindDC(idc,S,kpar)) then
                 R = par_uni(kpar)
                 bindtime = 1 + R*5.     ! mean = 3.5 min
-!                call random_number(R)
                 R = par_uni(kpar)
                 cellist(kcell)%DCbound(1) = idc
                 cellist(kcell)%unbindtime(1) = bindtime*R
@@ -1352,26 +1373,50 @@ neighbourhoodCount = count
 end function
 
 !--------------------------------------------------------------------------------
+! Ability of the T cell to attach to the DC is based on the current occupancy
+! level of the DC, %nbound.
+! Question: what if the FAST mode is selected?  In this case only cognate contacts
+! are counted, and consequently the probability of a cognate cell getting permission
+! to bind will be much higher than in normal simulation mode, if nbind1, nbind2
+! are unchanged.
+! If desensitisation is simulated, the current normalised stimulation level of a 
+! cognate cell influences bind probability Pb.
 !--------------------------------------------------------------------------------
-logical function bindDC(idc,kpar)
+logical function bindDC(idc,S,kpar)
 integer :: idc,kpar
+real :: S
 integer :: n
-real(DP) :: p, R
+real(DP) :: Pb, R, x, f
 
 n = DClist(idc)%nbound
 if (n >= nbind2) then
     bindDC = .false.
+    return
 elseif (n <= nbind1) then
     bindDC = .true.
+	Pb = 1
 else
-    p = real(nbind2 - n)/(nbind2 - nbind1)
-!    call random_number(R)
-    R = par_uni(kpar)
-    if (R < p) then
-        bindDC = .true.
-    else
-        bindDC = .false.
-    endif
+    Pb = real(nbind2 - n)/(nbind2 - nbind1)
+endif
+if (use_desensitisation .and. S > 0) then
+	x = S/STIMULATION_LIMIT		! normalised stimulation level
+	if (x < desens_stim_thresh) then
+		f = 1
+	elseif (x > desens_stim_limit) then
+		f = 0
+!		write(nflog,*) 'bindDC: Pb=0'
+	else
+		f = 1 - (x - desens_stim_thresh)/(desens_stim_limit - desens_stim_thresh)
+	endif
+	Pb = f*Pb
+elseif (bindDC) then
+	return
+endif
+R = par_uni(kpar)
+if (R < Pb) then
+    bindDC = .true.
+else
+    bindDC = .false.
 endif
 end function
 
@@ -1492,7 +1537,7 @@ end function
 !    FlowFraction(:)
 !-----------------------------------------------------------------------------------------
 subroutine set_globalvar
-real :: inflow0
+!real :: inflow0
 
 if (TAGGED_LOG_PATHS) then
 	InflowTotal = LOG_PATH_FACTOR*NTcells0*DELTA_T/(ave_residence_time*60)
@@ -1511,11 +1556,12 @@ else
 endif
 
 if (.not.steadystate) then     ! surrogate for modeling an immune response
-    call generate_traffic(inflow0)
+    call generate_traffic	!(inflow0)
 else
     InflowTotal = inflow0
     OutflowTotal = inflow0
 endif
+!write(nflog,'(a,i8,4f8.2)') 'NTcells,Inflow,Outflow: ',NTcells0,InflowTotal,OutflowTotal
 if (istep == 1 .and. .not.use_TCP) then
 	write(*,'(a,i8,4f8.2)') 'NTcells,Inflow,Outflow: ',NTcells0,InflowTotal,OutflowTotal
 endif
@@ -1525,9 +1571,9 @@ end subroutine
 !--------------------------------------------------------------------------------------
 real function f_blocked_egress_inflow(t,a)
 real :: t, a
-real :: inflow0
+!real :: inflow0
 
-inflow0 = (DELTA_T/60)*NTcells0/ave_residence_time
+!inflow0 = (DELTA_T/60)*NTcells0/ave_residence_time
 f_blocked_egress_inflow = inflow0*(1 + a*(1-exp(-eblock%k1*t)))*exp(-eblock%k2*t)
 !write(*,'(i6,4f8.1)') NTcells0,a,ave_residence_time,inflow0,f_blocked_egress_inflow
 end function
@@ -1577,8 +1623,8 @@ end subroutine
 ! Total T cell inflow and outflow are generated from the vascularity and baseline
 ! inflow, inflow0.
 !-----------------------------------------------------------------------------------------
-subroutine generate_traffic(inflow0)
-real :: inflow0
+subroutine generate_traffic	!(inflow0)
+!real :: inflow0
 real :: act, expansion, actfactor, tnow
 real :: inflow, outflow
 
@@ -2957,7 +3003,7 @@ else
 endif
 inquire(unit=nflog,OPENED=isopen)
 if (isopen) then
-	write(nflog,*) 'msg: ',trim(msg)
+	write(nflog,'(a,a)') 'msg: ',trim(msg)
 	if (error /= 0) then
 	    write(nflog,'(a,i4)') 'winsock_send error: ',error
 	    close(nflog)
