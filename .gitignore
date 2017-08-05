@@ -1,9 +1,8 @@
-Build32msvs/
-Build32msvs/*/*
+build/
+build/*/*
 docs/
 execution/
 execution/*/*
-ABM_GUI-build/
 *.pro
 *.pro.user
 *.$$$
