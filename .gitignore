@@ -1,5 +1,5 @@
 Build32msvs/
-Build32msvs/*
+Build32msvs/*/*
 docs/
 execution/
 execution/*/*
