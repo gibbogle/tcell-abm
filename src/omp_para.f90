@@ -5286,10 +5286,20 @@ integer :: error
 ok = .true.
 initialized = .false.
 par_zig_init = .false.
-Mnodes = ncpu
 inputfile = infile
 outputfile = outfile
 !resultfile = resfile
+
+call logger("read_cell_params")
+call read_cell_params(ok)
+if (.not.ok) return
+call logger("did read_cell_params")
+
+if (ncpu == 0) then
+	ncpu = ncpu_input
+endif
+Mnodes = ncpu
+
 write(logmsg,*) 'ncpu: ',ncpu 
 call logger(logmsg)
 
@@ -5305,11 +5315,6 @@ call logger(logmsg)
         Mnodes = 1
     endif
 #endif
-
-call logger("read_cell_params")
-call read_cell_params(ok)
-if (.not.ok) return
-call logger("did read_cell_params")
 
 !if (compute_travel_time .and. .not.IN_VITRO) then
 !	call set_travel_params

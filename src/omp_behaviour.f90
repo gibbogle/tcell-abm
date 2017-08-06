@@ -618,7 +618,7 @@ read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
-read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
+read(nfcell,*) ncpu_input					! this overrides ncpu on the command-line if it = 0
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) facs_h						! interval between FACS outputs (h)
 read(nfcell,*) SPECIES						! animal species source of T cells

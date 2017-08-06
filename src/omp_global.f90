@@ -804,7 +804,7 @@ integer :: VEGF_MODEL                   ! 1 = VEGF signal from inflammation, 2 =
 logical :: initialized, steadystate
 integer :: navid = 0
 integer ::  Nsteps, nsteps_per_min, istep
-integer :: Mnodes
+integer :: Mnodes, ncpu_input
 integer :: IDtest
 integer :: total_in, total_out, total_out_gen
 integer :: nIL2thresh = 0           ! to store times to IL2 threshold
