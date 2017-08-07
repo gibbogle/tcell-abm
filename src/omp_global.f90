@@ -127,7 +127,7 @@ integer, parameter :: CLUSTERS   = 3
 integer, parameter :: SWARMS     = 4
 integer, parameter :: DIVIDING   = 5
 integer, parameter :: FINISHED   = 6
-integer, parameter :: STAGELIMIT = 6
+integer, parameter :: STAGELIMIT = FINISHED
 !integer, parameter :: ACTIVATED  = 5   ! NOT USED NOW
 
 integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 

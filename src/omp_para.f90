@@ -2797,7 +2797,7 @@ if (teffgen > 0) then
 else
     fac = 0
 endif
-if (.not.use_TCP .and. use_cognate) then
+if (.not.use_TCP .and. use_cognate) then 
 write(*,'(a)') '----------------------------------------------------------------------'
 write(*,*) 'use_cognate: ',use_cognate
 write(*,'(a,i6,4i8,a,2i8)') 'snapshot: ',istep,ntot,ncogseed,ncog,'     dead: ',dNdead,Ndead
@@ -3797,7 +3797,7 @@ integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i
 integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
 integer :: nfirstDCtime, navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
 integer :: noDCcontact, noDCcontactfraction
-real :: stim(2*STAGELIMIT), IL2sig(2*STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
+real :: stim(STAGELIMIT), IL2sig(STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
 real :: entrytime, totstim(2), totstimrate(2)
 real ::totfirstDCtime, t, totnoDCtime, totDCtime(2),noDCcontacttime, avetotalDCtime(2)
 logical :: activated
