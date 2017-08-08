@@ -538,6 +538,7 @@ read(nfcell,*) BINDTIME_HILL_N              ! N parameter for Hill function that
 read(nfcell,*) BINDTIME_HILL_C              ! C parameter for Hill function that determines bind duration
 read(nfcell,*) BINDTIME_MIN                 ! minimum cognate bind duration, i.e. kinapse (mins)
 read(nfcell,*) BINDTIME_MAX                 ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+read(nfcell,*) BINDTIME_ACTIVATED			! bind time for activated (progeny) cells (mins)
 read(nfcell,*) UNSTAGED_MIN_DIVIDE_T        ! minimum time elapsed before start of 1st division (mins or hrs?)
 read(nfcell,*) MAXIMUM_AVIDITY              ! maximum TCR avidity, used to normalize T cell avidity levels
 read(nfcell,*) MAXIMUM_ANTIGEN              ! maximum DC antigen density, used to normalize DC antigen density levels
@@ -4073,7 +4074,7 @@ end function
 real function get_bindtime(p,signal,ctype,pMHC,stimrate_norm,kpar)
 type(cog_type), pointer :: p
 logical :: signal
-integer :: ctype, kpar
+integer :: ctype, gen, kpar
 real :: pMHC, stimrate_norm
 integer :: stage, region, i
 real(DP) :: R
@@ -4110,6 +4111,10 @@ if (signal) then
         h = stimrate_norm**BINDTIME_HILL_N/(stimrate_norm**BINDTIME_HILL_N + BINDTIME_HILL_C**BINDTIME_HILL_N)
         h = (1 + BINDTIME_HILL_C**BINDTIME_HILL_N)*h
         get_bindtime = h*BINDTIME_MAX
+		gen = get_generation(p)
+        if (BINDTIME_ACTIVATED > 0 .and. gen > 1) then
+			get_bindtime = min(get_bindtime, BINDTIME_ACTIVATED)
+		endif
 !	    write(logmsg,'(a,a,f5.3,a,f5.3,a,f5.3,a,f5.3,a,f6.1)') &
 !	        'UNSTAGED: ','A: ',a,' D: ',d,' dS/dt: ',stimrate_norm,' H: ',h,' T: ',get_bindtime
 !	    call logger(logmsg)

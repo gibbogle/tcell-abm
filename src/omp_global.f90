@@ -576,11 +576,12 @@ integer :: ACTIVATION_MODE              ! STAGED_MODE (0) or UNSTAGED_MODE (1)
 real :: BINDTIME_HILL_THRESHOLD         ! potential normalized stimulation rate required for a cognate DC interaction
 integer :: BINDTIME_HILL_N              ! N parameter for Hill function that determines bind duration
 real :: BINDTIME_HILL_C                 ! C parameter for Hill function that determines bind duration
-real :: BINDTIME_MIN             ! minimum cognate bind duration, i.e. kinapse (mins)
-real :: BINDTIME_MAX             ! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+real :: BINDTIME_MIN					! minimum cognate bind duration, i.e. kinapse (mins)
+real :: BINDTIME_MAX					! maximum cognate bind duration, i.e. synapse (mins converted from input hrs)
+real :: BINDTIME_ACTIVATED				! bind time for activated (progeny) cells.  If = 0 then these cells are treated like unactivated cells (mins)
 real :: UNSTAGED_MIN_DIVIDE_T           ! minimum time elapsed before start of 1st division (mins or hrs?)
-real :: MAXIMUM_AVIDITY            ! maximum TCR avidity, used to normalize T cell avidity levels
-real :: MAXIMUM_ANTIGEN            ! maximum DC antigen density, used to normalize DC antigen density levels
+real :: MAXIMUM_AVIDITY					! maximum TCR avidity, used to normalize T cell avidity levels
+real :: MAXIMUM_ANTIGEN					! maximum DC antigen density, used to normalize DC antigen density levels
 
 type(dist_type) :: divide_dist1
 type(dist_type) :: divide_dist2

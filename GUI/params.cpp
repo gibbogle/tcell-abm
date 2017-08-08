@@ -185,6 +185,10 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Maximum bind duration (hrs)",
 "The binding duration lies between the specified min and max values.  The max value is the longest synapse interaction time."},
 
+{"BINDTIME_ACTIVATED", 10, 0, 0,
+"Activated cell bind duration (mins)",
+"Activated cell bind duration."},
+
 {"UNSTAGED_MIN_DIVIDE_T", 24, 0, 0,
 "Min time to start 1st division (hrs)",
 "Regardless of the level of integrated signal, this is the minimum time that must have elapsed since the cell first encountered \n\

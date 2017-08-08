@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2911,7 +2911,7 @@ p, li { white-space: pre-wrap; }
               <x>810</x>
               <y>80</y>
               <width>311</width>
-              <height>169</height>
+              <height>191</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_2">
@@ -3142,6 +3142,42 @@ p, li { white-space: pre-wrap; }
                 </size>
                </property>
               </spacer>
+             </item>
+             <item row="6" column="2">
+              <widget class="QLineEdit" name="line_BINDTIME_ACTIVATED">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <spacer name="horizontalSpacer_62">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="6" column="0">
+              <widget class="QMyLabel" name="label_BINDTIME_ACTIVATED">
+               <property name="text">
+                <string>label_BINDTIME_ACTIVATED</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
