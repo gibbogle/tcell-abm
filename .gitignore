@@ -1,5 +1,7 @@
-build/
+build/*
 build/*/*
+ABM_GUI-build/*
+ABM_GUI-build/*/*
 docs/
 execution/
 execution/*/*
