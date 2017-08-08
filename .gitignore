@@ -1,5 +1,7 @@
 build/*
 build/*/*
+build/Debug
+build/Release
 ABM_GUI-build/*
 ABM_GUI-build/*/*
 docs/
