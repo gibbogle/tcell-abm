@@ -2864,27 +2864,11 @@ void MainWindow::create_hill_function(int N, double C, int n, double *x, double 
 void MainWindow::on_rbut_ACTIVATION_MODE_0_toggled(bool checked)
 {
     if (rbut_ACTIVATION_MODE_0->isChecked()) {
-        line_IL2_THRESHOLD->setEnabled(true);
-        line_ACTIVATION_THRESHOLD->setEnabled(true);
-        line_BINDTIME_HILL_THRESHOLD->setEnabled(false);
-        line_BINDTIME_HILL_N->setEnabled(false);
-        line_BINDTIME_HILL_C->setEnabled(false);
-        line_BINDTIME_HILL_MIN->setEnabled(false);
-        line_BINDTIME_HILL_MAX->setEnabled(false);
-        line_UNSTAGED_MIN_DIVIDE_T->setEnabled(false);
-//        line_MAXIMUM_AVIDITY->setEnabled(true);
-//        line_MAXIMUM_ANTIGEN->setEnabled(true);
+        groupBox_STAGED->setEnabled(true);
+        groupBox_UNSTAGED->setEnabled(false);
     } else {
-        line_IL2_THRESHOLD->setEnabled(false);
-        line_ACTIVATION_THRESHOLD->setEnabled(false);
-        line_BINDTIME_HILL_THRESHOLD->setEnabled(true);
-        line_BINDTIME_HILL_N->setEnabled(true);
-        line_BINDTIME_HILL_C->setEnabled(true);
-        line_BINDTIME_HILL_MIN->setEnabled(true);
-        line_BINDTIME_HILL_MAX->setEnabled(true);
-        line_UNSTAGED_MIN_DIVIDE_T->setEnabled(true);
-//        line_MAXIMUM_AVIDITY->setEnabled(true);
-//        line_MAXIMUM_ANTIGEN->setEnabled(true);
+        groupBox_STAGED->setEnabled(false);
+        groupBox_UNSTAGED->setEnabled(true);
     }
 }
 
