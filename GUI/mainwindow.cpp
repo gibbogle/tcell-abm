@@ -451,6 +451,22 @@ void MainWindow::loadParams()
                             if (use_desens)
                                 disableUseDesensitisation();
                         }
+                        bool use_overstim = qsname.contains("USE_OVERSTIMULATION");
+                        bool set_true = (p.value == 1);
+                        w_cb->setChecked(set_true);
+                        if (use_overstim) {
+                            enableUseOverstimulation(set_true);
+                        }
+//                        if (p.value == 1) {
+//                            w_cb->setChecked(true);
+//                            if (use_overstim)
+//                                enableUseOverstimulation();
+//                        } else {
+//                            w_cb->setChecked(false);
+//                            if (use_overstim)
+//                                disableUseOverstimulation();
+//                        }
+
                         bool sim_periphery = qsname.contains("SIMULATE_PERIPHERY");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
@@ -692,6 +708,12 @@ void MainWindow::reloadParams()
                             w_cb->setChecked(false);
                             if (use_desens)
                                 disableUseDesensitisation();
+                        }
+                        bool use_overstim = qsname.contains("USE_OVERSTIMULATION");
+                        bool set_true = (p.value == 1);
+                        w_cb->setChecked(set_true);
+                        if (use_overstim) {
+                            enableUseOverstimulation(set_true);
                         }
                         bool sim_periphery = qsname.contains("SIMULATE_PERIPHERY");
                         if (p.value == 1) {
@@ -1647,7 +1669,7 @@ void MainWindow::outputData(QString qdata)
 		}
 		vtk->read_cell_positions(cellfile, vtkfile, savepos);
 		started = true;
-        if (showingVTK > 0 || firstVTK) {
+        if (showingVTK || firstVTK) {
 			firstVTK = false;
 			bool redo = false;
 //			if (showingVTK == 1) {
@@ -2100,6 +2122,15 @@ void MainWindow::changeParam()
                 if (use_desens)
                     disableUseDesensitisation();
             }
+            bool use_overstim = wname.contains("USE_OVERSTIMULATION");
+            bool set_true = checkBox->isChecked();
+            if (set_true)
+                v = 1;
+            else
+                v = 0;
+            if (use_overstim) {
+                enableUseOverstimulation(set_true);
+            }
             bool sim_periphery = wname.contains("SIMULATE_PERIPHERY");
             if (checkBox->isChecked()) {
                 v = 1;
@@ -2344,6 +2375,13 @@ void MainWindow::disableUseDesensitisation()
             w->setEnabled(false);
         }
     }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseOverstimulation(bool set)
+{
+    groupBox_overstimulation->setEnabled(set);
 }
 
 //--------------------------------------------------------------------------------------------------------

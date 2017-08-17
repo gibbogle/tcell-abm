@@ -140,6 +140,24 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
     Hill = linear variation with stimulation rate, which is a Hill function \n\
     Henrickson = lognormal distn., median depends linearly on total stimulation."},
 
+{"USE_OVERSTIMULATION", 0, 0, 1,
+"Overstimulation effect?",
+"Suppressive effect of TCR overstimulation effect turned on"},
+
+{"OVERSTIM_F1", 0.5, 0, 0,
+"Overstimulation f1",
+"Rule for proliferation suppression effect of excessive TCR stimulation: \n\
+     S = total TCR stimulation, Sdiv1 = threshold for 1st division, P = probability that DC binding and cell division will be permanently suppressed \n\
+     With f = (S - Sdiv1)/Sdiv1: \n\
+     If f < f1, P = 0   if f > f2, P = 1,  else P = (f-f1)/(f2-f1)"},
+
+{"OVERSTIM_F2", 1.0, 0, 0,
+"Overstimulation f2",
+"Rule for proliferation suppression effect of excessive TCR stimulation: \n\
+     S = total TCR stimulation, Sdiv1 = threshold for 1st division, P = probability that DC binding and cell division will be permanently suppressed \n\
+     With f = (S - Sdiv1)/Sdiv1: \n\
+     If f < f1, P = 0   if f > f2, P = 1,  else P = (f-f1)/(f2-f1)"},
+
 {"STIM_HILL_THRESHOLD", 0.01, 0, 1,
 "Stimulation rate threshold",
 "If (normalized avidity)*(normalized pMHC) < this threshold there is no TCR signal."},

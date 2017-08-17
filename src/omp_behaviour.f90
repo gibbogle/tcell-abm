@@ -472,7 +472,8 @@ subroutine read_cell_params(ok)
 logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
-integer :: usetraffic, useexitchemo, useDCchemo, cognateonly, useCCL3_0, useCCL3_1, usehev, halveCD69, usedesens, simperiphery
+integer :: usetraffic, useexitchemo, useDCchemo, cognateonly
+integer :: useCCL3_0, useCCL3_1, usehev, halveCD69, usedesens, simperiphery, useoverstim
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -529,6 +530,9 @@ read(nfcell,*) EXIT_THRESHOLD(1)			! activation level below which exit is permit
 read(nfcell,*) STIMULATION_LIMIT			! maximum activation level
 read(nfcell,*) THRESHOLD_FACTOR             ! scales all threshold values
 read(nfcell,*) STAGED_CONTACT_RULE			! 2 = CT_HENRICKSON
+read(nfcell,*) useoverstim
+read(NFcell,*) overstim_f1
+read(NFcell,*) overstim_f2
 read(nfcell,*) STIM_HILL_THRESHOLD	        ! Normalized stim rate threshold for TCR signalling
 read(nfcell,*) STIM_HILL_N                  ! Parameters of Hill function for stimulation rate
 read(nfcell,*) STIM_HILL_C                  ! as function of x = (avidity/max avidity)*(pMHC/max pMHC)
@@ -617,14 +621,12 @@ read(nfcell,*) Inflammation_level	        ! This is the level of inflammation
 !read(nfcell,*) avidity_step                 ! step between equi-spaced values
 
 read(nfcell,*) days							! number of days to simulate
-write(*,*) 'days: ',days
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_input					! this overrides ncpu on the command-line if it = 0
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) facs_h						! interval between FACS outputs (h)
 read(nfcell,*) SPECIES						! animal species source of T cells
-write(*,*) 'SPECIES: ',SPECIES
 read(nfcell,*) invitro 						! select in vivo or in vitro simulation
 read(nfcell,*) IV_WELL_DIAMETER				! diameter of in vitro well (mm)
 read(nfcell,*) IV_NTCELLS					! initial T cell population in vitro
@@ -658,6 +660,7 @@ use_exit_chemotaxis = (useexitchemo == 1)
 use_HEV_portals = (usehev == 1)
 use_desensitisation = (usedesens == 1)
 simulate_periphery = (simperiphery == 1)
+use_overstimulation = (useoverstim == 1)
 !receptor(CCR1)%strength = chemo_K_DC
 if (useDCchemo == 1 .and. receptor(CCR1)%strength > 0) then
 	use_DC_chemotaxis = .true.
@@ -1212,6 +1215,9 @@ endif
 ndivided(gen) = ndivided(gen) + 1
 tdivided(gen) = tdivided(gen) + (tnow - p1%dividetime)
 effector = p1%effector
+if (gen == 1) then
+	p1%stimulation1 = p1%stimulation
+endif
 
 if (ngaps > 0) then
     icnew = gaplist(ngaps)
@@ -1276,6 +1282,8 @@ endif
 p2%CFSE = cfse0 - p1%CFSE
 p2%avidity = p1%avidity
 p2%stimulation = p1%stimulation
+p2%stimulation1 = p1%stimulation1
+p2%stopped = p1%stopped
 p2%CD69 = p1%CD69
 p2%S1PR1 = p1%S1PR1
 p2%CCR7 = p1%CCR7
@@ -1912,6 +1920,7 @@ else
     cell%cptr%stimulation = 0
     cell%cptr%stimrate = 0
     cell%cptr%effector = .false.
+    cell%cptr%stopped = .false.
 !    cell%cptr%IL_state = 0
 !    cell%cptr%IL_statep = 0
     if (use_cytokines) then
@@ -3964,7 +3973,7 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 		        else
 			        p%stagetime = 0		! time is not criterion for next transition
                 endif
-            else
+            else	! UNSTAGED
                 call set_stage(p,SWARMS)
 		        p%stagetime = 0		! time is not criterion for next transition
             endif
@@ -3998,6 +4007,8 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 		if (gen == TC_MAX_GEN) then
             call set_stage(p,FINISHED)
 			p%stagetime = BIG_TIME
+		elseif (p%stopped) then	
+			! do nothing until exit
 		elseif (candivide(p,ctype)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then
@@ -4164,7 +4175,7 @@ logical function candivide(p,ctype)
 type(cog_type), pointer :: p
 integer :: ctype
 integer :: gen
-real :: tnow, div_thresh, stim, CD25signal
+real :: tnow, div_thresh, stim, CD25signal, dS
 !
 ! NOTE: Need to better account for first division time, and need to check CD4/CD8
 !
@@ -4182,6 +4193,7 @@ endif
 if (activation_mode == UNSTAGED_MODE) then
     if (gen == 1 .and. tnow - p%firstDCtime < UNSTAGED_MIN_DIVIDE_T) return
     if (p%stimulation < div_thresh) return
+!    if (p%stopped) return
     candivide = .true.
     return 
 endif

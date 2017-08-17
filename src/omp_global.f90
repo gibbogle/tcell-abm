@@ -412,8 +412,9 @@ end type
 
 type cog_type
     sequence
-	real :: avidity			! level of TCR avidity with DC
+	real :: avidity			! level of TCR avidity with DC's antigen
 	real :: stimulation		! TCR stimulation level
+	real :: stimulation1	! TCR stimulation level at first division
     real :: firstDCtime     ! time of first contact with antigen on a DC at a level to generate TCR signalling
     real :: totalDCtime		! total time spent in contact with DC (progeny inherit parent's total)
 	real :: dietime			! time that the cell dies
@@ -430,6 +431,7 @@ type cog_type
     integer :: status       ! holds data in bytes: 1=stage, 2=generation
 	integer :: cogID		! index in the list of cognate cells
 	logical :: effector     ! effector function
+	logical :: stopped		! ability to divide has been suppressed
 	integer :: cnt(2)		! count of timesteps 
 							! (1) sharing a DC with activated CD4/CD8
 							! (2) in close proximity to an activated CD4/CD8
@@ -569,6 +571,9 @@ real :: FIRST_DIVISION_THRESHOLD(2)		! activation level needed for first divisio
 real :: DIVISION_THRESHOLD(2)			! activation level needed for subsequent division
 real :: EXIT_THRESHOLD(2)               ! activation/CD69 level S below which exit is permitted
 real :: STIMULATION_LIMIT				! maximum activation level
+logical :: use_overstimulation
+real :: overstim_f1
+real :: overstim_f2
 real :: CD25_DIVISION_THRESHOLD         ! CD25 store level needed for division of activated cell
 real :: CD25_SURVIVAL_THRESHOLD         ! CD25 store level needed for survival of activated cell
 real :: THRESHOLD_FACTOR                ! used to scale all thresholds
@@ -2985,6 +2990,34 @@ real :: halflife
 DecayRate = log(2.0)/(halflife*60)    ! rate/min
 end function
 
+!----------------------------------------------------------------------------------------
+! dS = S - S1 where S1 = S level at 1st division (or 1st division threshold)
+! The idea is that if dS is too big the cell will lose the ability todivide, become stopped.
+! This is checked whenever a cognate cell with gen > 1 unbinds from a DC.
+! The probability of stopping is proportional to dS, according to a couple of parameters.
+! (Note that currently CD4 and CD8 have same stimulation thresholds)
+! f = dS/FIRST_DIVISION_THRESHOLD
+! f1 = level of f for which stop prob starts 
+! f2 = level of f for which stop prob = 1 
+!----------------------------------------------------------------------------------------
+logical function check_stop(dS)
+real :: dS
+integer :: kpar=0
+real :: f, P
+
+f = dS/FIRST_DIVISION_THRESHOLD(1)
+if (f < overstim_f1) then
+	check_stop = .false.
+elseif (f > overstim_f2) then
+	check_stop = .true.
+else
+	P = (f-overstim_f1)/(overstim_f2-overstim_f1)
+	check_stop = (par_uni(kpar) < P)
+endif
+if (check_stop) then
+	write(nflog,'(a,f6.2)') 'cell division suppressed: dS/Sthresh: ',f
+endif
+end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------

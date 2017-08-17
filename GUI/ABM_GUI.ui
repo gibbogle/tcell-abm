@@ -3795,6 +3795,116 @@ p, li { white-space: pre-wrap; }
              </property>
             </widget>
            </widget>
+           <widget class="QMyCheckBox" name="cbox_USE_OVERSTIMULATION">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>400</y>
+              <width>151</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Simulate overstimulation?</string>
+            </property>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_overstimulation">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>420</y>
+              <width>201</width>
+              <height>81</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="gridLayoutWidget_9">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>181</width>
+               <height>61</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_9">
+              <item row="0" column="2">
+               <widget class="QLineEdit" name="line_OVERSTIM_F1">
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QMyLabel" name="label_OVERSTIM_F1">
+                <property name="text">
+                 <string>label_OVERSTIM_F1</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <spacer name="horizontalSpacer_63">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="line_OVERSTIM_F2">
+                <property name="minimumSize">
+                 <size>
+                  <width>50</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <spacer name="horizontalSpacer_64">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="1" column="0">
+               <widget class="QMyLabel" name="label_OVERSTIM_F2">
+                <property name="text">
+                 <string>label_OVERSTIM_F2</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_graphs">
            <attribute name="title">
@@ -5783,6 +5893,11 @@ p, li { white-space: pre-wrap; }
    <extends>QGroupBox</extends>
    <header>qmygroupbox.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QMyCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>qmycheckbox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -920,9 +920,9 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine binder(ok)
 logical :: ok
-integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, neardc(0:DCDIM-1), idc
+integer :: kcell, nbnd, i, k, site(3), ctype, stage, region, gen, neardc(0:DCDIM-1), idc
 integer :: nadd, nsub, nu, nb, nc, nbt, nbc, nt
-real :: tnow, bindtime, pMHC, stimrate, t_travel, ttravel, S
+real :: tnow, bindtime, pMHC, stimrate, t_travel, ttravel, S, dS
 logical :: unbound, cognate, bound
 type(cell_type), pointer :: cell
 type(cog_type), pointer :: cog_ptr
@@ -964,6 +964,7 @@ do kcell = 1,nlist
     do k = 1,MAX_DC_BIND
         idc = cell%DCbound(k)
         if (idc == 0) cycle
+        ! Cell is bound to DC idc
         nbnd = nbnd + 1
         if (tnow >= cell%unbindtime(k) .or. .not.DClist(idc)%capable) then   ! unbind
             DClist(idc)%nbound = DClist(idc)%nbound - 1
@@ -984,6 +985,13 @@ do kcell = 1,nlist
 		            ok = .false.
 			        return
                 endif
+                ! Now check level of dS = S - S1 to see if binding should be suppressed
+				gen = get_generation(cog_ptr)
+                if (use_overstimulation .and. gen > 1) then
+!	                dS = S - cog_ptr%stimulation1
+	                dS = S - FIRST_DIVISION_THRESHOLD(1)
+		            cog_ptr%stopped = check_stop(dS)
+		        endif
             endif
             cell%DCbound(k) = 0
             nbnd = nbnd - 1
@@ -1030,6 +1038,8 @@ do kcell = 1,nlist
                 if (FAST .and. (par_uni(kpar) > fast_bind_prob)) then
 					bound = .false.
 				endif
+				if (cognate .and. cog_ptr%stopped) bound = .false.
+				if (.not.bound) cycle
                 if (bound .and. cognate) then
                     if (cog_ptr%effector) then
                         ! DC is killed

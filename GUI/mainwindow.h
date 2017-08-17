@@ -164,6 +164,7 @@ private:
     void disableUseDesensitisation();
     void enableSimulatePeriphery();
     void disableSimulatePeriphery();
+    void enableUseOverstimulation(bool set);
     void writeout();
 	void execute_para();
 	void init_VTK();
