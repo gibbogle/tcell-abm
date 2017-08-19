@@ -29,13 +29,14 @@ QMyCheckBox::QMyCheckBox(QWidget *parent) : QCheckBox(parent)
 //--------------------------------------------------------------------------------------------------------
 // Redefines mousePressEvent for QMyCheckBox, which extends QCheckBox.  This is used to display info about
 // a model parameter.
+// Clicking graph selection checkboxes also displays the description stored in params.cpp - NOT ->description
 //--------------------------------------------------------------------------------------------------------
 void QMyCheckBox::mousePressEvent (QMouseEvent *event) {
     event->accept();
     QString text;
     if (objectName().contains("cbox_")) {
         QString sname = objectName().mid(5);
-//        LOG_QMSG("checkBoxClicked: " + sname);
+//        LOG_QMSG("param checkBoxClicked: " + sname);
         // Find which cbox_ sent the signal, and read its text
         for (int k=0; k<parm->nParams; k++) {
             PARAM_SET param = parm->get_param(k);
@@ -43,8 +44,10 @@ void QMyCheckBox::mousePressEvent (QMouseEvent *event) {
                 text = param.text;
             }
         }
-    } else if (objectName().contains("checkBox_")) {
-        text = this->description;
+//    } else if (objectName().contains("checkBox_")) {  // I think this is never accessed
+//        LOG_QMSG("checkBoxClicked: " + objectName());
+//        text = this->description;
+//        LOG_QMSG(text);
     }
     if (event->button() == Qt::LeftButton) {
         this->toggle();

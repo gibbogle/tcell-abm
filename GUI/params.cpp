@@ -505,8 +505,8 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
  Note that the normalised value is the actual value divided by the specified upper limit."},
 
 // Time-series plots
-    {"nDC",                     1, 0,1,"",""},
-    {"ntot_LN",                 1, 0,1,"",""},
+    {"nDC",                     1, 0,1,"","No. of DCs"},
+    {"ntot_LN",                 1, 0,1,"","No of cells in the LN"},
     {"ncogseed",                1, 0,1,"",""},
     {"ncog_LN",                 1, 0,1,"",""},
     {"ncog_PER",                1, 0,1,"",""},

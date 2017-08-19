@@ -745,21 +745,22 @@ void MainWindow::reloadParams()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// I see no reason to hide the description when the same text is sent twice.
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showMore(QString moreText)
 {
-	LOG_MSG("label clicked!");
-	LOG_QMSG(moreText);
+//	LOG_MSG("label clicked!");
+//	LOG_QMSG(moreText);
 	
-	if ((int)sender() != currentDescription) {
+//	if ((int)sender() != currentDescription) {
         text_more->setEnabled(true); // self.ui.text_description.setEnabled(1) #show()
         text_more->setText(moreText); // text_description
         currentDescription = (int)sender();
-    } else {
-        text_more->clear(); // text_description
-        text_more->setEnabled(false); // hide()#text_description
-        currentDescription = 0;
-	}
+//    } else {
+//        text_more->clear(); // text_description
+//        text_more->setEnabled(false); // hide()#text_description
+//        currentDescription = 0;
+//	}
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1416,6 +1417,75 @@ void MainWindow::errorPopup(QString errmsg)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::initializeGraphs(RESULT_SET *R)
 {
+    LOG_MSG("initializeGraphs");
+    mdiArea->closeAllSubWindows();
+    mdiArea->show();
+    setGraphsActive();
+    int non_ts = 0;
+//    if (field->isConcPlot()) non_ts++;
+//    if (field->isVolPlot()) non_ts++;
+//    if (field->isOxyPlot()) non_ts++;
+    grph->makeGraphList(non_ts);
+    nGraphs = grph->nGraphs;
+    if (nGraphCases > 0) {
+        clearAllGraphs();
+    }
+    QString tag;
+    QString title;
+    QString yAxisTitle;
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i) && !grph->isProfile(i) && !grph->isDistribution(i)) continue;   // ???
+        tag = grph->get_tag(i);
+        title = grph->get_title(i);
+        yAxisTitle = grph->get_yAxisTitle(i);
+        if (pGraph[i] != NULL) {
+            pGraph[i]->deleteLater();
+            pGraph[i] = NULL;
+        }
+        if (pGraph[i] == NULL) {
+            pGraph[i] = new Plot(tag,R->casename);
+            pGraph[i]->setTitle(title);
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+//            LOG_QMSG(title);
+//            LOG_QMSG(tag);
+        }
+    }
+
+    nGraphCases = 1;
+    graphResultSet[0] = R;
+
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i) && !grph->isProfile(i) && !grph->isDistribution(i)) continue;
+        mdiArea->addSubWindow(pGraph[i]);
+        pGraph[i]->show();
+    }
+
+    if (show_outputdata) {
+        mdiArea->addSubWindow(box_outputData);	// Need another way of creating this window - should be floating
+        box_outputData->show();
+    }
+/*
+    if (field->isConcPlot())
+        field->makeConcPlot(mdiArea);
+    if (field->isVolPlot())
+        field->makeVolPlot(mdiArea);
+    if (field->isOxyPlot())
+        field->makeOxyPlot(mdiArea);
+*/
+    mdiArea->tileSubWindows();
+
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i)) continue;
+        pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+    }
+//    Global::dist_nv = 20;
+}
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::initializeGraphs(RESULT_SET *R)
+{
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
     setGraphsActive();
@@ -1479,6 +1549,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	}
 //    showmdiAreaSize();
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -2414,19 +2485,62 @@ void MainWindow::on_line_SPECIAL_CASE_textEdited(QString str)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
+    QGridLayout *grid = new QGridLayout;
+    int row[3];
+    int col;
+    row[0] = row[1] = row[2] = -1;
+
+    cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
+    for (int i=0; i<grph->n_tsGraphs; i++) {
+        int itype = grph->tsGraphs[i].type;
+        if (itype == 0) {
+            if (i < 16)
+                col = 0;
+            else
+                col = 1;
+        } else {
+            col = 2;
+        }
+        row[col]++;
+        QString text = grph->tsGraphs[i].title;
+        cbox_ts[i] = new QMyCheckBox;
+        cbox_ts[i]->setText(text);
+        cbox_ts[i]->setObjectName("cbox_"+grph->tsGraphs[i].tag);
+        grid->addWidget(cbox_ts[i],row[col],col);
+        connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+    }
+    groupBox_graphselect->setLayout(grid);
+
+    QRect rect = groupBox_graphselect->geometry();
+#ifdef __DISPLAY768
+    rect.setHeight(460);
+#else
+    rect.setHeight(500);
+#endif
+    groupBox_graphselect->setGeometry(rect);
+}
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::setupGraphSelector-old()
+{
 //    QVBoxLayout *vbox = new QVBoxLayout;
     QGridLayout *grid = new QGridLayout;
+    int row, col;
     int row0=-1, row1=-1;
     cbox_ts = new QCheckBox*[grph->n_tsGraphs];
+    col = 0;
     for (int i=0; i<grph->n_tsGraphs; i++) {
-        int row, col;
 //        if (grph->isTimeseries(i)) {
         if (grph->tsGraphs[i].ts) {
-            col = 0;
             row0++;
+
             row = row0;
         } else {
-            col = 1;
+            if (row1 == -1) {
+                col++;
+            }
             row1++;
             row = row1;
         }
@@ -2448,6 +2562,7 @@ void MainWindow::setupGraphSelector()
 #endif
     groupBox_graphselect->setGeometry(rect);
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------

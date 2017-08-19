@@ -287,7 +287,8 @@ private:
 	Plot *graph_dummy;	// placeholder
 
     Plot *pGraph[MAX_DATA];
-    QCheckBox **cbox_ts;
+    QMyCheckBox **cbox_ts;
+//    QCheckBox **cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];
