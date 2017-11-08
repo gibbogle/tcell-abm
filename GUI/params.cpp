@@ -361,6 +361,10 @@ rate of TCR stimulation = Ks*(TCR avidity)*(DC antigen density)\n\
 "Simulate proliferation in the periphery?",
 "Simulate proliferation in the periphery"},
 
+{"TCR_SPLITTING", 0, 0, 1,
+"Halve S on division?",
+"Halve stimulation level S on cell division?"},
+
 {"INFLAMM_DAYS1", 3.5, 0, 0,
 "Inflammation plateau duration",
 "Period over which the level of inflammation signal from the periphery is constant.\n\

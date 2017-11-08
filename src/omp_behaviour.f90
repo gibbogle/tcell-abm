@@ -366,7 +366,7 @@ end subroutine
 subroutine read_fixed_params(ok)
 logical :: ok
 logical :: ext
-logical :: use_DCvisits_params
+logical :: use_DCvisits_params, dummy
 character*(128) :: DCparamfile
 
 inquire(file=fixedfile,exist=ext)
@@ -379,7 +379,7 @@ open(nfcell,file=fixedfile,status='old',err=99)
 ok = .true.
 ! T cell parameters
 !read(nfcell,*) use_traffic			!= .false.
-read(nfcell,*) TCR_splitting		!= .false.  ! enable sharing of integrated TCR signal between progeny cells
+read(nfcell,*) dummy	!TCR_splitting		!= .false.  ! enable sharing of integrated TCR signal between progeny cells
 read(nfcell,*) transient_stagetime	!= 1.0
 read(nfcell,*) clusters_stagetime	!= 13.0
 read(nfcell,*) transient_bindtime	!= 10.0
@@ -473,7 +473,7 @@ logical :: ok
 real :: sigma, divide_mean1, divide_shape1, divide_mean2, divide_shape2, real_DCradius, facs_h
 integer :: i, invitro, shownoncog, ncpu_dummy, dcsinjected, ispecial
 integer :: usetraffic, useexitchemo, useDCchemo, cognateonly
-integer :: useCCL3_0, useCCL3_1, usehev, halveCD69, usedesens, simperiphery, useoverstim
+integer :: useCCL3_0, useCCL3_1, usehev, halveCD69, usedesens, simperiphery, useoverstim, TCRsplit
 character(64) :: specialfile
 character(4) :: logstr
 logical, parameter :: use_chemo = .false.
@@ -594,7 +594,8 @@ read(nfcell,*) RESIDENCE_TIME(CD4)          ! CD4 T cell residence time in hours
 read(nfcell,*) RESIDENCE_TIME(CD8)          ! CD8 T cell residence time in hours -> inflow rate
 read(nfcell,*) exit_prob(CD4)
 read(nfcell,*) exit_prob(CD8)
-read(nfcell,*) simperiphery				! simulate proliferation in the periphery (0/1)
+read(nfcell,*) simperiphery					! simulate proliferation in the periphery (0/1)
+read(nfcell,*) TCRsplit						! halve TCR stimulation level S on division  (0/1)
 ! Vascularity parameters
 read(nfcell,*) Inflammation_days1	        ! Days of plateau level - parameters for VEGF_MODEL = 1
 read(nfcell,*) Inflammation_days2	        ! End of inflammation
@@ -660,6 +661,7 @@ use_exit_chemotaxis = (useexitchemo == 1)
 use_HEV_portals = (usehev == 1)
 use_desensitisation = (usedesens == 1)
 simulate_periphery = (simperiphery == 1)
+TCR_splitting = (TCRsplit == 1)
 use_overstimulation = (useoverstim == 1)
 !receptor(CCR1)%strength = chemo_K_DC
 if (useDCchemo == 1 .and. receptor(CCR1)%strength > 0) then
@@ -3824,99 +3826,6 @@ do idc = 1,NDC
 enddo
 end subroutine
 
-!--------------------------------------------------------------------------------
-! Note: USE_STAGETIME(icstage) means use stagetime for the transition from icstage.
-! p%stagetime = time that the cell is expected to make transition to the next stage.
-!--------------------------------------------------------------------------------
-subroutine updatestage1(kcell,tnow,divide_flag)
-integer :: kcell
-logical :: divide_flag
-real :: tnow
-integer :: stage, region, gen, ctype
-real :: stagetime
-type(cog_type), pointer :: p
-
-divide_flag = .false.
-p => cellist(kcell)%cptr
-call get_stage(p,stage,region)
-if (stage >= CLUSTERS) then
-    if (.not.cansurvive(p)) then
-        write(logmsg,*) 'cell IL2 store too low: ',kcell,p%cogID
-        call logger(logmsg)
-        p%dietime = tnow
-        stage = FINISHED
-        call set_stage(p,stage)
-    endif
-endif
-if (stage == FINISHED) return
-ctype = cellist(kcell)%ctype
-stagetime = p%stagetime
-if (tnow > stagetime) then		! time constraint to move to next stage is met
-	! May be possible to make the transition from stage
-	select case(stage)
-	case (NAIVE)        ! possible transition from NAIVE to TRANSIENT
-	    if (p%stimulation > 0) then
-	        gen = get_generation(p)
-            call set_stage(p,TRANSIENT)
-            p%dietime = tnow + TClifetime(p)
-		    if (USE_STAGETIME(TRANSIENT)) then
-			    p%stagetime = tnow + get_stagetime(p,ctype)
-		    else
-			    p%stagetime = 0		! time is not criterion for next transition
-            endif
-        endif
-	case (TRANSIENT)    ! possible transition from TRANSIENT to CLUSTERS
-	    if (reached_IL2_threshold(p)) then
-	        nIL2thresh = nIL2thresh + 1
-	        tIL2thresh = tIL2thresh + (tnow - cellist(kcell)%entrytime)
-!	        write(*,'(a,i6,2f8.1)') '========= Reached IL2 threshold: ',kcell,(tnow - cellist(kcell)%entrytime),p%stimulation
-            call set_stage(p,CLUSTERS)
-		    if (USE_STAGETIME(CLUSTERS)) then
-			    p%stagetime = tnow + get_stagetime(p,ctype)
-		    else
-			    p%stagetime = 0		! time is not criterion for next transition
-		    endif
-        endif
-	case (CLUSTERS)     ! possible transition from CLUSTERS to SWARMS
-	    if (reached_act_threshold(p)) then
-            call set_stage(p,SWARMS)
-		    if (USE_STAGETIME(SWARMS)) then     ! Must use stagetime(SWARMS) to get to ACTIVATED
-			    p%stagetime = tnow + get_stagetime(p,ctype)
-		    else
-			    p%stagetime = 0
-		    endif
-        endif
-! Code commented because we are now using a revised staging without ACTIVATED
-!	case (SWARMS)       ! possible transition from SWARMS to ACTIVATED
-!        call set_stage(p,ACTIVATED)
-!		if (USE_STAGETIME(ACTIVATED)) then      ! Must use stagetime(ACTIVATED) to get to ACTIVATED
-!            gen = get_generation(p)
-!            ctype = cellist(kcell)%ctype
-!			if (gen == 1) then
-!				p%stagetime = tnow
-!			else
-!				p%stagetime = tnow + dividetime(gen,ctype)
-!			endif
-!		else
-!			p%stagetime = 0
-!		endif
-!	case (ACTIVATED)     ! possible transition from ACTIVATED to DIVIDING
-!        gen = get_generation(p)
-!        ctype = cellist(kcell)%ctype
-!		if (gen == TC_MAX_GEN) then
-!            call set_stage(p,FINISHED)
-!			p%stagetime = BIG_TIME
-!		elseif (candivide(p,ctype)) then
-!            call set_stage(p,DIVIDING)
-!			p%stagetime = tnow + CYTOKINESIS_TIME
-!		endif
-	case (DIVIDING)
-	    divide_flag = .true.
-	case (FINISHED)
-
-    end select
-endif
-end subroutine
 
 !--------------------------------------------------------------------------------
 ! Note: USE_STAGETIME(icstage) means use stagetime for the transition from icstage.
@@ -4009,7 +3918,8 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 			p%stagetime = BIG_TIME
 		elseif (p%stopped) then	
 			! do nothing until exit
-		elseif (candivide(p,ctype)) then
+!		elseif (candivide(p,ctype)) then
+		elseif (candivide(kcell)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then
 !				p%stagetime = tnow + CYTOKINESIS_TIME
@@ -4171,7 +4081,9 @@ end function
 ! In this revised version, the use of a weighted sum of signals for stimulation (with the
 ! parameter TC_STIM_WEIGHT) has been separated from the optionA cases.
 !----------------------------------------------------------------------------------------
-logical function candivide(p,ctype)
+!logical function candivide(p,ctype)
+logical function candivide(kcell)
+integer :: kcell
 type(cog_type), pointer :: p
 integer :: ctype
 integer :: gen
@@ -4179,8 +4091,11 @@ real :: tnow, div_thresh, stim, CD25signal, dS
 !
 ! NOTE: Need to better account for first division time, and need to check CD4/CD8
 !
-tnow = istep*DELTA_T
 candivide = .false.
+if (cellist(kcell)%DCbound(1) /= 0) return
+p => cellist(kcell)%cptr
+ctype = cellist(kcell)%ctype
+tnow = istep*DELTA_T
 gen = get_generation(p)
 if (gen == 1) then			! undivided cell
 	div_thresh = FIRST_DIVISION_THRESHOLD(ctype)

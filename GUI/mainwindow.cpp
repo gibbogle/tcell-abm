@@ -3016,42 +3016,24 @@ void MainWindow::create_hill_function(int N, double C, int n, double *x, double 
 //------------------------------------------------------------------------------------------------------
 void MainWindow::on_rbut_ACTIVATION_MODE_0_toggled(bool checked)
 {
-    if (rbut_ACTIVATION_MODE_0->isChecked()) {
-        groupBox_STAGED->setEnabled(true);
-        groupBox_UNSTAGED->setEnabled(false);
-    } else {
-        groupBox_STAGED->setEnabled(false);
-        groupBox_UNSTAGED->setEnabled(true);
-    }
+    groupBox_STAGED->setEnabled(checked);
+    groupBox_UNSTAGED->setEnabled(!checked);
 }
 
 //------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_record_toggled(bool checked)
 {
-    if (checked) {
-        lineEdit_recordFileName->setEnabled(checked);
-        lineEdit_record_hour1->setEnabled(checked);
-        lineEdit_record_hour2->setEnabled(checked);
-        framenum = 0;
-    }
-//    } else {
-//        lineEdit_recordFileName->setEnabled(false);
-//        lineEdit_record_hour1->setEnabled(false);
-//        lineEdit_record_hour2->setEnabled(false);
-//    }
+    lineEdit_recordFileName->setEnabled(checked);
+    lineEdit_record_hour1->setEnabled(checked);
+    lineEdit_record_hour2->setEnabled(checked);
+    framenum = 0;
 }
 
 //------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------
 void MainWindow::on_checkBox_FACS_PLOT_toggled(bool checked)
 {
-//    if (checkBox_FACS_PLOT->isChecked()) {
-//        line_FACS_INTERVAL->setEnabled(true);
-//    } else {
-//        line_FACS_INTERVAL->setEnabled(false);
-//        line_FACS_INTERVAL->setText("0");
-//    }
     line_FACS_INTERVAL->setEnabled(checked);
     if (!checked) {
         line_FACS_INTERVAL->setText("0");

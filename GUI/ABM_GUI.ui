@@ -67,7 +67,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>5</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -3984,6 +3984,19 @@ p, li { white-space: pre-wrap; }
               </item>
              </layout>
             </widget>
+           </widget>
+           <widget class="QCheckBox" name="cbox_TCR_SPLITTING">
+            <property name="geometry">
+             <rect>
+              <x>610</x>
+              <y>80</y>
+              <width>121</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Halve S on division?</string>
+            </property>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_graphs">
