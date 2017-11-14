@@ -2378,12 +2378,14 @@ ntagged_left = 0
 id = 0
 cogid = 0
 NTcells = 0
+ncog = nlist*(TC_COGNATE_FRACTION(CD4)*CTYPE_FRACTION(CD4) + TC_COGNATE_FRACTION(CD8)*CTYPE_FRACTION(CD8))
+write(nflog,*) 'PlaceCells: Nlist, ncog: ',nlist,ncog
 if (FAST) then
     ! create initial population of cognate cells distributed randomly in the blob
     NTcells = nlist
 !    nlist = 0
     k = 0
-    ncog = nlist*(TC_COGNATE_FRACTION(CD4)*CTYPE_FRACTION(CD4) + TC_COGNATE_FRACTION(CD8)*CTYPE_FRACTION(CD8))
+!    ncog = nlist*(TC_COGNATE_FRACTION(CD4)*CTYPE_FRACTION(CD4) + TC_COGNATE_FRACTION(CD8)*CTYPE_FRACTION(CD8))
     do
         R = par_uni(kpar)
         x = 1 + R*NX
@@ -2444,6 +2446,9 @@ else
 					stage = NAIVE
 					region = LYMPHNODE
 					call select_cell_type(ctype,cognate,kpar)
+					if (cognate .and. (ncogseed(CD4) + ncogseed(CD8) == ncog)) then
+						cognate = .false.
+					endif
 					tag = 0
 					cnt(ctype) = cnt(ctype) + 1
 					if (evaluate_residence_time) then

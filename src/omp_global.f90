@@ -1392,9 +1392,12 @@ logical function bindDC(idc,S,kpar)
 integer :: idc,kpar
 real :: S
 integer :: n
-real(DP) :: Pb, R, x, f
+real(DP) :: Pb, R, x, f, sfactor
 
 n = DClist(idc)%nbound
+if (FAST) then
+	n = n + 73	! this is intended to restore the typical level of occupation of a DC
+endif
 if (n >= nbind2) then
     bindDC = .false.
     return
@@ -1405,7 +1408,13 @@ else
     Pb = real(nbind2 - n)/(nbind2 - nbind1)
 endif
 if (use_desensitisation .and. S > 0) then
+	if (FAST) then
+		sfactor = 2.0
+	else
+		sfactor = 1
+	endif
 	x = S/STIMULATION_LIMIT		! normalised stimulation level
+	x = sfactor*x
 	if (x < desens_stim_thresh) then
 		f = 1
 	elseif (x > desens_stim_limit) then
@@ -1497,7 +1506,7 @@ integer :: nratio
 
 ctype = select_CD4_CD8()
 !if (random_cognate) then
-    if (par_uni(kpar) < TC_COGNATE_FRACTION(ctype)) then
+    if (par_uni(kpar) < 1.02*TC_COGNATE_FRACTION(ctype)) then	! increase prob here, and limit ncog in PlaceCells
 		cognate = .true.
 	else
 		cognate = .false.
@@ -2321,7 +2330,7 @@ end subroutine
 subroutine update_DCstate(ok)
 logical :: ok
 real :: tnow, tfactor, decay_factor
-integer :: idc, nalive, nbound, ncbound, ncapable
+integer :: idc, nalive, nbound, ncbound, ncapable, ntbound
 
 if (NDCalive == 0) then
 	NDCcapable = 0
@@ -2333,6 +2342,7 @@ tfactor = 0.1**(DELTA_T/(60*DC_ACTIV_TAPER))
 tnow = istep*DELTA_T
 decay_factor = 1 - DCdecayrate*DELTA_T
 nalive = 0
+ntbound = 0
 do idc = 1,NDC
     if (DClist(idc)%alive) then
         if (.not.IN_VITRO .and. DC_outside(idc)) then	! A kludge to remove DCs stranded outside the blob
@@ -2340,6 +2350,7 @@ do idc = 1,NDC
 		endif
         nbound = DClist(idc)%nbound
         ncbound = DClist(idc)%ncogbound
+        ntbound = ntbound + nbound
         if (save_DCbinding) then
             dcbind(ncbound) = dcbind(ncbound) + 1
         endif
@@ -2382,7 +2393,7 @@ do idc = 1,NDC
 enddo
 NDCalive = nalive
 NDCcapable = ncapable
-!write(nflog,*) 'update_DCstate: live DCs: ',nalive
+!write(nflog,*) 'update_DCstate: live DCs: ',nalive,'  nbound/DC: ',ntbound/max(1,nalive)
 if (nalive == 0) then
     write(logmsg,*) 'No live DC'
     call logger(logmsg)

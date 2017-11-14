@@ -286,7 +286,7 @@ if (use_DC) then
     nbind1 = ABIND1*nbindmax
     nbind2 = ABIND2*nbindmax
 !    write(*,*) 'Space for T cells/DC: ',k
-!    write(*,*) 'nbind1,nbind2,nbindmax: ',nbind1,nbind2,nbindmax
+    write(nflog,*) 'nbind1,nbind2,nbindmax: ',nbind1,nbind2,nbindmax
     if (.not.IN_VITRO) then
 	    DCoffset(:,1) = (/ 0,0,0 /)
 	    if (NDCsites > 1 .and. NDCsites <= 7) then
@@ -3803,9 +3803,9 @@ subroutine get_summary(summaryData) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
 logical :: ok
-integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, stage, region, i, iseq, site(3), n, error
+integer :: kcell, ctype, stype, ncog(2), noncog, ntot_LN, nbnd, ncogbnd, stage, region, i, iseq, site(3), n, error
 integer :: gen, ngens, neffgens, nteffgen, nteffgen0, dNdead, Ndead, nact, nseed, navestim(2), navestimrate(2), nDCSOI
-integer :: nfirstDCtime, navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction
+integer :: nfirstDCtime, navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, ncogbndfraction
 integer :: noDCcontact, noDCcontactfraction
 real :: stim(STAGELIMIT), IL2sig(STAGELIMIT), tgen, tnow, fac, act, cyt_conc, mols_pM
 real :: entrytime, totstim(2), totstimrate(2)
@@ -3829,6 +3829,7 @@ tnow = istep*DELTA_T
 noncog = 0
 ncog = 0
 nbnd = 0
+ncogbnd = 0
 nst = 0
 noDCcontact = 0
 stim = 0
@@ -3873,7 +3874,7 @@ do kcell = 1,nlist
 		    totstimrate(region) = totstimrate(region) + p%stimrate
 		endif
 		if (cellist(kcell)%DCbound(1) > 0 .or. cellist(kcell)%DCbound(2) > 0) then
-			nbnd = nbnd + 1
+			ncogbnd = ncogbnd + 1
 		endif
 		if (p%firstDCtime == 0) then
 			noDCcontact = noDCcontact + 1
@@ -4042,7 +4043,7 @@ endif
 DCbindtime_count%nsamples = 0
 DCbindtime_count%total = 0
 
-nbndfraction = (1000.*nbnd)/ncog(1)
+ncogbndfraction = (1000.*ncogbnd)/ncog(1)
 
 if (FAST) then
     ntot_LN = NTcells
@@ -4073,8 +4074,8 @@ do region = 1,2
 enddo
 
 summaryData(1:26) = (/ int(tnow/60), istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
-	nbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
-	navefirstDCtime, naveDCtraveltime, naveDCbindtime, nbndfraction, nDCSOI, &
+	ncogbnd, int(InflowTotal), Nexits, nteffgen0, nteffgen,   nact, navestim(1), navestim(2), navestimrate(1), &
+	navefirstDCtime, naveDCtraveltime, naveDCbindtime, ncogbndfraction, nDCSOI, &
 	noDCcontactfraction, int(noDCcontacttime), int(avetotalDCtime(1)), int(avetotalDCtime(2)) /)
 
 write(nfout,'(f10.2,12i10,$)') tnow/60, istep, NDCalive, ntot_LN, nseed, ncog(1), ncog(2), ndead, &
