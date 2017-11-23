@@ -3923,7 +3923,6 @@ if (tnow > stagetime) then		! time constraint to move to next stage is met
 			p%stagetime = BIG_TIME
 		elseif (p%stopped) then	
 			! do nothing until exit
-!		elseif (candivide(p,ctype)) then
 		elseif (candivide(kcell)) then
             call set_stage(p,DIVIDING)
 		    if (USE_STAGETIME(DIVIDING)) then
@@ -3994,8 +3993,10 @@ end function
 ! the level of TCR stimulation, up to a limiting value.
 ! HYPOTHESIS: bind time should also increase with level of stimulation rate,
 ! i.e. CT_HILL should be combined with CT_HENRICKSON - but how?
-! Note: in the UNSTAGED case, the stimrate_norm value passed is used - this is the 
+! Notes: 
+! In the UNSTAGED case, the stimrate_norm value passed is used - this is the 
 ! normalised stimulation rate = a*d
+! If signal = false, there is no TCR signalling, ==> non-cognate bind time
 !--------------------------------------------------------------------------------------
 real function get_bindtime(p,signal,ctype,pMHC,stimrate_norm,kpar)
 type(cog_type), pointer :: p
@@ -4032,8 +4033,6 @@ if (signal) then
 	        get_bindtime = btime
         endif
     else
-        a = min(1.0,p%avidity/MAXIMUM_AVIDITY)
-        d = min(1.0,pMHC/MAXIMUM_ANTIGEN)
         h = stimrate_norm**BINDTIME_HILL_N/(stimrate_norm**BINDTIME_HILL_N + BINDTIME_HILL_C**BINDTIME_HILL_N)
         h = (1 + BINDTIME_HILL_C**BINDTIME_HILL_N)*h
         get_bindtime = h*BINDTIME_MAX
@@ -4086,7 +4085,6 @@ end function
 ! In this revised version, the use of a weighted sum of signals for stimulation (with the
 ! parameter TC_STIM_WEIGHT) has been separated from the optionA cases.
 !----------------------------------------------------------------------------------------
-!logical function candivide(p,ctype)
 logical function candivide(kcell)
 integer :: kcell
 type(cog_type), pointer :: p
@@ -4097,7 +4095,8 @@ real :: tnow, div_thresh, stim, CD25signal, dS
 ! NOTE: Need to better account for first division time, and need to check CD4/CD8
 !
 candivide = .false.
-if (cellist(kcell)%DCbound(1) /= 0) return
+if (cellist(kcell)%DCbound(1) /= 0) return	! a cell bound to a DC cannot divide
+
 p => cellist(kcell)%cptr
 ctype = cellist(kcell)%ctype
 tnow = istep*DELTA_T

@@ -749,6 +749,7 @@ do ibeta = 1,nbeta
         if (allocated(tagid))   deallocate(tagid)
         if (allocated(tagseq))  deallocate(tagseq)
         if (allocated(tagsite)) deallocate(tagsite)
+        deallocate(prevsite)
 	enddo
 enddo
 if (allocated(pathcell)) deallocate(pathcell)
@@ -4331,6 +4332,7 @@ do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
+deallocate(cnt)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4366,6 +4368,7 @@ do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
+deallocate(cnt)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4402,6 +4405,7 @@ do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
+deallocate(cnt)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4436,6 +4440,7 @@ do i = 1,n
     x(i) = i*dx
     y(i) = cnt(i)/real(nc)
 enddo
+deallocate(cnt)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -4476,6 +4481,7 @@ do i = 1,n
     x(i) = (i - 0.5)*dx
     y(i) = cnt(i)/real(nc)
 enddo
+deallocate(cnt)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

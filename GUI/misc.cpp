@@ -91,7 +91,7 @@ void SocketHandler::processor()
 {
 //	LOG_MSG("In processor");
     socket = tcpServer->nextPendingConnection();
-	sprintf(msg,"got server connection: %p",socket);	
+    sprintf(msg,"got server connection: %p",socket);
 	LOG_MSG(msg);
     emit sh_connected();
 	QString qdata;
@@ -215,7 +215,7 @@ void ExecThread::run()
 		if (stopped) break;
 	}
     snapshot();
-	Sleep(10);
+    Sleep(100);
 	terminate_run(&res);
 	return;
 }

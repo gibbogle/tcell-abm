@@ -64,7 +64,8 @@ double *profile_x[20];
 double *profile_y[20];
 int profile_n[20];
 
-//#define NO_USE_PGRAPH true
+bool display_plots = true;
+
 
 /*
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
@@ -194,6 +195,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
+
+//    sthread0 = NULL;
+//    sthread1 = NULL;
+//    exthread = NULL;
+//    newR = NULL;
     goToInputs();
 }
 
@@ -1265,16 +1271,17 @@ void MainWindow::runServer()
 		}
 	}
 	
-	if (!first) {
-		int response = QMessageBox::question(this, tr("ABM Model GUI"),
-						tr("Would you like to clear the graphs from the previous run?"),
-						QMessageBox::Yes | QMessageBox::No);
-		if (response == QMessageBox::Yes)
-            mdiArea->closeAllSubWindows();
-		else if (response == QMessageBox::Cancel)
-            return;
-	}
-	
+//    if (!first) {
+//        int response = QMessageBox::question(this, tr("ABM Model GUI"),
+//                        tr("Would you like to clear the graphs from the previous run?"),
+//                        QMessageBox::Yes | QMessageBox::No);
+//        if (response == QMessageBox::Yes)
+//            mdiArea->closeAllSubWindows();
+//        else if (response == QMessageBox::Cancel)
+//            return;
+//    }
+    first = false;
+
     // Display the outputs screen
     if (showingVTK) {
         goToVTK();
@@ -1301,16 +1308,21 @@ void MainWindow::runServer()
 	else
 		box_outputData = 0;
 
+//    if (sthread0) sthread0->deleteLater();
+//    if (sthread1) sthread1->deleteLater();
+
 	if (use_CPORT1) {
 
 		// Port 5001
-		sthread1 = new SocketHandler(CPORT1);
+        LOG_MSG("sthread1");
+        if (!sthread1)
+            sthread1 = new SocketHandler(CPORT1);
 		connect(sthread1, SIGNAL(sh_output(QString)), this, SLOT(outputData(QString)));
 		sthread1->start();
 	}
 
 	// Port 5000
-	sthread0 = new SocketHandler(CPORT0);
+    sthread0 = new SocketHandler(CPORT0);
 	connect(sthread0, SIGNAL(sh_output(QString)), box_outputLog, SLOT(append(QString))); //self.outputLog)
 	connect(sthread0, SIGNAL(sh_connected()), this, SLOT(preConnection()));
 	connect(sthread0, SIGNAL(sh_disconnected()), this, SLOT(postConnection()));
@@ -1341,7 +1353,9 @@ void MainWindow::runServer()
         recordfrom = -1;
         recordto = -1;
     }
-	exthread = new ExecThread(inputFile);
+    LOG_MSG("exthread");
+//    if (!exthread)
+        exthread = new ExecThread(inputFile);
     connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
 	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
     connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
@@ -1370,8 +1384,25 @@ void MainWindow::preConnection()
 			break;
 		}
 	}
+
+    if (!display_plots) return;
 	// We assume that the model output is at hourly intervals
-	newR = new RESULT_SET;
+
+//    if (newR) {
+//        LOG_MSG("deleting newR");
+//        for (int i=0; i<grph->nGraphs; i++) {
+//            delete  newR->pData[i];
+//            newR->pData[i] = NULL;
+//            delete pGraph[i];
+//            pGraph[i] = NULL;
+//        }
+//        delete newR->tnow;
+//        delete newR;
+//        newR = NULL;
+//    }
+
+    LOG_MSG("creating newR");
+    newR = new RESULT_SET;
 	QString casename = QFileInfo(inputFile).baseName();
 	vtkfile = casename + ".pos";
 	newR->casename = casename;
@@ -1651,6 +1682,8 @@ void MainWindow::showSummary()
 	char msg[128];
     double yscale;
 //    LOG_MSG("showSummary");
+    if (!display_plots) return;
+
 	step++;
 	if (step >= newR->nsteps) {
 		LOG_MSG("ERROR: step >= nsteps");
@@ -1815,6 +1848,8 @@ void MainWindow::postConnection()
     tab_TCR->setEnabled(true);
     tab_run->setEnabled(true);
 
+    if (!display_plots) return;
+
 	// Check if a result set of this name is already in the list, if so remove it
 	for (int i=0; i<result_list.size(); i++) {
 		if (newR->casename.compare(result_list[i]->casename) == 0) {
@@ -1834,6 +1869,12 @@ void MainWindow::postConnection()
 //	vtk->renderCells(true,true);		// for the case that the VTK page is viewed only after the execution is complete
     posdata = false;
 	LOG_MSG("completed postConnection");
+//    if (exthread->isFinished()) {
+//        LOG_MSG("exthread isFinished: delete");
+//        exthread->exit();
+//        exthread->wait();
+//        delete exthread;
+//    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1875,13 +1916,14 @@ void MainWindow::stopServer()
 		}
         exthread->snapshot();
 		exthread->stop();
-		sleep(1);		// delay for Fortran to wrap up (does this help?)
+        sleep(1);		// delay for Fortran to wrap up (does this help?)
 		if (use_CPORT1) {
 			sthread1->quit();
 			sthread1->terminate();
 		}
 		sthread0->stop();
-		newR->nsteps = step+1;
+        if (display_plots)
+            newR->nsteps = step+1;
 	}
     action_run->setEnabled(true); 
     action_pause->setEnabled(false);
@@ -1893,6 +1935,8 @@ void MainWindow::stopServer()
     if (actionStop_recording_FACS->isEnabled()) {
         stopRecorderFACS();
     }
+    delete exthread;
+    exthread = NULL;
 }
 
 //--------------------------------------------------------------------------------------------------------
