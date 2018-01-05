@@ -214,7 +214,7 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 	}
-    snapshot();
+//    snapshot();
     Sleep(100);
 	terminate_run(&res);
 	return;

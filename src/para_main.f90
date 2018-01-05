@@ -9,7 +9,7 @@ use omp_global
 integer :: ncpu, res, summarydata(100)
 character*(128) :: infile,outfile
 character*(64) :: travelfile = 'travel_time_dist.out'
-integer :: status, nlen, cnt, i, inbuflen, outbuflen
+integer :: status, nlen, cnt, i, inbuflen, outbuflen, it
 integer :: jstep, hour, ntot, ncog(2), inflow, exits
 character*(128) :: b, c, progname
 
@@ -70,7 +70,7 @@ end do
 #endif
 
 !runfile = 'running.out'
-if (compute_travel_time) then
+if (compute_travel_time) then	! set in global.f90
 	N_TRAVEL_COG = 1
 	N_TRAVEL_DC = 20
 	N_TRAVEL_DIST = 50

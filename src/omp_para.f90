@@ -228,19 +228,34 @@ endif
 
 max_nlist = 1.5*NX*NY*NZ
 
-if (allocated(occupancy)) then
-	ok = .false.
-	call logger("Error: array allocated: occupancy")
-	return
+if (leave_allocated) then
+	if (allocated(occupancy)) then
+		call logger("Array already allocated: occupancy")
+	else
+		allocate(occupancy(NX,NY,NZ))
+	endif
+	if (allocated(cellist)) then
+		call logger("Array allocated: cellist")
+	else
+		write(nflog,*) 'max_nlist: ',max_nlist
+		allocate(cellist(max_nlist))
+	endif
+else
+	if (allocated(occupancy)) then
+		ok = .false.
+		call logger("Error: array allocated: occupancy")
+		return
+	endif
+	allocate(occupancy(NX,NY,NZ))
+	if (allocated(cellist)) then
+		ok = .false.
+		call logger("Error: array allocated: cellist")
+		return
+	endif
+	write(nflog,*) 'max_nlist: ',max_nlist
+	allocate(cellist(max_nlist))
 endif
-allocate(occupancy(NX,NY,NZ))
-if (allocated(cellist)) then
-	ok = .false.
-	call logger("Error: array allocated: cellist")
-	return
-endif
-write(nflog,*) 'max_nlist: ',max_nlist
-allocate(cellist(max_nlist))
+
 if (allocated(gaplist)) then
 	ok = .false.
 	call logger("Error: array allocated: gaplist")
@@ -3915,6 +3930,11 @@ do kcell = 1,nlist
 		nDCSOI = nDCSOI + nearDC
 	endif
 enddo
+if (.not.hit_target .and. (ncog(1) + ncog(2)) > ncells_target) then
+	hit_target = .true.
+	write(logmsg,'(a,f8.2)') 'Hit target cognate cell count at hour: ',istep*DELTA_T/60
+	call logger(logmsg)
+endif
 do i = 1,FINISHED
     if (nst(i) > 0) then
         stim(i) = stim(i)/nst(i)
@@ -5514,6 +5534,7 @@ endif
 firstSummary = .true.
 initialized = .true.
 timer = 0
+hit_target = .false.
 
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',NTcells0
 call logger(logmsg)
@@ -5533,12 +5554,15 @@ if (allocated(zoffset)) deallocate(zoffset)
 if (allocated(xdomain)) deallocate(xdomain)
 if (allocated(zdomain)) deallocate(zdomain)
 if (allocated(zrange2D)) deallocate(zrange2D)
-if (allocated(occupancy)) deallocate(occupancy)
 if (allocated(Tres_dist)) deallocate(Tres_dist)
-if (allocated(cellist)) deallocate(cellist,stat=ierr)
-if (ierr /= 0) then
-    write(*,*) 'cellist deallocate error: ',ierr
-    stop
+if (.not.leave_allocated) then
+	! Try leaving these allocated to avoid "insufficient virtual memory" problem
+	if (allocated(occupancy)) deallocate(occupancy)
+	if (allocated(cellist)) deallocate(cellist,stat=ierr)
+	if (ierr /= 0) then
+		write(*,*) 'cellist deallocate error: ',ierr
+		stop
+	endif
 endif
 ierr = 0
 if (allocated(gaplist)) deallocate(gaplist,stat=ierr)

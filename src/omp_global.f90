@@ -854,10 +854,13 @@ logical :: SURFACE_PORTALS				! egress to the sinus at portals on the blob surfa
 logical :: use_desensitisation			! S level influences bind probability Pb
 real :: desens_stim_thresh				! normalised stimulation desensitisation probability ramp params
 real :: desens_stim_limit
+logical :: leave_allocated = .true.
 
 integer :: kcell_now
 integer :: idbug = 0
 logical :: dbug = .false.
+integer :: ncells_target = 50000
+logical :: hit_target
 
 ! Timer
 real(8) :: timer(6)

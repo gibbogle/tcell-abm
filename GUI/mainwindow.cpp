@@ -200,7 +200,29 @@ MainWindow::MainWindow(QWidget *parent)
 //    sthread1 = NULL;
 //    exthread = NULL;
 //    newR = NULL;
+//    checkMemory("start");
     goToInputs();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::checkMemory(QString loc)
+{
+    QString system_info = loc + ": ";
+    MEMORYSTATUSEX memory_status;
+    ZeroMemory(&memory_status, sizeof(MEMORYSTATUSEX));
+    memory_status.dwLength = sizeof(MEMORYSTATUSEX);
+    if (GlobalMemoryStatusEx(&memory_status)) {
+      system_info.append(
+            QString("RAM: %1 MB")
+            .arg(memory_status.ullTotalPhys / (1024 * 1024)));
+    } else {
+      system_info.append("Unknown RAM");
+    }
+    LOG_QMSG(system_info);
+    QMessageBox msgBox;
+    msgBox.setText(system_info);
+    msgBox.exec();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1367,7 +1389,7 @@ void MainWindow::runServer()
 	exthread->paused = false;
 	exthread->stopped = false;
     exthread->summary_interval = 4*lineEdit_summary_interval->text().toInt();
-	exthread->start();
+    exthread->start();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1905,7 +1927,7 @@ void MainWindow::pauseServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::stopServer()
 {
-	if (vtk->playing) {
+    if (vtk->playing) {
 		vtk->stop();
 		LOG_MSG("Stopped the player");
 	} else {

@@ -192,6 +192,8 @@ private:
 
 	PARAM_SET get_param(int);
 
+    void checkMemory(QString loc);
+
     void createMenus();
     void createToolBars();
     void createStatusBar();
